@@ -35,6 +35,7 @@ Suggests:
   MCMCglmm,
   mlogit,
   lme4,
+  knitr,
   mgcv,
   nnet,
   nlme,
@@ -51,3 +52,4 @@ Suggests:
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
+VignetteBuilder: knitr
