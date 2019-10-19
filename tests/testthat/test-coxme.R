@@ -1,11 +1,15 @@
-if (require("testthat") && require("insight") && require("survival") && require("coxme")) {
+if (require("testthat") &&
+  require("insight") &&
+  require("survival") &&
+  require("coxme")) {
   context("insight, model_info")
 
   data(lung)
   set.seed(1234)
   lung$inst2 <- sample(1:10, size = nrow(lung), replace = T)
   lung <- subset(lung, subset = ph.ecog %in% 0:2)
-  lung$ph.ecog <- factor(lung$ph.ecog, labels = c("good", "ok", "limited"))
+  lung$ph.ecog <-
+    factor(lung$ph.ecog, labels = c("good", "ok", "limited"))
 
   m1 <- coxme(Surv(time, status) ~ ph.ecog + age + (1 | inst), lung)
   m2 <- coxme(Surv(time, status) ~ ph.ecog + age + (1 | inst) + (1 | inst2), lung)
@@ -16,7 +20,10 @@ if (require("testthat") && require("insight") && require("survival") && require(
 
   test_that("find_predictors", {
     expect_identical(find_predictors(m1), list(conditional = c("ph.ecog", "age")))
-    expect_identical(find_predictors(m1, effects = "random"), list(random = "inst"))
+    expect_identical(
+      find_predictors(m1, effects = "random"),
+      list(random = "inst")
+    )
     expect_identical(find_predictors(m2), list(conditional = c("ph.ecog", "age")))
     expect_identical(find_predictors(m2, effects = "random"), list(random = c("inst", "inst2")))
   })
@@ -33,8 +40,29 @@ if (require("testthat") && require("insight") && require("survival") && require(
 
   test_that("get_data", {
     expect_equal(nrow(get_data(m1)), 226)
-    expect_equal(colnames(get_data(m1)), c("time", "status", "Surv(time, status)", "ph.ecog", "age", "inst"))
-    expect_equal(colnames(get_data(m2)), c("time", "status", "Surv(time, status)", "ph.ecog", "age", "inst", "inst2"))
+    expect_equal(
+      colnames(get_data(m1)),
+      c(
+        "time",
+        "status",
+        "Surv(time, status)",
+        "ph.ecog",
+        "age",
+        "inst"
+      )
+    )
+    expect_equal(
+      colnames(get_data(m2)),
+      c(
+        "time",
+        "status",
+        "Surv(time, status)",
+        "ph.ecog",
+        "age",
+        "inst",
+        "inst2"
+      )
+    )
   })
 
   test_that("find_formula", {
@@ -58,17 +86,57 @@ if (require("testthat") && require("insight") && require("survival") && require(
   })
 
   test_that("find_terms", {
-    expect_equal(find_terms(m1), list(response = c("time", "status"), conditional = c("ph.ecog", "age"), random = "inst"))
-    expect_equal(find_terms(m1, flatten = TRUE), c("time", "status", "ph.ecog", "age", "inst"))
+    expect_equal(
+      find_terms(m1),
+      list(
+        response = "Surv(time, status)",
+        conditional = c("ph.ecog", "age"),
+        random = "inst"
+      )
+    )
+    expect_equal(
+      find_terms(m1, flatten = TRUE),
+      c("Surv(time, status)", "ph.ecog", "age", "inst")
+    )
     expect_equal(
       find_terms(m2),
+      list(
+        response = "Surv(time, status)",
+        conditional = c("ph.ecog", "age"),
+        random = c("inst", "inst2")
+      )
+    )
+    expect_equal(
+      find_terms(m2, flatten = TRUE),
+      c("Surv(time, status)", "ph.ecog", "age", "inst", "inst2")
+    )
+  })
+
+  test_that("find_variables", {
+    expect_equal(
+      find_variables(m1),
+      list(
+        response = c("time", "status"),
+        conditional = c("ph.ecog", "age"),
+        random = "inst"
+      )
+    )
+    expect_equal(
+      find_variables(m1, flatten = TRUE),
+      c("time", "status", "ph.ecog", "age", "inst")
+    )
+    expect_equal(
+      find_variables(m2),
       list(
         response = c("time", "status"),
         conditional = c("ph.ecog", "age"),
         random = c("inst", "inst2")
       )
     )
-    expect_equal(find_terms(m2, flatten = TRUE), c("time", "status", "ph.ecog", "age", "inst", "inst2"))
+    expect_equal(
+      find_variables(m2, flatten = TRUE),
+      c("time", "status", "ph.ecog", "age", "inst", "inst2")
+    )
   })
 
   test_that("n_obs", {
@@ -108,11 +176,22 @@ if (require("testthat") && require("insight") && require("survival") && require(
       )
     )
     expect_equal(nrow(get_parameters(m1)), 3)
-    expect_equal(get_parameters(m1)$parameter, c("ph.ecogok", "ph.ecoglimited", "age"))
+    expect_equal(
+      get_parameters(m1)$Parameter,
+      c("ph.ecogok", "ph.ecoglimited", "age")
+    )
 
     expect_equal(nrow(get_parameters(m2)), 3)
-    expect_equal(get_parameters(m2)$parameter, c("ph.ecogok", "ph.ecoglimited", "age"))
+    expect_equal(
+      get_parameters(m2)$Parameter,
+      c("ph.ecogok", "ph.ecoglimited", "age")
+    )
 
     expect_length(get_parameters(m2, effects = "random"), 2)
+  })
+
+  test_that("find_statistic", {
+    expect_identical(find_statistic(m1), "z-statistic")
+    expect_identical(find_statistic(m2), "z-statistic")
   })
 }

@@ -1,18 +1,25 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
 if (.runThisTest || Sys.getenv("USER") == "travis") {
-
   if (require("testthat") && require("insight") && require("gbm")) {
     context("insight, gbm")
 
-    set.seed(102)  # for reproducibility
-    m1 <- gbm(mpg ~ gear + cyl + wt, data = mtcars,
-              var.monotone = c(0, 0, 0),
-              distribution = "gaussian", shrinkage = 0.1,
-              interaction.depth = 1, bag.fraction = 0.5,
-              train.fraction = 0.5,
-              n.minobsinnode = 1, cv.folds = 3, keep.data = TRUE,
-              verbose = FALSE, n.cores = 1)
+    set.seed(102) # for reproducibility
+    m1 <- gbm(
+      mpg ~ gear + cyl + wt,
+      data = mtcars,
+      var.monotone = c(0, 0, 0),
+      distribution = "gaussian",
+      shrinkage = 0.1,
+      interaction.depth = 1,
+      bag.fraction = 0.5,
+      train.fraction = 0.5,
+      n.minobsinnode = 1,
+      cv.folds = 3,
+      keep.data = TRUE,
+      verbose = FALSE,
+      n.cores = 1
+    )
 
     test_that("model_info", {
       expect_true(model_info(m1)$is_linear)
@@ -21,7 +28,10 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
 
     test_that("find_predictors", {
       expect_identical(find_predictors(m1), list(conditional = c("gear", "cyl", "wt")))
-      expect_identical(find_predictors(m1, flatten = TRUE), c("gear", "cyl", "wt"))
+      expect_identical(
+        find_predictors(m1, flatten = TRUE),
+        c("gear", "cyl", "wt")
+      )
       expect_null(find_predictors(m1, effects = "random"))
     })
 
@@ -63,8 +73,17 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
     })
 
     test_that("find_variables", {
-      expect_equal(find_variables(m1), list(response = "mpg", conditional = c("gear", "cyl", "wt")))
-      expect_equal(find_variables(m1, flatten = TRUE), c("mpg", "gear", "cyl", "wt"))
+      expect_equal(
+        find_variables(m1),
+        list(
+          response = "mpg",
+          conditional = c("gear", "cyl", "wt")
+        )
+      )
+      expect_equal(
+        find_variables(m1, flatten = TRUE),
+        c("mpg", "gear", "cyl", "wt")
+      )
     })
 
     test_that("n_obs", {
@@ -76,17 +95,14 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
     })
 
     test_that("find_parameters", {
-
       skip_on_travis()
 
       expect_equal(
         find_parameters(m1),
-        list(
-          conditional = c("wt", "gear", "cyl")
-        )
+        list(conditional = c("wt", "gear", "cyl"))
       )
       expect_equal(nrow(get_parameters(m1)), 3)
-      expect_equal(get_parameters(m1)$parameter, c("wt", "gear", "cyl"))
+      expect_equal(get_parameters(m1)$Parameter, c("wt", "gear", "cyl"))
     })
 
     test_that("find_terms", {
@@ -105,6 +121,10 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
 
     test_that("find_algorithm", {
       expect_warning(expect_null(find_algorithm(m1)))
+    })
+
+    test_that("find_statistic", {
+      expect_null(find_statistic(m1))
     })
   }
 }

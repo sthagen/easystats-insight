@@ -33,8 +33,11 @@
 #' or for specific terms like smooth- or spline-terms).
 #'
 #' @examples
+#' \dontrun{
+#' library(brms)
 #' model <- download_model("brms_zi_2")
 #' clean_parameters(model)
+#' }
 #' @export
 clean_parameters <- function(x, ...) {
   UseMethod("clean_parameters")
@@ -47,20 +50,25 @@ clean_parameters.default <- function(x, ...) {
   pars <- find_parameters(x, effects = "all", component = "all", flatten = FALSE)
 
   l <- lapply(names(pars), function(i) {
-    eff <- if (grepl("random", i, fixed = TRUE))
+    eff <- if (grepl("random", i, fixed = TRUE)) {
       "random"
-    else
+    } else {
       "fixed"
+    }
 
-    com <- if (grepl("zero_inflated", i, fixed = TRUE))
+    com <- if (grepl("zero_inflated", i, fixed = TRUE)) {
       "zero_inflated"
-    else
+    } else if (grepl("nonlinear", i, fixed = TRUE)) {
+      "nonlinear"
+    } else {
       "conditional"
+    }
 
-    fun <- if (grepl("smooth", i, fixed = TRUE))
+    fun <- if (grepl("smooth", i, fixed = TRUE)) {
       "smooth"
-    else
+    } else {
       ""
+    }
 
     if (eff == "random") {
       rand_eff <- lapply(names(pars[[i]]), function(j) {
@@ -93,6 +101,40 @@ clean_parameters.default <- function(x, ...) {
   out <- do.call(rbind, l)
   out <- .remove_empty_columns_from_pars(out)
   .fix_random_effect_smooth(x, out)
+}
+
+
+
+#' @export
+clean_parameters.lavaan <- function(x, ...) {
+  params <- get_parameters(x)
+
+  data.frame(
+    Parameter = params$Parameter,
+    Component = params$Component,
+    Group = "",
+    Function = "",
+    Cleaned_Parameter = params$Parameter,
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+}
+
+
+
+#' @export
+clean_parameters.blavaan <- function(x, ...) {
+  params <- get_parameters.lavaan(x)
+
+  data.frame(
+    Parameter = params$Parameter,
+    Component = params$Component,
+    Group = "",
+    Function = "",
+    Cleaned_Parameter = params$Parameter,
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
 }
 
 
@@ -152,24 +194,27 @@ clean_parameters.stanmvreg <- function(x, ...) {
 
 .get_stan_params <- function(pars, response = NA) {
   lapply(names(pars), function(i) {
-    eff <- if (grepl("random", i, fixed = TRUE))
+    eff <- if (grepl("random", i, fixed = TRUE)) {
       "random"
-    else
+    } else {
       "fixed"
+    }
 
-    com <- if (grepl("zero_inflated", i, fixed = TRUE))
+    com <- if (grepl("zero_inflated", i, fixed = TRUE)) {
       "zero_inflated"
-    else if (grepl("sigma", i, fixed = TRUE))
+    } else if (grepl("sigma", i, fixed = TRUE)) {
       "sigma"
-    else if (grepl("priors", i, fixed = TRUE))
+    } else if (grepl("priors", i, fixed = TRUE)) {
       "priors"
-    else
+    } else {
       "conditional"
+    }
 
-    fun <- if (grepl("smooth", i, fixed = TRUE))
+    fun <- if (grepl("smooth", i, fixed = TRUE)) {
       "smooth"
-    else
+    } else {
       ""
+    }
 
 
     data.frame(
@@ -188,7 +233,6 @@ clean_parameters.stanmvreg <- function(x, ...) {
 
 
 .clean_brms_params <- function(out, is_mv) {
-
   out$Cleaned_Parameter <- out$Parameter
 
   # for multivariate response models, remove responses from parameter names
@@ -274,8 +318,9 @@ clean_parameters.stanmvreg <- function(x, ...) {
   # fix intercept names
 
   intercepts <- which(out$Cleaned_Parameter == "Intercept")
-  if (!.is_empty_object(intercepts))
+  if (!.is_empty_object(intercepts)) {
     out$Cleaned_Parameter[intercepts] <- "(Intercept)"
+  }
 
   interaction_terms <- which(grepl("\\.", out$Cleaned_Parameter))
   if (length(interaction_terms)) {
@@ -294,7 +339,6 @@ clean_parameters.stanmvreg <- function(x, ...) {
 
 
 .clean_stanreg_params <- function(out) {
-
   out$Cleaned_Parameter <- out$Parameter
 
   # extract group-names from random effects and clean random effects

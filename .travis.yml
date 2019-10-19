@@ -1,18 +1,20 @@
 language: r
 
-os:
-  #- windows
-  - linux
-  - osx
-
-r:
-  - release
-  - devel
+matrix:
+  include:
+    - os: linux
+      dist: release
+    - os: linux
+      dist: devel
+    - os: osx
+      dist: oldrel
+    - os: osx
+      dist: release
 
 # Copied from broom
 sudo: required
 cache: packages
-bioc_required: true
+bioc_required: false
 warnings_are_errors: false
 
 env:
@@ -28,11 +30,3 @@ r_binary_packages:
   - rstanarm
   - rstan
   - lme4
-
-r_packages:
-  - rlang
-  - bindrcpp
-
-
-after_success:
-  - Rscript -e 'covr::codecov()'

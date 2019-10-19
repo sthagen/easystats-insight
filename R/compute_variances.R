@@ -169,7 +169,17 @@
 
     names(vals$re) <- re_names
     names(vals$vc) <- re_names
-
+  } else if (inherits(x, "clmm")) {
+    if (requireNamespace("ordinal", quietly = TRUE)) {
+      f <- find_formula(x)$conditional
+      mm <- stats::model.matrix(f, x$model)
+      vals <- list(
+        beta = c("(Intercept)" = 1, stats::coef(x)[intersect(names(coef(x)), colnames(mm))]),
+        X = mm,
+        vc = ordinal::VarCorr(x),
+        re = ordinal::ranef(x)
+      )
+    }
   } else {
     vals <- list(
       beta = lme4::fixef(x),
@@ -179,8 +189,7 @@
     )
   }
 
-  # for glmmTMB, use conditional component of model only,
-  # and tell user that zero-inflation is ignored
+  # for glmmTMB, tell user that dispersion model is ignored
 
   if (inherits(x, "glmmTMB")) {
     vals <- lapply(vals, .collapse_cond)
@@ -236,8 +245,7 @@
 #
 #' @importFrom stats nobs
 .compute_variance_random <- function(terms, x, vals) {
-
-  sigma_sum <- function(Sigma) {
+  .sigma_sum <- function(Sigma) {
     rn <- rownames(Sigma)
 
     if (!is.null(rn)) {
@@ -254,9 +262,9 @@
   }
 
   if (inherits(x, "MixMod")) {
-    sigma_sum(vals$vc)
+    .sigma_sum(vals$vc)
   } else {
-    sum(sapply(vals$vc[terms], sigma_sum))
+    sum(sapply(vals$vc[terms], .sigma_sum))
   }
 }
 
@@ -265,10 +273,11 @@
 
 # Calculate Distribution-specific variance (Nakagawa et al. 2017)
 .compute_variance_distribution <- function(x, var.cor, faminfo, name, verbose = TRUE) {
-  if (inherits(x, "lme"))
+  if (inherits(x, "lme")) {
     sig <- x$sigma
-  else
+  } else {
     sig <- attr(var.cor, "sc")
+  }
 
   if (is.null(sig)) sig <- 1
 
@@ -292,6 +301,15 @@
         sqrt = 0.25,
         .badlink(faminfo$link_function, faminfo$family, verbose = verbose)
       )
+    } else if (faminfo$family %in% c("Gamma", "gamma")) {
+      ## TODO needs some more checking
+      dist.variance <- switch(
+        faminfo$link_function,
+        inverse = ,
+        identity = stats::family(x)$variance(sig),
+        log = .variance_distributional(x, faminfo, sig, name = name, verbose = verbose),
+        .badlink(faminfo$link_function, faminfo$family, verbose = verbose)
+      )
     } else if (faminfo$family == "beta") {
       dist.variance <- switch(
         faminfo$link_function,
@@ -304,6 +322,8 @@
         log = .variance_distributional(x, faminfo, sig, name = name, verbose = verbose),
         .badlink(faminfo$link_function, faminfo$family, verbose = verbose)
       )
+    } else {
+      dist.variance <- sig
     }
   }
 
@@ -371,22 +391,25 @@
 
       # (zero-inflated) poisson
       `zero-inflated poisson` = ,
-      poisson                 = .variance_family_poisson(x, mu, faminfo),
+      poisson = .variance_family_poisson(x, mu, faminfo),
 
       # hurdle-poisson
-      `hurdle poisson`    = ,
-      truncated_poisson   = stats::family(x)$variance(sig),
+      `hurdle poisson` = ,
+      truncated_poisson = stats::family(x)$variance(sig),
+
+      # Gamma, exponential
+      Gamma = stats::family(x)$variance(sig),
 
       # (zero-inflated) negative binomial
       `zero-inflated negative binomial` = ,
       `negative binomial` = ,
-      genpois             = ,
-      nbinom1             = ,
-      nbinom2             = .variance_family_nbinom(x, mu, sig, faminfo),
+      genpois = ,
+      nbinom1 = ,
+      nbinom2 = .variance_family_nbinom(x, mu, sig, faminfo),
 
       # other distributions
-      tweedie             = .variance_family_tweedie(x, mu, sig),
-      beta                = .variance_family_beta(x, mu, sig),
+      tweedie = .variance_family_tweedie(x, mu, sig),
+      beta = .variance_family_beta(x, mu, sig),
 
       # default variance for non-captured distributions
       .variance_family_default(x, mu, verbose)
@@ -410,7 +433,7 @@
 
 # Get distributional variance for poisson-family
 .variance_family_poisson <- function(x, mu, faminfo) {
-  if (faminfo$is_zeroinf) {
+  if (faminfo$is_zero_inflated) {
     .variance_zip(x, faminfo, family_var = mu)
   } else {
     if (inherits(x, "MixMod")) {
@@ -426,10 +449,11 @@
 
 # Get distributional variance for beta-family
 .variance_family_beta <- function(x, mu, phi) {
-  if (inherits(x, "MixMod"))
+  if (inherits(x, "MixMod")) {
     stats::family(x)$variance(mu)
-  else
+  } else {
     mu * (1 - mu) / (1 + phi)
+  }
 }
 
 
@@ -448,13 +472,14 @@
 
 # Get distributional variance for nbinom-family
 .variance_family_nbinom <- function(x, mu, sig, faminfo) {
-  if (faminfo$is_zeroinf) {
+  if (faminfo$is_zero_inflated) {
     if (missing(sig)) sig <- 0
     .variance_zinb(x, sig, faminfo, family_var = mu * (1 + sig))
   } else {
     if (inherits(x, "MixMod")) {
-      if (missing(sig))
+      if (missing(sig)) {
         return(rep(1e-16, length(mu)))
+      }
       mu * (1 + sig)
     } else {
       stats::family(x)$variance(mu, sig)
@@ -550,7 +575,8 @@
       warning("Can't calculate model's distribution-specific variance. Results are not reliable.", call. = F)
     }
     0
-  })
+  }
+  )
 }
 
 
@@ -575,19 +601,19 @@
     re.terms <- paste0("(", sapply(lme4::findbars(f), .safe_deparse), ")")
     nullform <- stats::reformulate(re.terms, response = resp)
     null.model <- tryCatch({
-        stats::update(model, nullform)
-      },
-      error = function(e) {
-        msg <- e$message
-        if (verbose) {
-          if (grepl("(^object)(.*)(not found$)", msg)) {
-            insight::print_color("Can't calculate null-model. Probably the data that was used to fit the model cannot be found.\n", "red")
-          } else if (grepl("^could not find function", msg)) {
-            insight::print_color("Can't calculate null-model. Probably you need to load the package that was used to fit the model.\n", "red")
-          }
+      stats::update(model, nullform)
+    },
+    error = function(e) {
+      msg <- e$message
+      if (verbose) {
+        if (grepl("(^object)(.*)(not found$)", msg)) {
+          insight::print_color("Can't calculate null-model. Probably the data that was used to fit the model cannot be found.\n", "red")
+        } else if (grepl("^could not find function", msg)) {
+          insight::print_color("Can't calculate null-model. Probably you need to load the package that was used to fit the model.\n", "red")
         }
-        return(NULL)
       }
+      return(NULL)
+    }
     )
   }
 
@@ -604,7 +630,9 @@
 
   # if model has no random slopes, there are no random slopes that
   # are *not* present as fixed effects
-  if (is.null(rs)) return(TRUE)
+  if (is.null(rs)) {
+    return(TRUE)
+  }
 
   # make sure we have identical subcomponents between random and
   # fixed effects
@@ -662,10 +690,11 @@
   } else {
     corrs <- lapply(vals$vc, attr, "correlation")
     rho01 <- sapply(corrs, function(i) {
-      if (!is.null(i))
+      if (!is.null(i)) {
         i[-1, 1]
-      else
+      } else {
         NULL
+      }
     })
     unlist(rho01)
   }

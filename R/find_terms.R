@@ -35,7 +35,6 @@
 #' )
 #'
 #' find_terms(m)
-#'
 #' @export
 find_terms <- function(x, flatten = FALSE, ...) {
   f <- find_formula(x)
@@ -74,7 +73,7 @@ find_terms <- function(x, flatten = FALSE, ...) {
     if (any(nchar(f_parts) == 0)) {
       f_parts <- f_parts[-which(nchar(f_parts) == 0)]
     }
-    f_parts
+    unique(f_parts)
   })
 
 

@@ -27,9 +27,10 @@
 #'      \item \code{is_tweedie}: family is tweedie
 #'      \item \code{is_ordinal}: family is ordinal or cumulative link
 #'      \item \code{is_categorical}: family is categorical link
-#'      \item \code{is_censored}: model is a censored model
-#'      \item \code{is_zeroinf}: model has zero-inflation component
-#'      \item \code{is_zero_inflated}: alias for \code{is_zeroinf}
+#'      \item \code{is_censored}: model is a censored model (has a censored response, including survival models)
+#'      \item \code{is_truncated}: model is a truncated model (has a truncated response)
+#'      \item \code{is_survival}: model is a survival model
+#'      \item \code{is_zero_inflated}: model has zero-inflation component
 #'      \item \code{is_hurdle}: model has zero-inflation component and is a hurdle-model (truncated family distribution)
 #'      \item \code{is_mixed}: model is a mixed effects model (with random effects)
 #'      \item \code{is_multivariate}: model is a multivariate response model (currently only works for \emph{brmsfit} objects)
@@ -51,7 +52,6 @@
 #' m <- glm(SF ~ sex * ldose, family = binomial)
 #'
 #' model_info(m)
-#'
 #' \dontrun{
 #' library(glmmTMB)
 #' data("Salamanders")
@@ -61,7 +61,8 @@
 #'   dispformula = ~DOY,
 #'   data = Salamanders,
 #'   family = nbinom2
-#' )}
+#' )
+#' }
 #'
 #' model_info(m)
 #' @importFrom stats formula terms
@@ -85,15 +86,16 @@ model_info.default <- function(x, ...) {
     class(x) <- c(class(x), c("glm", "lm"))
   }
 
-  faminfo <- tryCatch(
-    {
-      if (inherits(x, c("Zelig-relogit"))) {
-        stats::binomial(link = "logit")
-      } else {
-        stats::family(x)
-      }
-    },
-    error = function(x) { NULL }
+  faminfo <- tryCatch({
+    if (inherits(x, c("Zelig-relogit"))) {
+      stats::binomial(link = "logit")
+    } else {
+      stats::family(x)
+    }
+  },
+  error = function(x) {
+    NULL
+  }
   )
 
   if (!is.null(faminfo)) {
@@ -107,6 +109,20 @@ model_info.default <- function(x, ...) {
   } else {
     warning("Could not access model information.", call. = FALSE)
   }
+}
+
+
+#' @importFrom stats family
+#' @export
+model_info.bamlss <- function(x, ...) {
+  faminfo <- stats::family(x)
+  make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$links[1] == "logit",
+    link.fun = faminfo$links[1],
+    ...
+  )
 }
 
 
@@ -207,6 +223,21 @@ model_info.survreg <- function(x, ...) {
 
 
 #' @export
+model_info.flexsurvreg <- function(x, ...) {
+  dist <- parse(text = .safe_deparse(x$call))[[1]]$dist
+  faminfo <- .make_tobit_family(x, dist)
+
+  make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$link == "logit",
+    link.fun = faminfo$link,
+    ...
+  )
+}
+
+
+#' @export
 model_info.LORgee <- function(x, ...) {
   if (grepl(pattern = "logit", x = x$link, fixed = TRUE)) {
     link <- "logit"
@@ -246,6 +277,12 @@ model_info.BFBayesFactor <- function(x, ...) {
 
 #' @export
 model_info.lme <- function(x, ...) {
+  make_family(x, ...)
+}
+
+
+#' @export
+model_info.bayesx <- function(x, ...) {
   make_family(x, ...)
 }
 
@@ -306,6 +343,12 @@ model_info.crq <- function(x, ...) {
 
 
 #' @export
+model_info.nlrq <- function(x, ...) {
+  make_family(x, ...)
+}
+
+
+#' @export
 model_info.rqss <- function(x, ...) {
   make_family(x, ...)
 }
@@ -359,12 +402,19 @@ model_info.gam <- function(x, ...) {
     class(x) <- c(class(x), "glm", "lm")
   }
 
-  faminfo <- stats::family(x)
+  faminfo <- .gam_family(x)
+
+  link <- faminfo$link[1]
+  is.mv <- faminfo$family == "Multivariate normal"
+
+  if (is.mv) link <- "identity"
+
   make_family(
     x = x,
     fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
+    logit.link = link == "logit",
+    link.fun = link,
+    multi.var = is.mv,
     ...
   )
 }
@@ -822,18 +872,30 @@ make_family <- function(x, fitfam = "gaussian", zero.inf = FALSE, hurdle = FALSE
       grepl("\\Qnzbinom\\E", fitfam, ignore.case = TRUE) |
       grepl("\\Qgenpois\\E", fitfam, ignore.case = TRUE) |
       grepl("\\Qnegbinomial\\E", fitfam, ignore.case = TRUE) |
-      grepl("\\Qneg_binomial\\E", fitfam, ignore.case = TRUE)
+      grepl("\\Qneg_binomial\\E", fitfam, ignore.case = TRUE) |
+      fitfam %in% c("ztnbinom", "nbinom")
 
-  beta_fam <- inherits(x, "betareg") | fitfam %in% c("beta", "betabinomial")
+  beta_fam <-
+    inherits(x, "betareg") |
+    fitfam %in% c(
+      "beta",
+      "Beta",
+      "betabinomial",
+      "Beta Inflated",
+      "Zero Inflated Beta",
+      "Beta Inflated zero",
+      "Beta Inflated one"
+    )
+
   betabin_fam <- inherits(x, "BBreg") | fitfam %in% "betabinomial"
 
   ## TODO beta-binomial = binomial?
   if (betabin_fam) binom_fam <- TRUE
 
-  exponential_fam <- fitfam %in% c("Gamma", "weibull")
+  exponential_fam <- fitfam %in% c("Gamma", "gamma", "weibull")
 
   linear_model <- (!binom_fam & !exponential_fam & !poisson_fam & !neg_bin_fam & !logit.link) ||
-    fitfam %in% c("Student's-t", "t Family") || grepl("(\\st)$", fitfam)
+    fitfam %in% c("Student's-t", "t Family", "gaussian", "Gaussian") || grepl("(\\st)$", fitfam)
 
   tweedie_model <- linear_model && grepl("tweedie", fitfam, fixed = TRUE)
 
@@ -848,7 +910,8 @@ make_family <- function(x, fitfam = "gaussian", zero.inf = FALSE, hurdle = FALSE
   hurdle <- hurdle |
     grepl("\\Qhurdle\\E", fitfam, ignore.case = TRUE) |
     grepl("^hu", fitfam, perl = TRUE) |
-    grepl("^truncated", fitfam, perl = TRUE)
+    grepl("^truncated", fitfam, perl = TRUE) |
+    fitfam == "ztnbinom"
 
   is.ordinal <-
     inherits(x, c("svyolr", "polr", "clm", "clm2", "clmm", "gmnl", "mlogit", "multinom", "LORgee")) |
@@ -856,20 +919,33 @@ make_family <- function(x, fitfam = "gaussian", zero.inf = FALSE, hurdle = FALSE
 
   is.categorical <- fitfam == "categorical"
 
+  is.bayes <- inherits(x, c("brmsfit", "stanfit", "MCMCglmm", "stanreg",
+                            "stanmvreg", "bmerMod", "BFBayesFactor", "bamlss",
+                            "bayesx"))
+
+  is.survival <- inherits(x, c("survreg", "survfit", "survPresmooth", "flexsurvreg", "coxph", "coxme"))
 
   # check if we have binomial models with trials instead of binary outcome
+  # and check if we have truncated or censored brms-regression
 
   is.trial <- FALSE
+  is.censored <- FALSE
+  is.truncated <- FALSE
 
   if (inherits(x, "brmsfit") && is.null(stats::formula(x)$responses)) {
-    is.trial <- tryCatch({
-      rv <- .safe_deparse(stats::formula(x)$formula[[2L]])
-      .trim(sub("(.*)\\|(.*)\\(([^,)]*).*", "\\2", rv)) %in% c("trials", "resp_trials")
+    rv <- tryCatch({
+      .safe_deparse(stats::formula(x)$formula[[2L]])
     },
     error = function(x) {
-      FALSE
+      NULL
     }
     )
+
+    if (!is.null(rv)) {
+      is.trial <- .trim(sub("(.*)\\|(.*)\\(([^,)]*).*", "\\2", rv)) %in% c("trials", "resp_trials")
+      is.censored <- grepl("(.*)\\|(.*)cens\\(", rv)
+      is.truncated <- grepl("(.*)\\|(.*)trunc\\(", rv)
+    }
   }
 
   if (binom_fam && !inherits(x, "brmsfit")) {
@@ -882,6 +958,7 @@ make_family <- function(x, fitfam = "gaussian", zero.inf = FALSE, hurdle = FALSE
     }
     )
   }
+
 
   dots <- list(...)
   if (.obj_has_name(dots, "no_terms") && isTRUE(dots$no_terms)) {
@@ -918,12 +995,13 @@ make_family <- function(x, fitfam = "gaussian", zero.inf = FALSE, hurdle = FALSE
 
     obj_type <- .classify_BFBayesFactor(x)
 
-    if (obj_type == "correlation")
+    if (obj_type == "correlation") {
       is_correlation <- TRUE
-    else if (obj_type == "ttest")
+    } else if (obj_type == "ttest") {
       is_ttest <- TRUE
-    else if (obj_type == "meta")
+    } else if (obj_type == "meta") {
       is_meta <- TRUE
+    }
   }
 
 
@@ -937,10 +1015,11 @@ make_family <- function(x, fitfam = "gaussian", zero.inf = FALSE, hurdle = FALSE
     is_exponential = exponential_fam,
     is_logit = logit.link,
     is_probit = link.fun == "probit",
-    is_censored = inherits(x, c("tobit", "crch", "censReg")),
+    is_censored = inherits(x, c("tobit", "crch", "censReg")) | is.censored | is.survival,
+    is_truncated = inherits(x, "truncreg") | is.truncated,
+    is_survival = is.survival,
     is_linear = linear_model,
     is_tweedie = tweedie_model,
-    is_zeroinf = zero.inf,
     is_zero_inflated = zero.inf,
     is_hurdle = hurdle,
     is_ordinal = is.ordinal,
@@ -948,7 +1027,7 @@ make_family <- function(x, fitfam = "gaussian", zero.inf = FALSE, hurdle = FALSE
     is_mixed = !is.null(find_random(x)),
     is_multivariate = multi.var,
     is_trial = is.trial,
-    is_bayesian = inherits(x, c("brmsfit", "stanfit", "stanreg", "stanmvreg", "bmerMod", "BFBayesFactor")),
+    is_bayesian = is.bayes,
     is_anova = inherits(x, c("aov", "aovlist")),
     is_ttest = is_ttest,
     is_correlation = is_correlation,
@@ -971,19 +1050,32 @@ get_ordinal_link <- function(x) {
 
 
 #' @importFrom stats gaussian binomial Gamma
-.make_tobit_family <- function(x) {
+.make_tobit_family <- function(x, dist = NULL) {
+  if (is.null(dist)) {
+    if (inherits(x, "flexsurvreg"))
+      dist <- parse(text = .safe_deparse(x$call))[[1]]$dist
+    else
+      dist <- x$dist
+  }
   f <- switch(
-    x$dist,
+    dist,
     gaussian = stats::gaussian("identity"),
     logistic = stats::binomial("logit"),
+    llogis = ,
     loglogistic = stats::binomial("log"),
+    lnorm = ,
     lognormal = stats::gaussian("log"),
+    gompertz = stats::Gamma("log"),
+    gamma = ,
+    gengamma = ,
+    gengamma.orig = stats::Gamma(),
     exponential = ,
+    exp = ,
     weibull = stats::Gamma("log"),
     stats::gaussian("identity")
   )
 
-  if (x$dist == "weibull") f$family <- "weibull"
+  if (dist == "weibull") f$family <- "weibull"
   f
 }
 
@@ -1001,7 +1093,7 @@ get_ordinal_link <- function(x) {
     "meta"
   } else if (any(class(x@denominator) %in% c("BFlinearModel"))) {
     "linear"
-  } else{
+  } else {
     class(x@denominator)
   }
 }

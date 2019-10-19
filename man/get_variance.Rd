@@ -87,7 +87,7 @@ This function returns different variance components from mixed models,
      \ifelse{html}{\out{&sigma;<sup>2</sup><sub>d</sub>}}{\eqn{\sigma^2_d}},
      depends on the model family. For Gaussian models, it is
      \ifelse{html}{\out{&sigma;<sup>2</sup>}}{\eqn{\sigma^2}} (i.e.
-     \code{sigma(model)^2}). For models with binary outome, it is
+     \code{sigma(model)^2}). For models with binary outcome, it is
      \eqn{\pi^2 / 3} for logit-link and \code{1} for probit-link. For all
      other models, the distribution-specific variance is based on lognormal
      approximation, \eqn{log(1 + var(x) / \mu^2)} (see \cite{Nakagawa et al. 2017}).
@@ -128,10 +128,10 @@ This function returns different variance components from mixed models,
 }
 \note{
 This function supports models of class \code{merMod} (including models
-  form \pkg{blme} or of class \code{glmmTMB}, \code{MixMod}, \code{lme}, \code{mixed},
-  \code{rlmerMod}, \code{stanreg} or \code{wbm}). Support for objects of class
-  \code{MixMod} (\pkg{GLMMadaptiv}) or \code{lme} (\pkg{nlme}) is experimental
-  and may not work for all models.
+  from \pkg{blme}), \code{clmm}, \code{glmmTMB}, \code{MixMod}, \code{lme},
+  \code{mixed}, \code{rlmerMod}, \code{stanreg} or \code{wbm}. Support for
+  objects of class \code{MixMod} (\pkg{GLMMadaptiv}) or \code{lme} (\pkg{nlme})
+  is experimental and may not work for all models.
 }
 \examples{
 \dontrun{
@@ -141,7 +141,8 @@ m <- lmer(Reaction ~ Days + (1 + Days | Subject), data = sleepstudy)
 
 get_variance(m)
 get_variance_fixed(m)
-get_variance_residual(m)}
+get_variance_residual(m)
+}
 
 }
 \references{

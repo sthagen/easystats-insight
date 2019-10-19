@@ -1,4 +1,91 @@
-# insight 0.3.1
+# insight 0.6.1
+
+## Breaking changes
+
+* In order to unify column names across easystats-packages, `get_parameters()` and `get_priors()` now return column names according to our naming conventions (i.e. capitalized column names).
+* `model_info()` returned both `$is_zeroinf` and `$is_zero_inflated` for zero-inflated models. Now `$is_zeroinf` was removed, so `model_info()` only returns `$is_zero_inflated` .
+
+# insight 0.6.0
+
+## New supported model classes
+
+* `bayesx` (*R2BayesX*), `bamlss` (*bamlss*) and `flexsurvreg` (*flexsurv*). Note that support for these models is still somewhat experimental.
+* Support for *lavaan* and *blavaan* was added, but only applies to some of the functions: `get_data()`, `get_parameters()`, `find_parameters()`, `clean_parameters()`, `find_algorithm()` and `get_priors()` (the two latter only for *blavaan*).
+
+## New functions
+
+* `get_statistic()` to return the test statistic of model estimates.
+* `get_varcov()` to return the variance-covariance matrix for models.
+* `supported_models()` to print a list of supported models.
+
+## Changes to functions
+
+* `model_info()` now returns the element `is_survival` for survival models.
+* `model_info()` now returns the element `is_truncated` for truncated regression, or *brmsfit* models with `trunc()` as additional response part.
+* `model_info()` now recognizes beta and beta inflated families from package *gamlss*.
+* Better support for nonlinear quantile regression (`quantreg::nlrq()`).
+* Better support for nonlinear mixed models (`lme4::nlmer()`). Note that model-specification requires the random term to be written in parentheses, i.e. `(slope | group)`.
+
+## Bug fixes
+
+* Fixed issues in `get_data()`, `find_parameters()` and `get_parameters()` for *gamlss* models.
+* Fixed issue in `get_data()` for *plm* models, where the `index`-argument was used in the `plm()`-function call.
+* Fixed issue in `get_data()`, `find_predictors()` and `find_variables()` for *brmsfit*  multi-membership-models.
+* `is_model()` did not recognize objects of class `anova` and `manova`.
+* `model_info()` now correctly recognizes censored regression models from *brmsfit*.
+* Fixed issues in `find_parameters()` and `get_parameters()` with *multinom* models.
+* Fixed issues in `clean_names()` for cases where variable transformations where made in specific patterns, like `log(test/10)`.
+
+# insight 0.5.0
+
+## Breaking Changes
+
+* The previous `is_model()` function has been renamed to `is_model_supported()` since it was unclear if the function checked the entered object was a model or a supported model in *insight*. The new `is_model()` function checks if the entered object is a model object, while `is_model_supported()` checks if a supported model object.
+
+## New functions
+
+* `find_statistic()` to return the test statistic of a regression model.
+* `format_value()` and `format_table()` as utility-functions to format (model) output, especially for tabular output.
+* `color_if()` as utility-function to add color formatting to values, depending on certain conditions.
+
+## General
+
+* Make extraction of model family information more stable for gam-objects.
+
+## Changes to functions
+
+* `find_parameters()` and `get_parameters()` now also support objects of class `sim` and `sim.merMod` (from `arm::sim()`).
+* `get_variance()` now also supports models of class *clmm*.
+* `find_predictors()` and `find_variables()` now include the Euclidean distance matrix for spatial models from *glmmTMB* (returned as random effects element, or more precise, as random slope).
+
+## Bug fixes
+
+* `find_formula()` now extracts group factors of random effects for *gamlss* models.
+* `find_parameters()` and `get_parameters()` no longer show `NA` coefficients from group factors of random effects for *gamlss* models.
+* `find_parameters()` and `get_parameters()` did not work for multivariate response models of class *brmsfit* when argument `parameters` was specified.
+* `get_data()` dropped value and variable label attributes, when model frame contained matrix variables (like splines).
+* `get_priors()` swapped column names `location` and `scale` for *brmsfit* -objects.
+* `get_parameters()` did not work for *glmmTMB* models without zero-inflation component.
+* `find_predictors()` did not remove parentheses from terms in multiple nested random effects.
+* Better support for *gam* models (package *mgcv*) with `ziplss` or `mvn` families.
+
+# insight 0.4.1
+
+## Changes to functions
+
+* `get_variance()` now supports models with Gamma-family.
+* `get_weights()` and `find_weights()` now work for *brms*-models.
+
+## Bug fixes
+
+* Fix CRAN-check issues due to recent update from the *panelr*-package.
+
+# insight 0.4.0
+
+## General
+
+* Updates `CITATION`, based on publication in [JOSS](https://doi.org/10.21105/joss.01412).
+* Added `nobs()`-method for those model-objects supported by *insight* that did not yet provide such a method.
 
 ## New supported model classes
 
@@ -6,7 +93,7 @@
 
 ## New functions
 
-* `clean_parameters()`, which returns a data frame with "decomposed" parameters, i.e. a data frame with information about the clean paramter name, whether it is a fixed or random effect, from conditional or zero-inflated component, and if it is a parameter related to specific grouping factors of random effects (#106).
+* `clean_parameters()`, which returns a data frame with "decomposed" parameters, i.e. a data frame with information about the clean parameter name, whether it is a fixed or random effect, from conditional or zero-inflated component, and if it is a parameter related to specific grouping factors of random effects (#106).
 * `print_parameters()`, which can be called on top of `clean_parameters()` to get a list of data frames that represent the different model components (fixed, random, zero-inflated, ...) and which is in shape for printing summary statistics of complex models.
 * `find_interactions()` to return all low/high order interaction terms in a model.
 * `find_weights()` and `get_weights()` to find / get model weights.
@@ -31,7 +118,7 @@
 * `find_parameters()` did not remove smooth-parameters that used `te()` or `ti()`.
 * Fixed various issues with non-linear *brms*-models.
 * `find_formula()` (and hence, `find_response()` or `get_data()`) did not work for multi-column responses in null-models (#100).
-* Fixed bugs with models from package *plm* that occured during the latest plm-update.
+* Fixed bugs with models from package *plm* that occurred during the latest plm-update.
 * `find_predictors()` did not split nested random effects when these were written as `g1:g2` instead `g2/g2` in the random part of the model formula.
 * Fixed issues with `all_model_equal()`.
 * `get_data()` did not return `(weights)` columns for some model objects.
@@ -39,6 +126,7 @@
 * `get_variance()` did not calculate random effect variances, when interaction terms in random slopes were also present in fixed effects, but the interaction was written in different order (e.g., `a*b` and `b*a`) (#112).
 * Fixed issue with tibbles in `get_data()`.
 * Fixed issue with `get_priors()` for *stanreg*-models, when `prior_summary()` returned `NULL` for a prior (#116).
+* Fixed issue with the recent update of *GLMMadaptive*, which broke some of the functions.
 
 # insight 0.3.0
 

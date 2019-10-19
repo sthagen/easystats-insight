@@ -49,7 +49,7 @@
 #'      \ifelse{html}{\out{&sigma;<sup>2</sup><sub>d</sub>}}{\eqn{\sigma^2_d}},
 #'      depends on the model family. For Gaussian models, it is
 #'      \ifelse{html}{\out{&sigma;<sup>2</sup>}}{\eqn{\sigma^2}} (i.e.
-#'      \code{sigma(model)^2}). For models with binary outome, it is
+#'      \code{sigma(model)^2}). For models with binary outcome, it is
 #'      \eqn{\pi^2 / 3} for logit-link and \code{1} for probit-link. For all
 #'      other models, the distribution-specific variance is based on lognormal
 #'      approximation, \eqn{log(1 + var(x) / \mu^2)} (see \cite{Nakagawa et al. 2017}).
@@ -89,10 +89,10 @@
 #'   }
 #'
 #' @note This function supports models of class \code{merMod} (including models
-#'   form \pkg{blme} or of class \code{glmmTMB}, \code{MixMod}, \code{lme}, \code{mixed},
-#'   \code{rlmerMod}, \code{stanreg} or \code{wbm}). Support for objects of class
-#'   \code{MixMod} (\pkg{GLMMadaptiv}) or \code{lme} (\pkg{nlme}) is experimental
-#'   and may not work for all models.
+#'   from \pkg{blme}), \code{clmm}, \code{glmmTMB}, \code{MixMod}, \code{lme},
+#'   \code{mixed}, \code{rlmerMod}, \code{stanreg} or \code{wbm}. Support for
+#'   objects of class \code{MixMod} (\pkg{GLMMadaptiv}) or \code{lme} (\pkg{nlme})
+#'   is experimental and may not work for all models.
 #'
 #' @references \itemize{
 #'  \item Johnson, P. C. D. (2014). Extension of Nakagawa & Schielzeth’s R2 GLMM to random slopes models. Methods in Ecology and Evolution, 5(9), 944–946. \doi{10.1111/2041-210X.12225}
@@ -108,7 +108,8 @@
 #'
 #' get_variance(m)
 #' get_variance_fixed(m)
-#' get_variance_residual(m)}
+#' get_variance_residual(m)
+#' }
 #'
 #' @export
 get_variance <- function(x, component = c("all", "fixed", "random", "residual", "distribution", "dispersion", "intercept", "slope", "rho01"), verbose = TRUE, ...) {
@@ -126,49 +127,49 @@ get_variance.default <- function(x, component = c("all", "fixed", "random", "res
 #' @export
 get_variance.merMod <- function(x, component = c("all", "fixed", "random", "residual", "distribution", "dispersion", "intercept", "slope", "rho01"), verbose = TRUE, ...) {
   component <- match.arg(component)
-  .compute_variances(x, component = component, name_fun = "get_variance", name_full = "random effect variances", verbose = verbose)
+  tryCatch({
+    .compute_variances(x, component = component, name_fun = "get_variance", name_full = "random effect variances", verbose = verbose)
+  },
+  error = function(e) { NULL })
 }
 
 
 #' @export
-get_variance.rlmerMod <- function(x, component = c("all", "fixed", "random", "residual", "distribution", "dispersion", "intercept", "slope", "rho01"), verbose = TRUE, ...) {
-  component <- match.arg(component)
-  .compute_variances(x, component = component, name_fun = "get_variance", name_full = "random effect variances", verbose = verbose)
-}
+get_variance.rlmerMod <- get_variance.merMod
 
 
 #' @export
-get_variance.glmmTMB <- function(x, component = c("all", "fixed", "random", "residual", "distribution", "dispersion", "intercept", "slope", "rho01"), verbose = TRUE, ...) {
-  component <- match.arg(component)
-  .compute_variances(x, component = component, name_fun = "get_variance", name_full = "random effect variances", verbose = verbose)
-}
+get_variance.glmmTMB <- get_variance.merMod
 
 
 #' @export
-get_variance.stanreg <- function(x, component = c("all", "fixed", "random", "residual", "distribution", "dispersion", "intercept", "slope", "rho01"), verbose = TRUE, ...) {
-  component <- match.arg(component)
-  .compute_variances(x, component = component, name_fun = "get_variance", name_full = "random effect variances", verbose = verbose)
-}
+get_variance.stanreg <- get_variance.merMod
 
 
 #' @export
-get_variance.MixMod <- function(x, component = c("all", "fixed", "random", "residual", "distribution", "dispersion", "intercept", "slope", "rho01"), verbose = TRUE, ...) {
-  component <- match.arg(component)
-  .compute_variances(x, component = component, name_fun = "get_variance", name_full = "random effect variances", verbose = verbose)
-}
+get_variance.MixMod <- get_variance.merMod
 
 
 #' @export
-get_variance.lme <- function(x, component = c("all", "fixed", "random", "residual", "distribution", "dispersion", "intercept", "slope", "rho01"), verbose = TRUE, ...) {
-  component <- match.arg(component)
-  .compute_variances(x, component = component, name_fun = "get_variance", name_full = "random effect variances, verbose = verbose")
-}
+get_variance.clmm <- get_variance.merMod
+
+
+#' @export
+get_variance.wbm <- get_variance.merMod
+
+
+#' @export
+get_variance.wblm <- get_variance.merMod
+
+
+#' @export
+get_variance.lme <- get_variance.merMod
 
 
 #' @export
 get_variance.mixed <- function(x, component = c("all", "fixed", "random", "residual", "distribution", "dispersion", "intercept", "slope", "rho01"), verbose = TRUE, ...) {
   component <- match.arg(component)
-  .compute_variances(x$full_model, component = component, name_fun = "get_variance", name_full = "random effect variances, verbose = verbose")
+  .compute_variances(x$full_model, component = component, name_fun = "get_variance", name_full = "random effect variances", verbose = verbose)
 }
 
 

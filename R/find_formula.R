@@ -23,7 +23,7 @@
 #'    }
 #'
 #' @note For models of class \code{lme} or \code{gls} the correlation-component
-#'   is only returned, when it is explicitely defined as named argument
+#'   is only returned, when it is explicitly defined as named argument
 #'   (\code{form}), e.g. \code{corAR1(form = ~1 | Mare)}
 #'
 #' @examples
@@ -64,19 +64,77 @@ find_formula.data.frame <- function(x, ...) {
 
 
 #' @export
-find_formula.gamlss <- function(x, ...) {
-  tryCatch({
-    list(
-      conditional = x$mu.formula,
-      sigma = x$sigma.formula,
-      nu = x$nu.formula,
-      tau = x$tau.formula
-    )
+find_formula.gam <- function(x, ...) {
+  f <- tryCatch({
+    stats::formula(x)
   },
   error = function(x) {
     NULL
   }
   )
+
+  if (!is.null(f)) {
+    if (is.list(f)) {
+      mi <- .gam_family(x)
+      if (!is.null(mi) && mi$family == "ziplss") {
+        # handle formula for zero-inflated models
+        f <- list(conditional = f[[1]], zero_inflated = f[[2]])
+      } else if (mi$family == "Multivariate normal") {
+        # handle formula for multivariate models
+        r <- lapply(f, function(.i) deparse(.i[[2]]))
+        f <- lapply(f, function(.i) list(conditional = .i))
+        names(f) <- r
+        attr(f, "is_mv") <- "1"
+      }
+    } else {
+      f <- list(conditional = f)
+    }
+  }
+
+  f
+}
+
+
+
+#' @export
+find_formula.gamlss <- function(x, ...) {
+  tryCatch({
+    if (!requireNamespace("lme4", quietly = TRUE)) {
+      stop("To use this function, please install package 'lme4'.")
+    }
+    f.random <- lapply(lme4::findbars(x$mu.formula), function(.x) {
+      f <- .safe_deparse(.x)
+      stats::as.formula(paste0("~", f))
+    })
+
+    if (length(f.random) == 1) {
+      f.random <- f.random[[1]]
+    }
+
+    .compact_list(list(
+      conditional = stats::as.formula(.get_fixed_effects(x$mu.formula)),
+      random = f.random,
+      sigma = x$sigma.formula,
+      nu = x$nu.formula,
+      tau = x$tau.formula
+    ))
+  },
+  error = function(x) {
+    NULL
+  }
+  )
+}
+
+
+#' @importFrom stats as.formula
+#' @export
+find_formula.bamlss <- function(x, ...) {
+  f <- stats::formula(x)
+
+  .compact_list(list(
+    conditional = stats::as.formula(.safe_deparse(f$mu$formula)),
+    sigma = stats::as.formula(paste0("~", as.character(f$sigma$formula)[3]))
+  ))
 }
 
 
@@ -201,12 +259,13 @@ find_formula.plm <- function(x, ...) {
     f <- .safe_deparse(stats::formula(x))
     bar_pos <- regexpr(pattern = "\\|", f)
 
-    if (bar_pos == -1)
+    if (bar_pos == -1) {
       stop_pos <- nchar(f) + 1
-    else
+    } else {
       stop_pos <- bar_pos
+    }
 
-    cond <- .trim(substr(f, start = 0, stop =  stop_pos - 1))
+    cond <- .trim(substr(f, start = 0, stop = stop_pos - 1))
     instr <- .trim(substr(f, stop_pos + 1, stop = 10000L))
 
     if (.is_empty_string(instr)) {
@@ -412,6 +471,16 @@ find_formula.zerotrunc <- function(x, ...) {
 
 
 #' @export
+find_formula.clmm2 <- function(x, ...) {
+  list(
+    conditional = stats::as.formula(.safe_deparse(attr(x$location, "terms", exact = TRUE))),
+    random  = stats::as.formula(paste0("~", parse(text = .safe_deparse(x$call))[[1]]$random))
+  )
+}
+
+
+
+#' @export
 find_formula.clm2 <- function(x, ...) {
   list(conditional = attr(x$location, "terms", exact = TRUE))
 }
@@ -479,6 +548,36 @@ find_formula.glmmTMB <- function(x, ...) {
     zero_inflated = f.zi,
     zero_inflated_random = f.zirandom,
     dispersion = f.disp
+  ))
+}
+
+
+
+#' @export
+find_formula.nlmerMod <- function(x, ...) {
+  if (!requireNamespace("lme4", quietly = TRUE)) {
+    stop("To use this function, please install package 'lme4'.")
+  }
+
+  f.cond <- stats::formula(x)
+  f.random <- lapply(lme4::findbars(f.cond), function(.x) {
+    f <- .safe_deparse(.x)
+    stats::as.formula(paste0("~", f))
+  })
+
+  if (length(f.random) == 1) {
+    f.random <- f.random[[1]]
+  }
+
+  fx <- .get_fixed_effects(f.cond)
+
+  f.cond <- stats::as.formula(gsub("(.*)(~)(.*)~(.*)", "\\1\\2\\4", fx))
+  f.nonlin <- stats::as.formula(paste0("~", .trim(gsub("(.*)~(.*)~(.*)", "\\2", fx))))
+
+  .compact_list(list(
+    conditional = f.cond,
+    nonlinear = f.nonlin,
+    random = f.random
   ))
 }
 
@@ -671,7 +770,6 @@ find_formula.MixMod <- function(x, ...) {
 #' @export
 find_formula.BFBayesFactor <- function(x, ...) {
   if (.classify_BFBayesFactor(x) == "linear") {
-
     fcond <- utils::tail(x@numerator, 1)[[1]]@identifier$formula
     dt <- utils::tail(x@numerator, 1)[[1]]@dataTypes
     frand <- names(dt)[which(dt == "random")]
@@ -685,8 +783,7 @@ find_formula.BFBayesFactor <- function(x, ...) {
       f.random <- NULL
       f.cond <- stats::as.formula(fcond)
     }
-
-  } else{
+  } else {
     return(NULL)
   }
 
@@ -695,6 +792,7 @@ find_formula.BFBayesFactor <- function(x, ...) {
     random = f.random
   ))
 }
+
 
 
 
@@ -742,6 +840,7 @@ find_formula.BFBayesFactor <- function(x, ...) {
 
 
 
+
 .get_stanmv_formula <- function(f) {
   if (!requireNamespace("lme4", quietly = TRUE)) {
     stop("To use this function, please install package 'lme4'.")
@@ -767,6 +866,8 @@ find_formula.BFBayesFactor <- function(x, ...) {
 
 
 
+# Find formula for zero-inflated regressions, where
+# zero-inflated part is separated by | from count part
 .zeroinf_formula <- function(x) {
   f <- tryCatch({
     stats::formula(x)
@@ -789,5 +890,45 @@ find_formula.BFBayesFactor <- function(x, ...) {
     zi.form <- NULL
   }
 
+  ## TODO could be extended to all find_formula()
+
+  # fix dot-formulas
+  c.form <- .dot_formula(f = c.form, model = x)
+
+  # fix dot-formulas
+  zi.form <- tryCatch({
+    if (as.character(zi.form[2]) == ".") {
+      resp <- .safe_deparse(c.form[2])
+      pred <- setdiff(colnames(.get_data_from_env(x)), resp)
+      zi.form <- stats::as.formula(paste(resp, "~", paste0(pred, collapse = " + ")))
+    }
+    zi.form
+  },
+  error = function(e) {
+    zi.form
+  }
+  )
+
+
   .compact_list(list(conditional = c.form, zero_inflated = zi.form))
+}
+
+
+
+# try to guess "full" formula for dot-abbreviation, e.g.
+# lm(mpg ~., data = mtcars)
+.dot_formula <- function(f, model) {
+  # fix dot-formulas
+  tryCatch({
+    if (as.character(f[3]) == ".") {
+      resp <- .safe_deparse(f[2])
+      pred <- setdiff(colnames(.get_data_from_env(model)), resp)
+      f <- stats::as.formula(paste(resp, "~", paste0(pred, collapse = " + ")))
+    }
+    f
+  },
+  error = function(e) {
+    f
+  }
+  )
 }

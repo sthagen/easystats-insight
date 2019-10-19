@@ -55,14 +55,27 @@ find_predictors <- function(x, effects = c("fixed", "random", "all"), component 
 
   # random effects are returned as list, so we need to unlist here
   if (is_mv) {
-    l <- lapply(f, function(.i) return_vars(.i, x))
+    l <- lapply(f, function(.i) .return_vars(.i, x))
   } else {
-    l <- return_vars(f, x)
+    l <- .return_vars(f, x)
   }
 
   if (.is_empty_object(l) || .is_empty_object(.compact_list(l))) {
     return(NULL)
   }
+
+
+  # some models, like spatial models, have random slopes that are not defined
+  # as fixed effect predictor. In such cases, we have to add the random slope term
+  # manually, so other functions like "get_data()" work as expected...
+
+  if (.obj_has_name(l, "random") && effects == "all") {
+    random_slope <- unname(unlist(find_random_slopes(x)))
+    all_predictors <- unlist(unique(l))
+    rs_not_in_pred <- unique(setdiff(random_slope, all_predictors))
+    if (length(rs_not_in_pred)) l$random <- c(rs_not_in_pred, l$random)
+  }
+
 
   if (flatten) {
     unique(unlist(l))
@@ -72,7 +85,7 @@ find_predictors <- function(x, effects = c("fixed", "random", "all"), component 
 }
 
 
-return_vars <- function(f, x) {
+.return_vars <- function(f, x) {
   l <- lapply(names(f), function(i) {
     if (i %in% c("random", "zero_inflated_random")) {
       unique(paste(unlist(f[[i]])))

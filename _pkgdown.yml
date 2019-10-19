@@ -3,7 +3,8 @@ authors:
     href: https://github.com/strengejacke
   Dominique Makowski:
     href: https://dominiquemakowski.github.io/
-
+  Indrajeet Patil:
+    href: https://github.com/IndrajeetPatil/
 
 template:
   params:
@@ -34,6 +35,7 @@ reference:
   - get_data
   - get_priors
   - get_variance
+  - get_varcov
 
 - title: "Find Information or Get Data from Model Objects"
   desc: >
@@ -48,6 +50,8 @@ reference:
   - get_random
   - find_response
   - get_response
+  - find_statistic
+  - get_statistic
   - find_weights
   - get_weights
 
@@ -66,16 +70,20 @@ reference:
   - all_models_same_class
   - has_intercept
   - is_model
+  - is_model_supported
   - is_multivariate
   - is_nullmodel
 
 - title: "Utilities"
   desc: >
     Functions that are not specifically related to access model information,
-    but rather small utility functions.
+    but rather small utility functions (mostly for printing)
   contents:
   - clean_names
   - clean_parameters
+  - color_if
   - download_model
+  - format_table
+  - format_value
   - print_color
   - print_parameters

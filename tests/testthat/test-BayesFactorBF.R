@@ -1,9 +1,11 @@
-if (require("testthat") && require("insight") && require("stats") && require("BayesFactor")) {
-
+if (require("testthat") &&
+  require("insight") &&
+  require("stats") &&
+  require("BayesFactor")) {
   context("BF correlation")
   x <- correlationBF(y = iris$Sepal.Length, x = iris$Sepal.Width)
   test_that("get_data", {
-      expect_true(is.data.frame(get_data(x)))
+    expect_true(is.data.frame(get_data(x)))
   })
   test_that("find_formula", {
     expect_null(find_formula(x))
@@ -36,7 +38,8 @@ if (require("testthat") && require("insight") && require("stats") && require("Ba
   # ---------------------------
   context("BF t.test two samples")
   data(chickwts)
-  chickwts <- chickwts[chickwts$feed %in% c("horsebean","linseed"),]
+  chickwts <-
+    chickwts[chickwts$feed %in% c("horsebean", "linseed"), ]
   chickwts$feed <- factor(chickwts$feed)
   x <- ttestBF(formula = weight ~ feed, data = chickwts)
   test_that("get_data", {
@@ -88,7 +91,8 @@ if (require("testthat") && require("insight") && require("stats") && require("Ba
   # ---------------------------
   context("BF ANOVA Random")
   data(puzzles)
-  x <- anovaBF(RT ~ shape * color + ID, data = puzzles, whichRandom = "ID")
+  x <-
+    anovaBF(RT ~ shape * color + ID, data = puzzles, whichRandom = "ID")
 
   test_that("get_data", {
     expect_true(is.data.frame(get_data(x)))
@@ -116,6 +120,17 @@ if (require("testthat") && require("insight") && require("stats") && require("Ba
     expect_equal(find_random(x), list(random = "ID"))
   })
 
+  test_that("find_variables", {
+    expect_equal(
+      find_variables(x),
+      list(
+        response = "RT",
+        conditional = c("shape", "color"),
+        random = "ID"
+      )
+    )
+  })
+
   test_that("find_terms", {
     expect_equal(
       find_terms(x),
@@ -131,10 +146,10 @@ if (require("testthat") && require("insight") && require("stats") && require("Ba
     expect_equal(
       get_priors(x),
       data.frame(
-        parameter = c("fixed", "random", "continuous"),
-        distribution = c("cauchy", "cauchy", "cauchy"),
-        location = c(0, 0, 0),
-        scale = c(0.5, 1, 0.353553390593274),
+        Parameter = c("fixed", "random", "continuous"),
+        Distribution = c("cauchy", "cauchy", "cauchy"),
+        Location = c(0, 0, 0),
+        Scale = c(0.5, 1, 0.353553390593274),
         stringsAsFactors = FALSE,
         row.names = NULL
       ),
@@ -168,7 +183,6 @@ if (require("testthat") && require("insight") && require("stats") && require("Ba
   })
   test_that("find_formula", {
     expect_equal(find_formula(x), list(conditional = as.formula("len ~ supp + dose")))
-
   })
   test_that("get_parameters", {
     expect_null(get_parameters(x))
@@ -178,10 +192,10 @@ if (require("testthat") && require("insight") && require("stats") && require("Ba
     expect_equal(
       get_priors(x),
       data.frame(
-        parameter = c("fixed", "random", "continuous"),
-        distribution = c("cauchy", "cauchy", "cauchy"),
-        location = c(0, 0, 0),
-        scale = c(0.5, 1, 0.353553390593274),
+        Parameter = c("fixed", "random", "continuous"),
+        Distribution = c("cauchy", "cauchy", "cauchy"),
+        Location = c(0, 0, 0),
+        Scale = c(0.5, 1, 0.353553390593274),
         stringsAsFactors = FALSE,
         row.names = NULL
       ),
@@ -189,4 +203,7 @@ if (require("testthat") && require("insight") && require("stats") && require("Ba
     )
   })
 
+  test_that("find_statistic", {
+    expect_null(find_statistic(x))
+  })
 }

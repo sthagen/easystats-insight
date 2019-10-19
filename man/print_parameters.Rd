@@ -2,7 +2,7 @@
 % Please edit documentation in R/print_parameters.R
 \name{print_parameters}
 \alias{print_parameters}
-\title{Prepare summary statistics of model paramters for printing}
+\title{Prepare summary statistics of model parameters for printing}
 \usage{
 print_parameters(x, ..., split_by = c("Effects", "Component", "Group",
   "Response"))
@@ -61,6 +61,7 @@ list and print each component for a better overview. Further, parameter
 names are "cleaned", if necessary, also for a cleaner print. See also 'Examples'.
 }
 \examples{
+\dontrun{
 library(bayestestR)
 model <- download_model("brms_zi_2")
 x <- hdi(model, effects = "all", component = "all")
@@ -79,5 +80,6 @@ print_parameters(model, tmp)
 # in a clean way to the console by splitting the information into
 # different model components.
 x
+}
 
 }

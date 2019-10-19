@@ -1,16 +1,14 @@
-#' @title Checks if an object is a (supported) regression model object
+#' @title Checks if an object is a regression model object
 #' @name is_model
 #'
-#' @description Small helper that checks if a model is a \emph{supported}
-#'  (regression) model object.
+#' @description Small helper that checks if a model is a regression model
+#'   object.
 #'
 #' @param x An object.
 #'
 #' @return A logical, \code{TRUE} if \code{x} is a (supported) model object.
 #'
-#' @details This function returns \code{TRUE} is \code{x} is a model object
-#'   that works with the package's functions. A list of supported models can
-#'   also be found here: \url{https://github.com/easystats/insight}.
+#' @details This function returns \code{TRUE} if \code{x} is a model object.
 #'
 #' @examples
 #' data(mtcars)
@@ -18,20 +16,142 @@
 #'
 #' is_model(m)
 #' is_model(mtcars)
-#'
 #' @export
 is_model <- function(x) {
-  inherits(x, c(
-    "aov", "aovlist", "BBmm", "BBreg", "betareg", "BFBayesFactor", "biglm", "bigglm",
-    "brmsfit", "censReg", "clm", "clm2", "clmm", "coxme", "coxph",
-    "crch", "crq", "feis", "felm", "gam", "Gam", "gamlss", "gamm", "gbm",
-    "gee", "geeglm", "glimML", "glm", "glmmPQL", "glmmTMB", "glmrob", "glmRob",
-    "gls", "gmnl", "htest", "hurdle", "iv_robust", "ivreg", "lm",
-    "lm_robust", "lme", "lmrob", "lmRob", "logistf", "LORgee", "lrm",
-    "ols", "MCMCglmm", "merMod", "mixed", "MixMod", "mlm", "mlogit",
-    "multinom", "plm", "polr", "psm", "rlmerMod", "rq", "rqss",
-    "speedlm", "speedglm", "stanmvreg", "stanreg", "survfit", "survreg",
-    "svyglm", "svyolr", "tobit", "truncreg", "vgam", "vglm",
-    "wbm", "wblm", "zeroinfl", "zerotrunc"
-  ))
+  inherits(
+    x,
+    c(
+      "aareg",
+      "anova",
+      "aov",
+      "aovlist",
+      "Arima",
+      "bamlss",
+      "bamlss.frame",
+      "bayesx",
+      "BBmm",
+      "BBreg",
+      "betareg",
+      "BFBayesFactor",
+      "bglmerMod",
+      "biglm",
+      "bigglm",
+      "blavaan",
+      "blmerMod",
+      "bracl",
+      "brglmFit",
+      "brmsfit",
+      "brmultinom",
+      "btergm",
+      "cch",
+      "censReg",
+      "cgam",
+      "cgamm",
+      "clm",
+      "clm2",
+      "clmm",
+      "clmm2",
+      "complmrob",
+      "confusionMatrix",
+      "coxme",
+      "coxph",
+      "crch",
+      "crq",
+      "drc",
+      "emmGrid",
+      "epi.2by2",
+      "ergm",
+      "feis",
+      "felm",
+      "fitdistr",
+      "flexsurvreg",
+      "gam",
+      "Gam",
+      "gamlss",
+      "gamm",
+      "gamm4",
+      "garch",
+      "gbm",
+      "gee",
+      "geeglm",
+      "glimML",
+      "glm",
+      "glmerMod",
+      "glmmadmb",
+      "glmmLasso",
+      "glmmPQL",
+      "glmmTMB",
+      "glmnet",
+      "glmrob",
+      "glmRob",
+      "gls",
+      "gmnl",
+      "gmm",
+      "htest",
+      "hurdle",
+      "iv_robust",
+      "ivreg",
+      "lavaan",
+      "lm",
+      "lm_robust",
+      "lme",
+      "lmrob",
+      "lmRob",
+      "logistf",
+      "loo",
+      "LORgee",
+      "lmodel2",
+      "lqmm",
+      "lrm",
+      "manova",
+      "mclogit",
+      "mmclogit",
+      "mcmc",
+      "MCMCglmm",
+      "mediate",
+      "merMod",
+      "mixed",
+      "MixMod",
+      "mjoint",
+      "mle2",
+      "mlm",
+      "mlogit",
+      "multinom",
+      "mvr",
+      "negbin",
+      "nlrq",
+      "nls",
+      "ols",
+      "orcutt",
+      "plm",
+      "plmm",
+      "polr",
+      "psm",
+      "ridgelm",
+      "rjags",
+      "rlm",
+      "rlme",
+      "rlmerMod",
+      "rms",
+      "rq",
+      "rqss",
+      "speedlm",
+      "speedglm",
+      "stanmvreg",
+      "stanreg",
+      "survfit",
+      "survreg",
+      "survPresmooth",
+      "svyglm",
+      "svyolr",
+      "tobit",
+      "truncreg",
+      "vgam",
+      "vglm",
+      "wbm",
+      "wblm",
+      "zeroinfl",
+      "zerotrunc"
+    )
+  )
 }

@@ -1,9 +1,11 @@
-if (require("testthat") && require("insight") && require("stats")) {
+if (require("testthat") &&
+  require("insight") &&
+  require("stats")) {
   context("insight, aovlist")
 
   data(npk)
-  m1 <- aov(yield ~  N*P*K + Error(block), data = npk)
-  m2 <- aov(yield ~  N*P*K, data = npk)
+  m1 <- aov(yield ~ N * P * K + Error(block), data = npk)
+  m2 <- aov(yield ~ N * P * K, data = npk)
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_linear)
@@ -67,9 +69,18 @@ if (require("testthat") && require("insight") && require("stats")) {
   })
 
   test_that("find_terms", {
-    expect_equal(find_terms(m1), list(response = "yield", conditional = c("N", "P", "K", "block")))
-    expect_equal(find_terms(m1, flatten = TRUE), c("yield", "N", "P", "K", "block"))
-    expect_equal(find_terms(m2), list(response = "yield", conditional = c("N", "P", "K")))
+    expect_equal(find_terms(m1), list(
+      response = "yield",
+      conditional = c("N", "P", "K", "Error(block)")
+    ))
+    expect_equal(
+      find_terms(m1, flatten = TRUE),
+      c("yield", "N", "P", "K", "Error(block)")
+    )
+    expect_equal(find_terms(m2), list(
+      response = "yield",
+      conditional = c("N", "P", "K")
+    ))
     expect_equal(find_terms(m2, flatten = TRUE), c("yield", "N", "P", "K"))
   })
 
@@ -96,14 +107,32 @@ if (require("testthat") && require("insight") && require("stats")) {
     expect_equal(nrow(get_parameters(m1, effects = "all")), 8)
 
     expect_equal(
-      get_parameters(m1, effects = "all")$effects,
-      c("fixed", "fixed", "random", "random", "random", "random", "random", "random")
+      get_parameters(m1, effects = "all")$Effects,
+      c(
+        "fixed",
+        "fixed",
+        "random",
+        "random",
+        "random",
+        "random",
+        "random",
+        "random"
+      )
     )
 
     expect_equal(
       find_parameters(m2),
       list(
-        conditional = c("(Intercept)", "N1", "P1", "K1", "N1:P1", "N1:K1", "P1:K1", "N1:P1:K1")
+        conditional = c(
+          "(Intercept)",
+          "N1",
+          "P1",
+          "K1",
+          "N1:P1",
+          "N1:K1",
+          "P1:K1",
+          "N1:P1:K1"
+        )
       )
     )
     expect_equal(nrow(get_parameters(m2)), 8)
@@ -112,5 +141,10 @@ if (require("testthat") && require("insight") && require("stats")) {
   test_that("is_multivariate", {
     expect_false(is_multivariate(m1))
     expect_false(is_multivariate(m2))
+  })
+
+  test_that("find_statistic", {
+    expect_identical(find_statistic(m1), "F-statistic")
+    expect_identical(find_statistic(m2), "F-statistic")
   })
 }

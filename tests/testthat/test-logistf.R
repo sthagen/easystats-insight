@@ -1,4 +1,6 @@
-if (require("testthat") && require("insight") && require("logistf")) {
+if (require("testthat") &&
+  require("insight") &&
+  require("logistf")) {
   context("insight, model_info")
 
   data(sex2)
@@ -10,8 +12,13 @@ if (require("testthat") && require("insight") && require("logistf")) {
   })
 
   test_that("find_predictors", {
-    expect_identical(find_predictors(m1), list(conditional = c("age", "oc", "vic", "vicl", "vis", "dia")))
-    expect_identical(find_predictors(m1, flatten = TRUE), c("age", "oc", "vic", "vicl", "vis", "dia"))
+    expect_identical(find_predictors(m1), list(conditional = c(
+      "age", "oc", "vic", "vicl", "vis", "dia"
+    )))
+    expect_identical(
+      find_predictors(m1, flatten = TRUE),
+      c("age", "oc", "vic", "vicl", "vis", "dia")
+    )
     expect_null(find_predictors(m1, effects = "random"))
   })
 
@@ -32,7 +39,10 @@ if (require("testthat") && require("insight") && require("logistf")) {
   })
 
   test_that("get_predictors", {
-    expect_equal(colnames(get_predictors(m1)), c("age", "oc", "vic", "vicl", "vis", "dia"))
+    expect_equal(
+      colnames(get_predictors(m1)),
+      c("age", "oc", "vic", "vicl", "vis", "dia")
+    )
   })
 
   test_that("link_inverse", {
@@ -41,7 +51,10 @@ if (require("testthat") && require("insight") && require("logistf")) {
 
   test_that("get_data", {
     expect_equal(nrow(get_data(m1)), 239)
-    expect_equal(colnames(get_data(m1)), c("case", "age", "oc", "vic", "vicl", "vis", "dia"))
+    expect_equal(
+      colnames(get_data(m1)),
+      c("case", "age", "oc", "vic", "vicl", "vis", "dia")
+    )
   })
 
   test_that("find_formula", {
@@ -53,8 +66,14 @@ if (require("testthat") && require("insight") && require("logistf")) {
   })
 
   test_that("find_terms", {
-    expect_equal(find_terms(m1), list(response = "case", conditional = c("age", "oc", "vic", "vicl", "vis", "dia")))
-    expect_equal(find_terms(m1, flatten = TRUE), c("case", "age", "oc", "vic", "vicl", "vis", "dia"))
+    expect_equal(find_terms(m1), list(
+      response = "case",
+      conditional = c("age", "oc", "vic", "vicl", "vis", "dia")
+    ))
+    expect_equal(
+      find_terms(m1, flatten = TRUE),
+      c("case", "age", "oc", "vic", "vicl", "vis", "dia")
+    )
   })
 
   test_that("n_obs", {
@@ -77,7 +96,10 @@ if (require("testthat") && require("insight") && require("logistf")) {
       )
     )
     expect_equal(nrow(get_parameters(m1)), 7)
-    expect_equal(get_parameters(m1)$parameter, c("(Intercept)", "age", "oc", "vic", "vicl", "vis", "dia"))
+    expect_equal(
+      get_parameters(m1)$Parameter,
+      c("(Intercept)", "age", "oc", "vic", "vicl", "vis", "dia")
+    )
   })
 
   test_that("is_multivariate", {
@@ -86,5 +108,9 @@ if (require("testthat") && require("insight") && require("logistf")) {
 
   test_that("find_algorithm", {
     expect_equal(find_algorithm(m1), list(algorithm = "Penalized ML"))
+  })
+
+  test_that("find_statistic", {
+    expect_identical(find_statistic(m1), "chi-squared statistic")
   })
 }

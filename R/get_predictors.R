@@ -12,12 +12,14 @@
 #' head(get_predictors(m))
 #' @export
 get_predictors <- function(x) {
-  vars <- if (inherits(x, "wbm"))
+  vars <- if (inherits(x, "wbm")) {
     unlist(.compact_list(find_terms(x, flatten = FALSE)[c("conditional", "instruments")]))
-  else
+  } else {
     find_predictors(x, effects = "fixed", component = "all", flatten = TRUE)
+  }
 
-  dat <- get_data(x)[, vars, drop = FALSE]
+  dat <- get_data(x)
+  dat <- dat[, intersect(vars, colnames(dat)), drop = FALSE]
 
   if (.is_empty_object(dat)) {
     print_color("Warning: Data frame is empty, probably you have an intercept-only model?\n", "red")

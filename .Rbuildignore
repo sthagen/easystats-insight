@@ -3,13 +3,12 @@
 ^\.travis\.yml$
 ^revdep$
 ^docs$
+^doc$
 ^LICENSE
 ^_pkgdown\.yml$
-^_pkgdown.yml
+^appveyor\.yml$
 ^pkgdown$
 ^README.Rmd
 ^paper$
-^CONTRIBUTING.*$
-^CODE_OF_CONDUCT.*$
-^doc$
 ^Meta$
+^.github$

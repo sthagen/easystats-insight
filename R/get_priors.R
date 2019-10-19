@@ -13,8 +13,9 @@
 #' @examples
 #' \dontrun{
 #' library(rstanarm)
-#' model <- stan_glm(Sepal.Width ~ Species * Petal.Length, data=iris)
-#' get_priors(model)}
+#' model <- stan_glm(Sepal.Width ~ Species * Petal.Length, data = iris)
+#' get_priors(model)
+#' }
 #'
 #' @export
 get_priors <- function(x, ...) {
@@ -48,12 +49,19 @@ get_priors.stanreg <- function(x, ...) {
   colnames(prior_info) <- gsub("dist", "distribution", colnames(prior_info))
   colnames(prior_info) <- gsub("df", "DoF", colnames(prior_info))
 
-  as.data.frame(lapply(prior_info, function(x) {
-    if (.is_numeric_character(x))
+  priors <- as.data.frame(lapply(prior_info, function(x) {
+    if (.is_numeric_character(x)) {
       as.numeric(as.character(x))
-    else
+    } else {
       as.character(x)
+    }
   }), stringsAsFactors = FALSE)
+
+  string <- strsplit(names(priors), "_", fixed = TRUE)
+  string <- lapply(string, .capitalize)
+  names(priors) <- unlist(lapply(string, paste0, collapse = "_"))
+
+  priors
 }
 
 
@@ -88,25 +96,26 @@ get_priors.brmsfit <- function(x, ...) {
 
   prior_info <- x$prior[x$prior$coef != "" & x$prior$class %in% c("b", "(Intercept)"), ]
 
-  prior_info$distribution <- gsub("(.*)\\(.*", "\\1", prior_info$prior)
-  prior_info$scale <- gsub("(.*)\\((.*)\\,(.*)", "\\2", prior_info$prior)
-  prior_info$location <- gsub("(.*)\\,(.*)\\)(.*)", "\\2", prior_info$prior)
-  prior_info$parameter <- prior_info$coef
+  prior_info$Distribution <- gsub("(.*)\\(.*", "\\1", prior_info$prior)
+  prior_info$Location <- gsub("(.*)\\((.*)\\,(.*)", "\\2", prior_info$prior)
+  prior_info$Scale <- gsub("(.*)\\,(.*)\\)(.*)", "\\2", prior_info$prior)
+  prior_info$Parameter <- prior_info$coef
 
-  prior_info <- prior_info[, c("parameter", "distribution", "location", "scale")]
+  prior_info <- prior_info[, c("Parameter", "Distribution", "Location", "Scale")]
 
   pinfo <- as.data.frame(lapply(prior_info, function(x) {
-    if (.is_numeric_character(x))
+    if (.is_numeric_character(x)) {
       as.numeric(as.character(x))
-    else
+    } else {
       as.character(x)
+    }
   }), stringsAsFactors = FALSE)
 
-  if (.is_empty_string(pinfo$distribution)) {
+  if (.is_empty_string(pinfo$Distribution)) {
     print_color("Model was fitted with uninformative (flat) priors!\n", "red")
-    pinfo$distribution <- "uniform"
-    pinfo$location <- 0
-    pinfo$scale <- NA
+    pinfo$Distribution <- "uniform"
+    pinfo$Location <- 0
+    pinfo$Scale <- NA
   }
 
   pinfo
@@ -125,13 +134,50 @@ get_priors.BFBayesFactor <- function(x, ...) {
   )
 
   data.frame(
-    parameter = names(prior),
-    distribution = "cauchy",
-    location = 0,
-    scale = unlist(prior),
+    Parameter = names(prior),
+    Distribution = "cauchy",
+    Location = 0,
+    Scale = unlist(prior),
     stringsAsFactors = FALSE,
     row.names = NULL
   )
+}
+
+
+
+#' @export
+get_priors.blavaan <- function(x, ...) {
+  if (!requireNamespace("lavaan", quietly = TRUE)) {
+    stop("Package 'lavaan' required for this function to work. Please install it.")
+  }
+
+  PE <- lavaan::parameterEstimates(
+    x, se = FALSE, ci = FALSE, remove.eq = FALSE, remove.system.eq = TRUE,
+    remove.ineq = FALSE, remove.def = FALSE, add.attributes = TRUE
+  )
+
+  if (!("group" %in% names(PE))) PE$group <- 1
+
+  newpt <- x@ParTable
+  pte2 <- which(newpt$free > 0)
+
+  relevant_rows <- match(
+    with(newpt, paste(lhs[pte2], op[pte2], rhs[pte2], group[pte2], sep = "")),
+    paste(PE$lhs, PE$op, PE$rhs, PE$group, sep = "")
+  )
+
+  # Priors
+  priors <- rep(NA, nrow(PE))
+  priors[relevant_rows] <- newpt$prior[pte2]
+  priors[is.na(PE$prior)] <- NA
+
+  stats::na.omit(data.frame(
+    Parameter = paste(PE$lhs, PE$op, PE$rhs, sep = ""),
+    Distribution = gsub("(.*)\\((.*)", "\\1", priors),
+    Location = as.numeric(gsub("(.*)\\((.*)\\,(.*)\\)(.*)", "\\2", priors)),
+    Scale = as.numeric(gsub("(.*)\\((.*)\\,(.*)\\)(.*)", "\\3", priors)),
+    stringsAsFactors = FALSE
+  ))
 }
 
 

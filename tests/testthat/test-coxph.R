@@ -1,4 +1,6 @@
-if (require("testthat") && require("insight") && require("survival")) {
+if (require("testthat") &&
+  require("insight") &&
+  require("survival")) {
   context("insight, coxph")
 
   data("lung")
@@ -28,20 +30,38 @@ if (require("testthat") && require("insight") && require("survival")) {
 
   test_that("get_data", {
     expect_equal(nrow(get_data(m1)), 226)
-    expect_equal(colnames(get_data(m1)), c("time", "status", "Surv(time, status)", "sex", "age", "ph.ecog"))
+    expect_equal(
+      colnames(get_data(m1)),
+      c(
+        "time",
+        "status",
+        "Surv(time, status)",
+        "sex",
+        "age",
+        "ph.ecog"
+      )
+    )
   })
 
   test_that("find_formula", {
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("Surv(time, status) ~ sex + age + ph.ecog"))
+      list(conditional = as.formula(
+        "Surv(time, status) ~ sex + age + ph.ecog"
+      ))
     )
   })
 
   test_that("find_variables", {
-    expect_equal(find_variables(m1), list(response = c("time", "status"), conditional = c("sex", "age", "ph.ecog")))
-    expect_equal(find_variables(m1, flatten = TRUE), c("time", "status", "sex", "age", "ph.ecog"))
+    expect_equal(find_variables(m1), list(
+      response = c("time", "status"),
+      conditional = c("sex", "age", "ph.ecog")
+    ))
+    expect_equal(
+      find_variables(m1, flatten = TRUE),
+      c("time", "status", "sex", "age", "ph.ecog")
+    )
   })
 
   test_that("n_obs", {
@@ -64,7 +84,10 @@ if (require("testthat") && require("insight") && require("survival")) {
       )
     )
     expect_equal(nrow(get_parameters(m1)), 4)
-    expect_equal(get_parameters(m1)$parameter, c("sexfemale", "age", "ph.ecogok", "ph.ecoglimited"))
+    expect_equal(
+      get_parameters(m1)$Parameter,
+      c("sexfemale", "age", "ph.ecogok", "ph.ecoglimited")
+    )
   })
 
   test_that("find_terms", {
@@ -75,5 +98,9 @@ if (require("testthat") && require("insight") && require("survival")) {
         conditional = c("sex", "age", "ph.ecog")
       )
     )
+  })
+
+  test_that("find_statistic", {
+    expect_identical(find_statistic(m1), "z-statistic")
   })
 }

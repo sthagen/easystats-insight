@@ -48,6 +48,30 @@ link_inverse.default <- function(x, ...) {
 
 
 #' @export
+link_inverse.gam <- function(x, ...) {
+  li <- tryCatch({
+    .gam_family(x)$linkinv
+  },
+  error = function(x) {
+    NULL
+  }
+  )
+
+  if (is.null(li)) {
+    mi <- .gam_family(x)
+    if (.obj_has_name(mi, "linfo")) {
+      if (.obj_has_name(mi$linfo, "linkinv"))
+        li <- mi$linfo$linkinv
+      else
+        li <- mi$linfo[[1]]$linkinv
+    }
+  }
+
+  li
+}
+
+
+#' @export
 link_inverse.glm <- function(x, ...) {
   tryCatch({
     stats::family(x)$linkinv
@@ -72,6 +96,13 @@ link_inverse.bigglm <- function(x, ...) {
 
 
 #' @export
+link_inverse.flexsurvreg <- function(x, ...) {
+  dist <- parse(text = .safe_deparse(x$call))[[1]]$dist
+  .make_tobit_family(x, dist)$linkinv
+}
+
+
+#' @export
 link_inverse.gamlss <- function(x, ...) {
   faminfo <- get(x$family[1], asNamespace("gamlss"))()
   faminfo$mu.linkinv
@@ -79,12 +110,13 @@ link_inverse.gamlss <- function(x, ...) {
 
 
 #' @export
-link_inverse.gam <- function(x, ...) {
+link_inverse.bamlss <- function(x, ...) {
+  flink <- stats::family(x)$links[1]
   tryCatch({
-    stats::family(x)$linkinv
+    stats::make.link(flink)$linkinv
   },
-  error = function(x) {
-    NULL
+  error = function(e) {
+    print_colour("\nCould not find appropriate link-inverse-function.\n", "red")
   }
   )
 }
@@ -92,6 +124,12 @@ link_inverse.gam <- function(x, ...) {
 
 #' @export
 link_inverse.lm <- function(x, ...) {
+  stats::gaussian(link = "identity")$linkinv
+}
+
+
+#' @export
+link_inverse.bayesx <- function(x, ...) {
   stats::gaussian(link = "identity")$linkinv
 }
 
