@@ -4,38 +4,91 @@
 \alias{get_statistic}
 \alias{get_statistic.default}
 \alias{get_statistic.glmmTMB}
+\alias{get_statistic.clm2}
+\alias{get_statistic.betamfx}
+\alias{get_statistic.logitmfx}
+\alias{get_statistic.mjoint}
+\alias{get_statistic.emmGrid}
+\alias{get_statistic.gee}
+\alias{get_statistic.betareg}
+\alias{get_statistic.DirichletRegModel}
 \title{Get statistic associated with estimates}
 \usage{
 get_statistic(x, ...)
 
-\method{get_statistic}{default}(x, column_index = 3, ...)
+\method{get_statistic}{default}(x, column_index = 3, verbose = TRUE, ...)
 
-\method{get_statistic}{glmmTMB}(x, component = c("all", "conditional",
-  "zi", "zero_inflated"), ...)
+\method{get_statistic}{glmmTMB}(
+  x,
+  component = c("all", "conditional", "zi", "zero_inflated", "dispersion"),
+  ...
+)
+
+\method{get_statistic}{clm2}(x, component = c("all", "conditional", "scale"), ...)
+
+\method{get_statistic}{betamfx}(
+  x,
+  component = c("all", "conditional", "precision", "marginal"),
+  ...
+)
+
+\method{get_statistic}{logitmfx}(x, component = c("all", "conditional", "marginal"), ...)
+
+\method{get_statistic}{mjoint}(x, component = c("all", "conditional", "survival"), ...)
+
+\method{get_statistic}{emmGrid}(x, ci = 0.95, adjust = "none", merge_parameters = FALSE, ...)
+
+\method{get_statistic}{gee}(x, robust = FALSE, ...)
+
+\method{get_statistic}{betareg}(x, component = c("all", "conditional", "precision"), ...)
+
+\method{get_statistic}{DirichletRegModel}(x, component = c("all", "conditional", "precision"), ...)
 }
 \arguments{
 \item{x}{A model.}
 
 \item{...}{Currently not used.}
 
-\item{column_index}{For model objects that have no defined \code{get_statistic()}
-method yet, the default method is called. This method tries to extract the
-statistic column from \code{coef(summary())}, where the index of the column
-that is being pulled is \code{column_index}. Defaults to 3, which is the
-default statistic column for most models' summary-output.}
+\item{column_index}{For model objects that have no defined
+\code{get_statistic()} method yet, the default method is called. This
+method tries to extract the statistic column from \code{coef(summary())},
+where the index of the column that is being pulled is \code{column_index}.
+Defaults to 3, which is the default statistic column for most models'
+summary-output.}
+
+\item{verbose}{Toggle messages and warnings.}
 
 \item{component}{Should all parameters, parameters for the conditional model,
 or for the zero-inflated part of the model be returned? Applies to models
 with zero-inflated component. \code{component} may be one of
 \code{"conditional"}, \code{"zi"}, \code{"zero-inflated"} or \code{"all"}
-(default). May be abbreviated.}
+(default). For models with smooth terms, \code{component = "smooth_terms"}
+is also possible. May be abbreviated. Note that the \emph{conditional}
+component is also called \emph{count} or \emph{mean} component, depending
+on the model.}
+
+\item{ci}{Confidence Interval (CI) level. Default to \code{0.95} (\verb{95\%}).
+Currently only applies to objects of class \code{emmGrid}.}
+
+\item{adjust}{Character value naming the method used to adjust p-values or
+confidence intervals. See \code{?emmeans::summary.emmGrid} for details.}
+
+\item{merge_parameters}{Logical, if \code{TRUE} and \code{x} has multiple
+columns for parameter names (like \code{emmGrid} objects may have), these
+are merged into a single parameter column, with parameters names and values
+as values.}
+
+\item{robust}{Logical, if \code{TRUE}, test statistic based on robust
+standard errors is returned.}
 }
 \value{
-A data frame with the model's parameter names and the related test statistic.
+A data frame with the model's parameter names and the related test
+statistic.
 }
 \description{
-Returns the statistic (\emph{t}, \code{z}, ...) for model estimates.
-  In most cases, this is the related column from \code{coef(summary())}.
+Returns the statistic (\emph{t}, \code{z}, ...) for model
+estimates. In most cases, this is the related column from
+\code{coef(summary())}.
 }
 \examples{
 data(mtcars)

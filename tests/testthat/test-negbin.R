@@ -1,19 +1,18 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
 if (.runThisTest && Sys.getenv("USER") != "travis") {
-  if (require("testthat") && require("insight") && require("aod")) {
-    context("insight, negbin")
-
+  if (requiet("testthat") && requiet("insight") && requiet("aod")) {
     data(dja)
     m1 <-
-      aod::negbin(y ~ group + offset(log(trisk)),
+      suppressWarnings(aod::negbin(y ~ group + offset(log(trisk)),
         random = ~village,
         data = dja
-      )
+      ))
 
     test_that("model_info", {
       expect_true(model_info(m1)$is_negbin)
       expect_true(model_info(m1)$is_mixed)
+      expect_false(model_info(m1)$is_linear)
     })
 
     test_that("find_predictors", {
@@ -37,7 +36,7 @@ if (.runThisTest && Sys.getenv("USER") != "travis") {
     })
 
     test_that("get_random", {
-      expect_equal(get_random(m1), dja[, "village", drop = FALSE])
+      expect_equal(get_random(m1), dja[, "village", drop = FALSE], ignore_attr = TRUE)
     })
 
     test_that("find_response", {
@@ -73,7 +72,8 @@ if (.runThisTest && Sys.getenv("USER") != "travis") {
         list(
           conditional = as.formula("y ~ group + offset(log(trisk))"),
           random = as.formula("~village")
-        )
+        ),
+        ignore_attr = TRUE
       )
     })
 

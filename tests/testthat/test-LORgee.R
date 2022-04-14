@@ -1,8 +1,6 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("multgee")) {
-  context("insight, multgee")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("multgee")) {
   data(arthritis)
   m1 <- ordLORgee(
     y ~ factor(time) + factor(trt) + factor(baseline),
@@ -14,7 +12,9 @@ if (require("testthat") &&
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_ordinal)
+    expect_false(model_info(m1)$is_multinomial)
     expect_true(model_info(m1)$is_logit)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -43,7 +43,7 @@ if (require("testthat") &&
   })
 
   test_that("get_random", {
-    expect_equal(get_random(m1), arthritis[, "id", drop = FALSE])
+    expect_equal(get_random(m1), arthritis[, "id", drop = FALSE], ignore_attr = TRUE)
   })
 
   test_that("get_predictors", {
@@ -69,7 +69,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("y ~ factor(time) + factor(trt) + factor(baseline)"),
         random = as.formula("~id")
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 

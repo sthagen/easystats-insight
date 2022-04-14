@@ -1,8 +1,6 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("lfe")) {
-  context("insight, lfe")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("lfe")) {
   x <- rnorm(1000)
   x2 <- rnorm(length(x))
   id <- factor(sample(20, length(x), replace = TRUE))
@@ -15,10 +13,8 @@ if (require("testthat") &&
   x3 <- rnorm(length(x))
   x4 <- sample(12, length(x), replace = TRUE)
 
-  Q <-
-    0.3 * x3 + x + 0.2 * x2 + id.eff[id] + 0.3 * log(x4) - 0.3 * y + rnorm(length(x), sd = 0.3)
-  W <-
-    0.7 * x3 - 2 * x + 0.1 * x2 - 0.7 * id.eff[id] + 0.8 * cos(x4) - 0.2 * y + rnorm(length(x), sd = 0.6)
+  Q <- 0.3 * x3 + x + 0.2 * x2 + id.eff[id] + 0.3 * log(x4) - 0.3 * y + rnorm(length(x), sd = 0.3)
+  W <- 0.7 * x3 - 2 * x + 0.1 * x2 - 0.7 * id.eff[id] + 0.8 * cos(x4) - 0.2 * y + rnorm(length(x), sd = 0.6)
 
   # add them to the outcome
   y <- y + Q + W
@@ -88,7 +84,8 @@ if (require("testthat") &&
         conditional = as.formula("y ~ x + x2"),
         random = as.formula("~id + firm"),
         instruments = as.formula("~(Q | W ~ x3 + factor(x4))")
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 
@@ -137,12 +134,12 @@ if (require("testthat") &&
   test_that("find_parameters", {
     expect_equal(
       find_parameters(m1),
-      list(conditional = c("x", "x2", "`Q(fit)`", "`W(fit)`"))
+      list(conditional = c("x", "x2", "Q(fit)", "W(fit)"))
     )
     expect_equal(nrow(get_parameters(m1)), 4)
     expect_equal(
       get_parameters(m1)$Parameter,
-      c("x", "x2", "`Q(fit)`", "`W(fit)`")
+      c("x", "x2", "Q(fit)", "W(fit)")
     )
   })
 

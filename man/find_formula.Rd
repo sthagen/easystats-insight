@@ -2,42 +2,73 @@
 % Please edit documentation in R/find_formula.R
 \name{find_formula}
 \alias{find_formula}
+\alias{formula_ok}
 \title{Find model formula}
 \usage{
-find_formula(x, ...)
+find_formula(x, verbose = TRUE, ...)
+
+formula_ok(x, verbose = TRUE, ...)
 }
 \arguments{
 \item{x}{A fitted model.}
+
+\item{verbose}{Toggle warnings.}
 
 \item{...}{Currently not used.}
 }
 \value{
 A list of formulas that describe the model. For simple models,
-   only one list-element, \code{conditional}, is returned. For more complex
-   models, the returned list may have following elements:
-   \itemize{
-     \item \code{conditional}, the "fixed effects" part from the model
-     \item \code{random}, the "random effects" part from the model (or the \code{id} for gee-models and similar)
-     \item \code{zero_inflated}, the "fixed effects" part from the zero-inflation component of the model
-     \item \code{zero_inflated_random}, the "random effects" part from the zero-inflation component of the model
-     \item \code{dispersion}, the dispersion formula
-     \item \code{instruments}, for fixed-effects regressions like \code{ivreg}, \code{felm} or \code{plm}, the instrumental variables
-     \item \code{cluster}, for fixed-effects regressions like \code{felm}, the cluster specification
-     \item \code{correlation}, for models with correlation-component like \code{gls}, the formula that describes the correlation structure
-     \item \code{slopes}, for fixed-effects individual-slope models like \code{feis}, the formula for the slope parameters
-   }
+only one list-element, \code{conditional}, is returned. For more complex
+models, the returned list may have following elements:
+\itemize{
+\item \code{conditional}, the "fixed effects" part from the model (in the
+context of fixed-effects or instrumental variable regression, also
+called \emph{regressors}) . One exception are \code{DirichletRegModel} models
+from \pkg{DirichletReg}, which has two or three components,
+depending on \code{model}.
+\item \code{random}, the "random effects" part from the model (or the
+\code{id} for gee-models and similar)
+\item \code{zero_inflated}, the "fixed effects" part from the
+zero-inflation component of the model
+\item \code{zero_inflated_random}, the "random effects" part from the
+zero-inflation component of the model
+\item \code{dispersion}, the dispersion formula
+\item \code{instruments}, for fixed-effects or instrumental variable
+regressions like \code{ivreg::ivreg()}, \code{lfe::felm()} or \code{plm::plm()},
+the instrumental variables
+\item \code{cluster}, for fixed-effects regressions like
+\code{lfe::felm()}, the cluster specification
+\item \code{correlation}, for models with correlation-component like
+\code{nlme::gls()}, the formula that describes the correlation structure
+\item \code{slopes}, for fixed-effects individual-slope models like
+\code{feisr::feis()}, the formula for the slope parameters
+\item \code{precision}, for \code{DirichletRegModel} models from
+\pkg{DirichletReg}, when parametrization (i.e. \code{model}) is
+\code{"alternative"}.
+}
 }
 \description{
 Returns the formula(s) for the different parts of a model
-   (like fixed or random effects, zero-inflated component, ...).
+(like fixed or random effects, zero-inflated component, ...).
+\code{formula_ok()} checks if a model formula has valid syntax
+regarding writing \code{TRUE} instead of \code{T} inside \code{poly()}
+and that no data names are used (i.e. no \code{data$variable}, but rather
+\code{variable}).
 }
 \note{
 For models of class \code{lme} or \code{gls} the correlation-component
-  is only returned, when it is explicitly defined as named argument
-  (\code{form}), e.g. \code{corAR1(form = ~1 | Mare)}
+is only returned, when it is explicitly defined as named argument
+(\code{form}), e.g. \code{corAR1(form = ~1 | Mare)}
 }
 \examples{
 data(mtcars)
 m <- lm(mpg ~ wt + cyl + vs, data = mtcars)
 find_formula(m)
+
+if (require("lme4")) {
+  m <- lmer(Sepal.Length ~ Sepal.Width + (1 | Species), data = iris)
+  f <- find_formula(m)
+  f
+  format(f)
+}
 }

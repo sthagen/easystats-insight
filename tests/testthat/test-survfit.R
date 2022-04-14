@@ -1,14 +1,11 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("survival")) {
-  context("insight, survfit")
-
-  data("lung")
-  m1 <-
-    survfit(Surv(time, status) ~ sex + age + ph.ecog, data = lung)
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("survival")) {
+  m1 <- survfit(Surv(time, status) ~ sex + age + ph.ecog, data = lung)
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_logit)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -29,7 +26,7 @@ if (require("testthat") &&
     expect_equal(nrow(get_data(m1)), 227)
     expect_equal(
       colnames(get_data(m1)),
-      c("time", "status", "sex", "age", "ph.ecog")
+      c("time", "status", "age", "sex", "ph.ecog")
     )
   })
 
@@ -39,7 +36,8 @@ if (require("testthat") &&
       find_formula(m1),
       list(conditional = as.formula(
         "Surv(time, status) ~ sex + age + ph.ecog"
-      ))
+      )),
+      ignore_attr = TRUE
     )
   })
 

@@ -1,22 +1,20 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
-if (.runThisTest || Sys.getenv("USER") == "travis") {
-  if (require("testthat") && require("insight") && require("plm")) {
-    context("insight, model_info")
-
+if (.runThisTest && getRversion() > "3.5") {
+  if (requiet("testthat") && requiet("insight") && requiet("plm")) {
     data(Crime)
-    m1 <- plm(lcrmrte ~ lprbarr + factor(year) | . - lprbarr + lmix, data = Crime, model = "random")
+    m1 <- suppressWarnings(plm(lcrmrte ~ lprbarr + factor(year) | . - lprbarr + lmix, data = Crime, model = "random"))
 
     # data
     set.seed(123)
     data("Produc", package = "plm")
 
     # model
-    m2 <- plm::plm(
+    m2 <- suppressWarnings(plm::plm(
       formula = log(gsp) ~ log(pcap) + log(pc) + log(emp) + unemp,
       data = Produc,
       index = c("state", "year")
-    )
+    ))
 
     test_that("model_info", {
       expect_true(model_info(m1)$is_linear)
@@ -82,7 +80,8 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
         list(
           conditional = as.formula("lcrmrte ~ lprbarr + factor(year)"),
           instruments = as.formula("~-lprbarr + lmix")
-        )
+        ),
+        ignore_attr = TRUE
       )
     })
 

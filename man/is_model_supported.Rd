@@ -3,8 +3,7 @@
 \name{is_model_supported}
 \alias{is_model_supported}
 \alias{supported_models}
-\title{Checks if an object is a regression model object supported in
-  \pkg{insight} package.}
+\title{Checks if a regression model object is supported in \pkg{insight} package}
 \usage{
 is_model_supported(x)
 
@@ -18,18 +17,23 @@ A logical, \code{TRUE} if \code{x} is a (supported) model object.
 }
 \description{
 Small helper that checks if a model is a \emph{supported}
- (regression) model object. \code{supported_models()} prints a list
- of currently supported model classes.
+(regression) model object. \code{supported_models()} prints a list
+of currently supported model classes.
 }
 \details{
-This function returns \code{TRUE} if \code{x} is a model object
-  that works with the package's functions. A list of supported models can
-  also be found here: \url{https://github.com/easystats/insight}.
+This function returns \code{TRUE} if \code{x} is a model object that works with the
+package's functions. A list of supported models can also be found here:
+\url{https://github.com/easystats/insight}.
 }
 \examples{
+
 data(mtcars)
 m <- lm(mpg ~ wt + cyl + vs, data = mtcars)
 
 is_model_supported(m)
 is_model_supported(mtcars)
+
+# to see all supported models
+supported_models()
+
 }

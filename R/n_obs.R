@@ -5,21 +5,34 @@
 #'   to fit the model, as numeric value.
 #'
 #' @param weighted For survey designs, returns the weighted sample size.
+#' @param disaggregate For binomial models with aggregated data, `n_obs()`
+#'   returns the number of data rows by default. If `disaggregate = TRUE`,
+#'   the total number of trials is returned instead (determined by summing the
+#'   results of `weights()` for aggregated data, which will be either the
+#'   weights input for proportion success response or the row sums of the
+#'   response matrix if matrix response, see 'Examples').
 #' @inheritParams find_predictors
 #' @inheritParams get_response
 #' @inheritParams find_formula
 #'
-#' @return The number of observations used to fit the model, or \code{NULL} if
+#' @return The number of observations used to fit the model, or `NULL` if
 #'   this information is not available.
-#'
-#' @note For model-objects supported by \pkg{insight} that \emph{do not} have
-#' a \code{nobs()}-method, \pkg{insight} provides a \code{nobs()}-method as well.
 #'
 #' @examples
 #' data(mtcars)
 #' m <- lm(mpg ~ wt + cyl + vs, data = mtcars)
 #' n_obs(m)
-#' @importFrom stats model.frame nobs
+#'
+#' if (require("lme4")) {
+#'   data(cbpp, package = "lme4")
+#'   m <- glm(
+#'     cbind(incidence, size - incidence) ~ period,
+#'     data = cbpp,
+#'     family = binomial(link = "logit")
+#'   )
+#'   n_obs(m)
+#'   n_obs(m, disaggregate = TRUE)
+#' }
 #' @export
 n_obs <- function(x, ...) {
   UseMethod("n_obs")
@@ -28,20 +41,70 @@ n_obs <- function(x, ...) {
 
 #' @export
 n_obs.default <- function(x, ...) {
-  if (inherits(x, "list") && .obj_has_name(x, "gam")) {
-    x <- x$gam
-    class(x) <- c(class(x), c("glm", "lm"))
+  is_binomial <- tryCatch(
+    {
+      fam <- stats::family(x)
+      fam$family == "binomial"
+    },
+    error = function(e) {
+      FALSE
+    }
+  )
+
+  if (isTRUE(is_binomial)) {
+    return(n_obs.glm(x, ...))
   }
 
-  tryCatch({
-    stats::nobs(x)
-  },
-  error = function(x) {
-    NULL
-  }
+  tryCatch(
+    {
+      stats::nobs(x)
+    },
+    error = function(x) {
+      NULL
+    }
   )
 }
 
+
+#' @rdname n_obs
+#' @export
+n_obs.glm <- function(x, disaggregate = FALSE, ...) {
+  is_binomial <- tryCatch(
+    {
+      fam <- stats::family(x)
+      fam$family == "binomial"
+    },
+    error = function(e) {
+      FALSE
+    }
+  )
+
+  .nobs <- stats::nobs(x)
+
+  if (isTRUE(is_binomial) && isTRUE(disaggregate)) {
+    resp <- deparse(stats::formula(x)[[2]])
+    resp_data <- get_response(x, verbose = FALSE)
+
+    # response is a matrix of numbers of trials and successes
+    if (grepl("cbind(", resp, fixed = TRUE)) {
+      trials <- trim_ws(sub("cbind\\((.*),(.*)\\)", "\\2", resp))
+      if (grepl("-", trials, fixed = TRUE)) {
+        .nobs <- sum(resp_data[[2]])
+      } else {
+        .nobs <- sum(resp_data)
+      }
+
+      # response is a fraction
+    } else if (!is.data.frame(resp_data) && .is.fraction(resp_data)) {
+      .nobs <- sum(get_weights(x))
+    }
+  }
+
+  .nobs
+}
+
+#' @export
+n_obs.censReg <- n_obs.default
 
 
 #' @rdname n_obs
@@ -55,19 +118,97 @@ n_obs.svyolr <- function(x, weighted = FALSE, ...) {
 }
 
 
+#' @export
+n_obs.svy_vglm <- function(x, ...) {
+  n_obs(x$fit)
+}
+
 
 #' @export
-n_obs.gamm <- function(x, ...) {
-  x <- x$gam
-  class(x) <- c(class(x), c("glm", "lm"))
-  NextMethod()
+n_obs.model_fit <- n_obs.svy_vglm
+
+
+#' @export
+n_obs.HLfit <- function(x, ...) {
+  stats::nobs(x)
+}
+
+
+#' @export
+n_obs.gam <- function(x, ...) {
+  if (!is.null(dim(x$y))) {
+    dim(x$y)[1]
+  } else {
+    length(x$y)
+  }
 }
 
 #' @export
-nobs.gamm <- function(object, ...) {
-  x <- object$gam
-  class(x) <- c(class(x), c("glm", "lm"))
-  n_obs(x, ...)
+n_obs.gamm <- function(x, ...) {
+  if (object_has_names(x, "gam")) {
+    n_obs(x$gam, ...)
+  } else {
+    stop("Cannot find n_obs for this object. Please an open an issue!")
+  }
+}
+
+#' @export
+n_obs.list <- n_obs.gamm
+
+
+#' @export
+n_obs.lavaan <- function(x, ...) {
+  x@SampleStats@ntotal
+}
+
+
+#' @export
+n_obs.selection <- function(x, type = c("all", "observed", "censored"), ...) {
+  type <- match.arg(type)
+  s <- summary(x)
+  switch(type,
+    "all" = s$param$nObs,
+    "observed" = s$param$N1,
+    s$param$N0
+  )
+}
+
+
+#' @export
+n_obs.mjoint <- function(x, ...) {
+  nrow(x$data[[1]])
+}
+
+
+#' @export
+n_obs.joint <- function(x, ...) {
+  nrow(x$data$longitudinal)
+}
+
+
+#' @export
+n_obs.merModList <- function(x, ...) {
+  stats::nobs(x[[1]])
+}
+
+
+
+#' @export
+n_obs.summary.lm <- function(x, ...) {
+  length(x$residuals)
+}
+
+
+
+#' @export
+n_obs.mediate <- function(x, ...) {
+  x$nobs
+}
+
+
+#' @export
+n_obs.garch <- function(x, ...) {
+  x$n.used
 }
 
 
@@ -77,11 +218,6 @@ n_obs.bayesx <- function(x, ...) {
   length(x$response)
 }
 
-#' @export
-nobs.bayesx <- function(object, ...) {
-  n_obs(object, ...)
-}
-
 
 
 #' @export
@@ -89,9 +225,25 @@ n_obs.flexsurvreg <- function(x, ...) {
   x$N
 }
 
+
+
 #' @export
-nobs.flexsurvreg <- function(object, ...) {
-  n_obs(object, ...)
+n_obs.SemiParBIV <- function(x, ...) {
+  x$n
+}
+
+
+
+#' @export
+n_obs.ivprobit <- function(x, ...) {
+  nrow(x$mr1)
+}
+
+
+
+#' @export
+n_obs.mvord <- function(x, ...) {
+  x$rho$n
 }
 
 
@@ -101,9 +253,11 @@ n_obs.bamlss <- function(x, ...) {
   nrow(x$model.frame)
 }
 
+
+
 #' @export
-nobs.bamlss <- function(object, ...) {
-  n_obs(object, ...)
+n_obs.coeftest <- function(x, ...) {
+  attributes(x)$nobs
 }
 
 
@@ -113,9 +267,25 @@ n_obs.lmRob <- function(x, ...) {
   length(x$fitted.values)
 }
 
+
+
 #' @export
-nobs.lmRob <- function(object, ...) {
-  n_obs(object, ...)
+n_obs.lqmm <- function(x, ...) {
+  x$nobs
+}
+
+#' @export
+n_obs.lqm <- n_obs.lqmm
+
+
+
+
+#' @export
+n_obs.sem <- function(x, ...) {
+  if (!.is_semLme(x)) {
+    return(NULL)
+  }
+  length(x$original.y)
 }
 
 
@@ -126,27 +296,55 @@ n_obs.LORgee <- function(x, ...) {
 }
 
 
+
+#' @export
+n_obs.crr <- function(x, ...) {
+  x$n
+}
+
+
+
+#' @export
+n_obs.mcmc <- function(x, ...) {
+  nrow(as.data.frame(x))
+}
+
+
+
 #' @export
 n_obs.biglm <- function(x, ...) {
   x$n
 }
 
 #' @export
-nobs.biglm <- function(object, ...) {
-  n_obs(object, ...)
-}
+n_obs.bigglm <- n_obs.biglm
+
+#' @export
+n_obs.eglm <- n_obs.biglm
+
+#' @export
+n_obs.rqss <- n_obs.biglm
+
+#' @export
+n_obs.hurdle <- n_obs.biglm
+
+#' @export
+n_obs.zerotrunc <- n_obs.biglm
+
+#' @export
+n_obs.zeroinfl <- n_obs.biglm
+
+
 
 
 
 #' @export
-n_obs.bigglm <- function(x, ...) {
-  x$n
+n_obs.cgam <- function(x, ...) {
+  nrow(get_data(x))
 }
 
 #' @export
-nobs.bigglm <- function(object, ...) {
-  n_obs(object, ...)
-}
+n_obs.cglm <- n_obs.cgam
 
 
 
@@ -155,11 +353,14 @@ n_obs.gbm <- function(x, ...) {
   length(x$fit)
 }
 
-#' @export
-nobs.gbm <- function(object, ...) {
-  n_obs(object, ...)
-}
 
+#' @export
+#' @rdname n_obs
+#' @inheritParams get_data
+n_obs.afex_aov <- function(x, shape = c("long", "wide"), ...) {
+  shape <- match.arg(shape)
+  nrow(get_data(x, shape = shape))
+}
 
 
 #' @export
@@ -167,21 +368,39 @@ n_obs.glimML <- function(x, ...) {
   nrow(x@data)
 }
 
+
+
 #' @export
-nobs.glimML <- function(object, ...) {
-  n_obs(object, ...)
+n_obs.mle2 <- function(x, ...) {
+  n <- tryCatch(
+    {
+      x@nobs
+    },
+    error = function(e) {
+      NULL
+    }
+  )
+  if (is.null(n)) {
+    n <- tryCatch(
+      {
+        nrow(get_data(x))
+      },
+      error = function(e) {
+        NULL
+      }
+    )
+  }
+  n
 }
+
+#' @export
+n_obs.mle <- n_obs.mle2
 
 
 
 #' @export
 n_obs.glmRob <- function(x, ...) {
   length(x$fitted.values)
-}
-
-#' @export
-nobs.glmRob <- function(object, ...) {
-  n_obs(object, ...)
 }
 
 
@@ -191,12 +410,6 @@ n_obs.gmnl <- function(x, ...) {
   x$logLik$nobs
 }
 
-#' @export
-nobs.gmnl <- function(object, ...) {
-  n_obs(object, ...)
-}
-
-
 
 
 #' @export
@@ -204,11 +417,32 @@ n_obs.multinom <- function(x, ...) {
   nrow(x$fitted.values)
 }
 
+
+
 #' @export
-nobs.multinom <- function(object, ...) {
-  n_obs(object, ...)
+n_obs.cpglmm <- function(x, ...) {
+  nrow(x@frame)
 }
 
+
+
+#' @export
+n_obs.lmodel2 <- function(x, ...) {
+  nrow(get_data(x))
+}
+
+
+
+#' @export
+n_obs.cpglm <- function(x, ...) {
+  nrow(x$model.frame)
+}
+
+#' @export
+n_obs.zcpglm <- n_obs.cpglm
+
+#' @export
+n_obs.bcplm <- n_obs.cpglm
 
 
 #' @export
@@ -217,11 +451,7 @@ n_obs.rq <- function(x, ...) {
 }
 
 #' @export
-nobs.rq <- function(object, ...) {
-  n_obs(object, ...)
-}
-
-
+n_obs.ivFixed <- n_obs.rq
 
 #' @export
 n_obs.BBreg <- function(x, ...) {
@@ -229,50 +459,48 @@ n_obs.BBreg <- function(x, ...) {
 }
 
 #' @export
-nobs.BBreg <- function(object, ...) {
-  n_obs(object, ...)
-}
-
-
-
-
-#' @export
-n_obs.BBmm <- function(x, ...) {
-  x$nObs
-}
-
-#' @export
-nobs.BBmm <- function(object, ...) {
-  n_obs(object, ...)
-}
-
+n_obs.BBmm <- n_obs.BBreg
 
 
 
 #' @export
 n_obs.crq <- function(x, ...) {
   n <- nrow(x$residuals)
-  if (.is_empty_object(n)) {
+  if (is_empty_object(n)) {
     n <- nrow(x$fitted.values)
   }
   n
 }
 
 #' @export
-nobs.crq <- function(object, ...) {
-  n_obs(object, ...)
+n_obs.crqs <- n_obs.crq
+
+
+#' @export
+n_obs.comprisk <- function(x, ...) {
+  x$n
 }
 
 
-#' @importFrom stats fitted
+#' @export
+n_obs.riskRegression <- function(x, ...) {
+  nrow(x$response)
+}
+
+
+#' @export
+n_obs.MANOVA <- function(x, ...) {
+  nrow(x$input$data)
+}
+
+#' @export
+n_obs.RM <- n_obs.MANOVA
+
+
+
 #' @export
 n_obs.nlrq <- function(x, ...) {
   length(stats::fitted(x))
-}
-
-#' @export
-nobs.nlrq <- function(object, ...) {
-  n_obs(object, ...)
 }
 
 
@@ -282,63 +510,45 @@ n_obs.survfit <- function(x, ...) {
   length(x$n.event)
 }
 
-#' @export
-nobs.survfit <- function(object, ...) {
-  n_obs(object, ...)
-}
 
+
+#' @export
+n_obs.mhurdle <- function(x, ...) {
+  nrow(x$model)
+}
 
 
 
 #' @export
 n_obs.survreg <- function(x, ...) {
-  length(x$y)
-}
-
-#' @export
-nobs.survreg <- function(object, ...) {
-  n_obs(object, ...)
+  length(x$linear.predictors)
 }
 
 
 
-
 #' @export
-n_obs.coxph <- function(x, ...) {
+n_obs.aareg <- function(x, ...) {
   max(x$n)
 }
 
 #' @export
-nobs.coxph <- function(object, ...) {
-  n_obs(object, ...)
-}
-
-
+n_obs.coxph <- n_obs.aareg
 
 
 #' @export
-n_obs.coxme <- function(x, ...) {
-  max(x$n)
-}
+n_obs.coxme <- n_obs.aareg
+
 
 #' @export
-nobs.coxme <- function(object, ...) {
-  n_obs(object, ...)
+n_obs.coxr <- function(x, ...) {
+  nrow(x$y)
 }
-
-
 
 
 #' @export
 n_obs.felm <- function(x, ...) {
   x$N
 }
-
-#' @export
-nobs.felm <- function(object, ...) {
-  n_obs(object, ...)
-}
-
 
 
 
@@ -347,21 +557,37 @@ n_obs.feis <- function(x, ...) {
   length(x$fitted.values)
 }
 
+
+
 #' @export
-nobs.feis <- function(object, ...) {
-  n_obs(object, ...)
+n_obs.averaging <- function(x, ...) {
+  attr(x, "nobs")
 }
 
+
+
+#' @export
+n_obs.fixest <- function(x, ...) {
+  x$nobs
+}
+
+
+
+#' @export
+n_obs.feglm <- function(x, ...) {
+  x$nobs[["nobs"]]
+}
+
+#' @export
+n_obs.bife <- n_obs.feglm
+
+#' @export
+n_obs.complmrob <- n_obs.cgam
 
 
 #' @export
 n_obs.aovlist <- function(x, ...) {
   nrow(stats::model.frame(x))
-}
-
-#' @export
-nobs.aovlist <- function(object, ...) {
-  n_obs(object, ...)
 }
 
 
@@ -382,12 +608,12 @@ n_obs.stanmvreg <- function(x, select = NULL, ...) {
   n
 }
 
+
+
 #' @export
-nobs.stanmvreg <- function(object, ...) {
-  n_obs(object, ...)
+n_obs.blrm <- function(x, ...) {
+  x$N
 }
-
-
 
 
 #' @export
@@ -395,53 +621,90 @@ n_obs.mlogit <- function(x, ...) {
   nrow(x$model)
 }
 
+
 #' @export
-nobs.mlogit <- function(object, ...) {
-  n_obs(object, ...)
-}
-
-
+n_obs.Glm <- n_obs.mlogit
 
 
 #' @export
-n_obs.hurdle <- function(x, ...) {
-  x$n
-}
-
-#' @export
-nobs.hurdle <- function(object, ...) {
-  n_obs(object, ...)
-}
-
-
-
-#' @export
-n_obs.zerotrunc <- function(x, ...) {
-  x$n
-}
-
-#' @export
-nobs.zerotrunc <- function(object, ...) {
-  n_obs(object, ...)
-}
-
-
-
-
-#' @export
-n_obs.zeroinfl <- function(x, ...) {
-  x$n
-}
-
-#' @export
-nobs.zeroinfl <- function(object, ...) {
-  n_obs(object, ...)
-}
-
-
+n_obs.maxLik <- n_obs.mlogit
 
 
 #' @export
 n_obs.wbm <- function(x, ...) {
   nrow(x@frame)
+}
+
+
+
+#' @export
+n_obs.wbgee <- function(x, ...) {
+  stats::nobs(x)
+}
+
+
+#' @export
+n_obs.Rchoice <- function(x, ...) {
+  nrow(x$mf)
+}
+
+
+
+
+
+# mfx models --------------------------------------
+
+#' @export
+n_obs.betamfx <- function(x, ...) {
+  stats::nobs(x$fit)
+}
+
+#' @export
+n_obs.betaor <- n_obs.betamfx
+
+#' @export
+n_obs.logitmfx <- n_obs.betamfx
+
+#' @export
+n_obs.poissonmfx <- n_obs.betamfx
+
+#' @export
+n_obs.probitmfx <- n_obs.betamfx
+
+#' @export
+n_obs.negbinmfx <- n_obs.betamfx
+
+#' @export
+n_obs.negbinirr <- n_obs.betamfx
+
+#' @export
+n_obs.poissonirr <- n_obs.betamfx
+
+#' @export
+n_obs.logitor <- n_obs.betamfx
+
+
+
+
+
+# special models -----------
+
+#' @export
+n_obs.mipo <- function(x, ...) {
+  x$glanced$nobs
+}
+
+
+#' @export
+n_obs.mira <- function(x, ...) {
+  if (!requireNamespace("mice", quietly = TRUE)) {
+    stop("Package `mice` required. Please install it.", call. = FALSE)
+  }
+  n_obs(mice::pool(x), ...)
+}
+
+
+#' @export
+n_obs.emm_list <- function(x, ...) {
+  NULL
 }

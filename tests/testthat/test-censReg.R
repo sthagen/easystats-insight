@@ -1,9 +1,7 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("censReg") &&
-  require("AER")) {
-  context("insight, censReg")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("censReg") &&
+  requiet("AER")) {
   data("Affairs", package = "AER")
   m1 <-
     censReg(affairs ~ age + yearsmarried + religiousness + occupation + rating,
@@ -11,7 +9,7 @@ if (require("testthat") &&
     )
 
   test_that("model_info", {
-    expect_true(model_info(m1)$is_linear)
+    expect_false(model_info(m1)$is_linear)
     expect_true(model_info(m1)$is_censored)
   })
 
@@ -94,7 +92,8 @@ if (require("testthat") &&
         conditional = as.formula(
           "affairs ~ age + yearsmarried + religiousness + occupation + rating"
         )
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 

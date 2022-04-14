@@ -1,8 +1,6 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("betareg")) {
-  context("insight, betareg")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("betareg")) {
   data("GasolineYield")
   data("FoodExpenditure")
 
@@ -11,6 +9,7 @@ if (require("testthat") &&
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_beta)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -48,11 +47,13 @@ if (require("testthat") &&
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("yield ~ batch + temp"))
+      list(conditional = as.formula("yield ~ batch + temp")),
+      ignore_attr = TRUE
     )
     expect_equal(
       find_formula(m2),
-      list(conditional = as.formula("I(food/income) ~ income + persons"))
+      list(conditional = as.formula("I(food/income) ~ income + persons")),
+      ignore_attr = TRUE
     )
   })
 
@@ -90,20 +91,8 @@ if (require("testthat") &&
     expect_equal(
       find_parameters(m1),
       list(
-        conditional = c(
-          "(Intercept)",
-          "batch1",
-          "batch2",
-          "batch3",
-          "batch4",
-          "batch5",
-          "batch6",
-          "batch7",
-          "batch8",
-          "batch9",
-          "temp",
-          "(phi)"
-        )
+        conditional = c("(Intercept)", "batch1", "batch2", "batch3", "batch4", "batch5", "batch6", "batch7", "batch8", "batch9", "temp"),
+        precision = "(phi)"
       )
     )
     expect_equal(nrow(get_parameters(m1)), 12)

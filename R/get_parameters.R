@@ -2,28 +2,34 @@
 #' @name get_parameters
 #'
 #' @description Returns the coefficients (or posterior samples for Bayesian
-#'    models) from a model.
+#'    models) from a model. See the documentation for your object's class:
+#'    \itemize{
+#'      \item{[Bayesian models][get_parameters.BGGM] (\pkg{rstanarm}, \pkg{brms}, \pkg{MCMCglmm}, ...)}
+#'      \item{[Estimated marginal means][get_parameters.emmGrid] (\pkg{emmeans})}
+#'      \item{[Generalized additive models][get_parameters.gamm] (\pkg{mgcv}, \pkg{VGAM}, ...)}
+#'      \item{[Marginal effects models][get_parameters.betamfx] (\pkg{mfx})}
+#'      \item{[Mixed models][get_parameters.glmm] (\pkg{lme4}, \pkg{glmmTMB}, \pkg{GLMMadaptive}, ...)}
+#'      \item{[Zero-inflated and hurdle models][get_parameters.zeroinfl] (\pkg{pscl}, ...)}
+#'      \item{[Models with special components][get_parameters.betareg] (\pkg{betareg}, \pkg{MuMIn}, ...)}
+#'      \item{[Hypothesis tests][get_parameters.htest] (`htest`)}
+#'    }
 #'
-#' @param iterations Number of posterior draws.
-#' @param progress Display progress.
+#' @param verbose Toggle messages and warnings.
 #' @param ... Currently not used.
 #'
 #' @inheritParams find_parameters
 #' @inheritParams find_predictors
 #'
 #' @return \itemize{
-#'   \item for non-Bayesian models and if \code{effects = "fixed"}, a data frame with two columns: the parameter names and the related point estimates
-#'   \item if \code{effects = "random"}, a list of data frames with the random effects (as returned by \code{ranef()}), unless the random effects have the same simplified structure as fixed effects (e.g. for models from \pkg{MCMCglmm})
-#'   \item for Bayesian models, the posterior samples from the requested parameters as data frame
-#'   \item for Anova (\code{aov()}) with error term, a list of parameters for the conditional and the random effects parameters
-#'   \item for models with smooth terms or zero-inflation component, a data frame with three columns: the parameter names, the related point estimates and the component
+#'   \item for non-Bayesian models, a data frame with two columns: the parameter names and the related point estimates.
+#'   \item for Anova (`aov()`) with error term, a list of parameters for the conditional and the random effects parameters
 #' }
 #'
 #' @details In most cases when models either return different "effects" (fixed,
 #' random) or "components" (conditional, zero-inflated, ...), the arguments
-#' \code{effects} and \code{component} can be used.
+#' `effects` and `component` can be used.
 #' \cr \cr
-#' \code{get_parameters()} is comparable to \code{coef()}, however, the coefficients
+#' `get_parameters()` is comparable to `coef()`, however, the coefficients
 #' are returned as data frame (with columns for names and point estimates of
 #' coefficients). For Bayesian models, the posterior samples of parameters are
 #' returned.
@@ -32,7 +38,6 @@
 #' data(mtcars)
 #' m <- lm(mpg ~ wt + cyl + vs, data = mtcars)
 #' get_parameters(m)
-#' @importFrom stats coef
 #' @export
 get_parameters <- function(x, ...) {
   UseMethod("get_parameters")
@@ -40,305 +45,58 @@ get_parameters <- function(x, ...) {
 
 
 
+# Default models ---------------------------------------------
+
+
+#' @rdname get_parameters
 #' @export
-get_parameters.default <- function(x, ...) {
-  if (inherits(x, "list") && .obj_has_name(x, "gam")) {
+get_parameters.default <- function(x, verbose = TRUE, ...) {
+  if (inherits(x, "list") && object_has_names(x, "gam")) {
     x <- x$gam
     class(x) <- c(class(x), c("glm", "lm"))
     return(get_parameters.gam(x, ...))
   }
 
-  tryCatch({
-    cf <- stats::coef(x)
-    data.frame(
-      Parameter = names(cf),
-      Estimate = unname(cf),
-      stringsAsFactors = FALSE,
-      row.names = NULL
-    )
-  },
-  error = function(x) {
-    print_color(sprintf("Parameters can't be retrieved for objects of class '%s'.\n", class(x)[1]), "red")
-    NULL
-  }
+  tryCatch(
+    {
+      cf <- stats::coef(x)
+      params <- names(cf)
+      if (is.null(params)) {
+        params <- paste(1:length(cf))
+      }
+
+      params <- data.frame(
+        Parameter = params,
+        Estimate = unname(cf),
+        stringsAsFactors = FALSE,
+        row.names = NULL
+      )
+
+      text_remove_backticks(params)
+    },
+    error = function(x) {
+      if (isTRUE(verbose)) {
+        warning(sprintf("Parameters can't be retrieved for objects of class '%s'.", class(x)[1]), call. = FALSE)
+      }
+      return(NULL)
+    }
   )
 }
 
 
-
 #' @export
-get_parameters.flexsurvreg <- function(x, ...) {
+get_parameters.summary.lm <- function(x, ...) {
   cf <- stats::coef(x)
-  data.frame(
-    Parameter = names(cf),
-    Estimate = unname(cf),
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-}
 
-
-
-#' @export
-get_parameters.mlm <- function(x, ...) {
-  cs <- stats::coef(summary(x))
-
-  out <- lapply(names(cs), function(i) {
-    params <- cs[[i]]
-    data.frame(
-      Parameter = rownames(params),
-      Estimate = params[, 1],
-      Response = gsub("^Response (.*)", "\\1", i),
-      stringsAsFactors = FALSE,
-      row.names = NULL
-    )
-  })
-
-  do.call(rbind, out)
-}
-
-
-
-#' @export
-get_parameters.blavaan <- function(x, ...) {
-  if (!requireNamespace("lavaan", quietly = TRUE)) {
-    stop("Package 'lavaan' required for this function to work. Please install it.")
-  }
-
-  if (!requireNamespace("blavaan", quietly = TRUE)) {
-    stop("Package 'blavaan' required for this function to work. Please install it.")
-  }
-
-  draws <- blavaan::blavInspect(x, "draws")
-  posteriors <- as.data.frame(as.matrix(draws))
-
-  names(posteriors) <- names(lavaan::coef(x))
-  posteriors
-}
-
-
-
-#' @export
-get_parameters.lavaan <- function(x, ...) {
-  if (!requireNamespace("lavaan", quietly = TRUE)) {
-    stop("Package 'lavaan' required for this function to work. Please install it.")
-  }
-
-  params <- lavaan::parameterEstimates(x)
-
-  params$parameter <- paste0(params$lhs, params$op, params$rhs)
-  params$comp <- NA
-
-  params$comp[params$op == "~"] <- "regression"
-  params$comp[params$op == "=~"] <- "latent"
-  params$comp[params$op == "~~"] <- "residual"
-  params$comp[params$op == "~1"] <- "intercept"
-
-  data.frame(
-    Parameter = params$parameter,
-    Estimate = params$est,
-    Component = params$comp,
-    stringsAsFactors = FALSE
-  )
-}
-
-
-
-#' @export
-get_parameters.polr <- function(x, ...) {
-  pars <- c(sprintf("Intercept: %s", names(x$zeta)), names(x$coefficients))
-  data.frame(
-    Parameter = pars,
-    Estimate = c(unname(x$zeta), unname(x$coefficients)),
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-}
-
-
-
-#' @export
-get_parameters.gbm <- function(x, ...) {
-  s <- summary(x, plotit = FALSE)
-  data.frame(
-    Parameter = as.character(s$var),
-    Estimate = s$rel.inf,
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-}
-
-
-
-#' @export
-get_parameters.BBreg <- function(x, ...) {
-  pars <- summary(x)$coefficients
-  data.frame(
-    Parameter = rownames(pars),
-    Estimate = pars[, "Estimate"],
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.BBmm <- function(x, effects = c("fixed", "random"), ...) {
-  effects <- match.arg(effects)
-
-  l <- .compact_list(list(
-    conditional = x$fixed.coef,
-    random = x$random.coef
-  ))
-
-  fixed <- data.frame(
-    Parameter = rownames(l$conditional),
-    Estimate = l$conditional,
+  params <- data.frame(
+    Parameter = names(cf[, 1]),
+    Estimate = unname(cf[, 1]),
     stringsAsFactors = FALSE,
     row.names = NULL
   )
 
-  if (effects == "fixed") {
-    fixed
-  } else {
-    l$random
-  }
+  text_remove_backticks(params)
 }
-
-
-
-#' @importFrom stats coef
-#' @rdname find_parameters
-#' @export
-get_parameters.bayesx <- function(x, component = c("all", "conditional", "smooth_terms"), flatten = FALSE, parameters = NULL, ...) {
-  component <- match.arg(component)
-
-  smooth_terms <- find_parameters(x, component = "smooth_terms", flatten = TRUE)
-
-  fixed_dat <- attr(x$fixed.effects, "sample")
-  smooth_dat <- do.call(cbind, lapply(smooth_terms, function(i) {
-    dat <- data.frame(x$effects[[i]]$Mean)
-    colnames(dat) <- i
-    dat
-  }))
-
-  switch(
-    component,
-    "all" = cbind(fixed_dat, smooth_dat),
-    "conditional" = fixed_dat,
-    "smooth_terms" = smooth_dat
-  )
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.glimML <- function(x, effects = c("fixed", "random", "all"), ...) {
-  effects <- match.arg(effects)
-
-  l <- .compact_list(list(
-    conditional = x@fixed.param,
-    random = x@random.param
-  ))
-
-  fixed <- data.frame(
-    Parameter = names(l$conditional),
-    Estimate = l$conditional,
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-
-  random <- data.frame(
-    Parameter = names(l$random),
-    Estimate = l$random,
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-
-  all <- rbind(
-    cbind(fixed, data.frame(Effects = "fixed", stringsAsFactors = FALSE)),
-    cbind(random, data.frame(Effects = "random", stringsAsFactors = FALSE))
-  )
-
-  if (effects == "fixed") {
-    fixed
-  } else if (effects == "random") {
-    random
-  } else {
-    all
-  }
-}
-
-
-#' @importFrom stats na.omit
-#' @export
-get_parameters.gamlss <- function(x, ...) {
-  pars <- lapply(x$parameters, function(i) {
-    stats::na.omit(stats::coef(x, what = i))
-  })
-
-  names(pars) <- x$parameters
-  if ("mu" %in% names(pars)) names(pars)[1] <- "conditional"
-
-  do.call(rbind, lapply(names(pars), function(i) {
-    data.frame(
-      Parameter = names(pars[[i]]),
-      Estimate = pars[[i]],
-      Component = i,
-      stringsAsFactors = FALSE,
-      row.names = NULL
-    )
-  }))
-  #
-  # data.frame(
-  #   Parameter = c(names(pars$conditional), names(pars$sigma), names(pars$nu), names(pars$tau)),
-  #   Estimate = c(unname(pars$conditional), unname(pars$sigma), unname(pars$nu), unname(pars$tau)),
-  #   Component = c(
-  #     rep("conditional", length(pars$conditional)),
-  #     rep("sigma", length(pars$sigma)),
-  #     rep("nu", length(pars$nu)),
-  #     rep("tau", length(pars$tau))
-  #   ),
-  #   stringsAsFactors = FALSE,
-  #   row.names = NULL
-  # )
-}
-
-
-
-#' @export
-get_parameters.lrm <- function(x, ...) {
-  tryCatch({
-    cf <- stats::coef(x)
-    data.frame(
-      Parameter = names(cf),
-      Estimate = unname(cf),
-      stringsAsFactors = FALSE,
-      row.names = NULL
-    )
-  },
-  error = function(x) {
-    NULL
-  }
-  )
-}
-
-
-
-#' @export
-get_parameters.aov <- function(x, ...) {
-  cf <- stats::coef(x)
-  data.frame(
-    Parameter = names(cf),
-    Estimate = unname(cf),
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-}
-
 
 
 #' @export
@@ -348,548 +106,289 @@ get_parameters.data.frame <- function(x, ...) {
 
 
 
-#' @rdname get_parameters
+
+# Special models ---------------------------------------------
+
+
 #' @export
-get_parameters.gam <- function(x, component = c("all", "conditional", "smooth_terms"), ...) {
-  component <- match.arg(component)
-  pars <- stats::coef(x)
+get_parameters.rms <- get_parameters.default
 
-  st <- summary(x)$s.table
-  smooth_terms <- st[, 1]
-  names(smooth_terms) <- row.names(st)
 
-  .return_smooth_parms(
-    conditional = pars[.grep_non_smoothers(names(pars))],
-    smooth_terms = smooth_terms,
-    component = component
-  )
+#' @export
+get_parameters.tobit <- get_parameters.default
+
+
+#' @export
+get_parameters.model_fit <- function(x, ...) {
+  get_parameters(x$fit, ...)
 }
 
 
-
-#' @rdname get_parameters
 #' @export
-get_parameters.vgam <- function(x, component = c("all", "conditional", "smooth_terms"), ...) {
-  component <- match.arg(component)
-  pars <- stats::coef(x)
+get_parameters.bfsl <- function(x, ...) {
+  cf <- stats::coef(x)
 
-  .return_smooth_parms(
-    conditional = pars[.grep_non_smoothers(names(pars))],
-    smooth_terms = pars[.grep_smoothers(names(pars))],
-    component = component
-  )
-}
-
-
-
-#' @export
-get_parameters.crq <- function(x, ...) {
-  sc <- summary(x)
-  data.frame(
-    Parameter = names(sc$coefficients[, 1]),
-    Estimate = unname(sc$coefficients[, 1]),
+  params <- data.frame(
+    Parameter = rownames(cf),
+    Estimate = unname(cf[, "Estimate"]),
     stringsAsFactors = FALSE,
     row.names = NULL
   )
+
+  text_remove_backticks(params)
 }
 
 
-
-#' @rdname get_parameters
 #' @export
-get_parameters.rqss <- function(x, component = c("all", "conditional", "smooth_terms"), ...) {
+get_parameters.selection <- function(x, component = c("all", "selection", "outcome", "auxiliary"), ...) {
   component <- match.arg(component)
-  sc <- summary(x)
-
-  smooth_terms <- sc$qsstab[, 3]
-  names(smooth_terms) <- rownames(sc$qsstab)
-
-  .return_smooth_parms(
-    conditional = sc$coef[, 1],
-    smooth_terms = smooth_terms,
-    component = component
+  s <- summary(x)
+  rn <- row.names(s$estimate)
+  estimates <- as.data.frame(s$estimate, row.names = FALSE)
+  params <- data.frame(
+    Parameter = rn,
+    Estimate = estimates[[1]],
+    Component = "auxiliary",
+    stringsAsFactors = FALSE,
+    row.names = NULL
   )
-}
+  params$Component[s$param$index$betaS] <- "selection"
+  params$Component[s$param$index$betaO] <- "outcome"
 
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.Gam <- function(x, component = c("all", "conditional", "smooth_terms"), ...) {
-  component <- match.arg(component)
-  pars <- stats::coef(x)
-
-  .return_smooth_parms(
-    conditional = pars[.grep_non_smoothers(names(pars))],
-    smooth_terms = pars[.grep_smoothers(names(pars))],
-    component = component
-  )
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.zeroinfl <- function(x, component = c("all", "conditional", "zi", "zero_inflated"), ...) {
-  component <- match.arg(component)
-  .return_zeroinf_parms(x, component)
-}
-
-
-
-#' @export
-get_parameters.zerotrunc <- function(x, component = c("all", "conditional", "zi", "zero_inflated"), ...) {
-  component <- match.arg(component)
-  .return_zeroinf_parms(x, component)
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.gamm <- function(x, component = c("all", "conditional", "smooth_terms"), ...) {
-  x <- x$gam
-  class(x) <- c(class(x), c("glm", "lm"))
-  get_parameters.gam(x, component, ...)
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.aovlist <- function(x, effects = c("fixed", "random", "all"), ...) {
-  effects <- match.arg(effects)
-
-  l <- lapply(stats::coef(x), function(i) {
-    data.frame(
-      Parameter = names(i),
-      Estimate = unname(i),
-      stringsAsFactors = FALSE
-    )
-  })
-
-  l <- list(rbind(l[[1]], l[[2]]), l[[3]])
-  names(l) <- c("conditional", "random")
-
-  all <- rbind(
-    cbind(l$conditional, data.frame(Effects = "fixed", stringsAsFactors = FALSE)),
-    cbind(l$random, data.frame(Effects = "random", stringsAsFactors = FALSE))
-  )
-
-  if (effects == "fixed") {
-    l$conditional
-  } else if (effects == "random") {
-    l$random
-  } else {
-    all
-  }
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.hurdle <- function(x, component = c("all", "conditional", "zi", "zero_inflated"), ...) {
-  component <- match.arg(component)
-  .return_zeroinf_parms(x, component)
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.MCMCglmm <- function(x, effects = c("fixed", "random", "all"), ...) {
-  effects <- match.arg(effects)
-  sc <- summary(x)
-
-  l <- .compact_list(list(
-    conditional = sc$solutions[, 1],
-    random = sc$Gcovariances[, 1]
-  ))
-
-  names(l$conditional) <- rownames(sc$solutions)
-  names(l$random) <- rownames(sc$Gcovariances)
-
-  fixed <- data.frame(
-    Parameter = names(l$conditional),
-    Estimate = unname(l$conditional),
-    stringsAsFactors = FALSE
-  )
-
-  random <- data.frame(
-    Parameter = names(l$random),
-    Estimate = unname(l$random),
-    stringsAsFactors = FALSE
-  )
-
-  all <- rbind(
-    cbind(fixed, data.frame(Effects = "fixed", stringsAsFactors = FALSE)),
-    cbind(random, data.frame(Effects = "random", stringsAsFactors = FALSE))
-  )
-
-  if (effects == "fixed") {
-    fixed
-  } else if (effects == "random") {
-    random
-  } else {
-    all
-  }
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.coxme <- function(x, effects = c("fixed", "random"), ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("To use this function, please install package 'lme4'.")
+  if (component != "all") {
+    params <- params[params$Component == component, , drop = FALSE]
   }
 
-  effects <- match.arg(effects)
-
-  l <- .compact_list(list(
-    conditional = lme4::fixef(x),
-    random = lme4::ranef(x)
-  ))
-
-  fixed <- data.frame(
-    Parameter = names(l$conditional),
-    Estimate = unname(l$conditional),
-    stringsAsFactors = FALSE
-  )
-
-  if (effects == "fixed") {
-    fixed
-  } else {
-    l$random
-  }
+  text_remove_backticks(params)
 }
 
 
+#' @export
+get_parameters.epi.2by2 <- function(x, ...) {
+  coef_names <- grepl("^([^NNT]*)(\\.strata\\.wald)", names(x$massoc.detail), perl = TRUE)
+  cf <- x$massoc.detail[coef_names]
+  names(cf) <- gsub(".strata.wald", "", names(cf), fixed = TRUE)
+
+  params <- data.frame(
+    Parameter = names(cf),
+    Estimate = unname(unlist(lapply(cf, function(i) i["est"]))),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+  text_remove_backticks(params)
+}
+
 
 #' @export
-get_parameters.wbm <- function(x, effects = c("fixed", "random"), ...) {
-  effects <- match.arg(effects)
+get_parameters.Rchoice <- function(x, ...) {
+  cf <- stats::coef(x)
+  params <- data.frame(
+    Parameter = find_parameters(x, flatten = TRUE),
+    Estimate = as.vector(cf),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+  text_remove_backticks(params)
+}
 
-  if (effects == "fixed") {
-    s <- summary(x)
 
-    terms <- c(
-      rownames(s$within_table),
-      rownames(s$between_table),
-      rownames(s$ints_table)
-    )
+#' @export
+get_parameters.btergm <- function(x, ...) {
+  cf <- x@coef
+  params <- data.frame(
+    Parameter = names(cf),
+    Estimate = as.vector(cf),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+  text_remove_backticks(params)
+}
 
-    params <- rbind(
-      data.frame(params = s$within_table, component = "within", stringsAsFactors = FALSE),
-      data.frame(params = s$between_table, component = "between", stringsAsFactors = FALSE),
-      data.frame(params = s$ints_table, component = "interactions", stringsAsFactors = FALSE)
-    )
 
-    data.frame(
-      Parameter = gsub("`", "", terms, fixed = TRUE),
-      Estimate = params[[1]],
-      Component = params[["component"]],
+#' @export
+get_parameters.mediate <- function(x, ...) {
+  info <- model_info(x$model.y, verbose = FALSE)
+  if (info$is_linear && !x$INT) {
+    out <- data.frame(
+      Parameter = c("ACME", "ADE", "Total Effect", "Prop. Mediated"),
+      Estimate = c(x$d1, x$z0, x$tau.coef, x$n0),
       stringsAsFactors = FALSE
     )
   } else {
-    if (!requireNamespace("lme4", quietly = TRUE)) {
-      stop("To use this function, please install package 'lme4'.")
+    out <- data.frame(
+      Parameter = c(
+        "ACME (control)", "ACME (treated)", "ADE (control)",
+        "ADE (treated)", "Total Effect", "Prop. Mediated (control)",
+        "Prop. Mediated (treated)", "ACME (average)", "ADE (average)",
+        "Prop. Mediated (average)"
+      ),
+      Estimate = c(x$d0, x$d1, x$z0, x$z1, x$tau.coef, x$n0, x$n1, x$d.avg, x$z.avg, x$n.avg),
+      stringsAsFactors = FALSE
+    )
+  }
+  text_remove_backticks(out)
+}
+
+
+#' @export
+get_parameters.ridgelm <- function(x, ...) {
+  out <- data.frame(
+    Parameter = names(x$coef),
+    Estimate = as.vector(x$coef),
+    stringsAsFactors = FALSE
+  )
+  text_remove_backticks(out)
+}
+
+
+#' @export
+get_parameters.ivFixed <- function(x, ...) {
+  out <- data.frame(
+    Parameter = rownames(x$coefficients),
+    Estimate = as.vector(x$coefficients),
+    stringsAsFactors = FALSE
+  )
+  text_remove_backticks(out)
+}
+
+
+#' @export
+get_parameters.ivprobit <- function(x, ...) {
+  out <- data.frame(
+    Parameter = x$names,
+    Estimate = as.vector(x$coefficients),
+    stringsAsFactors = FALSE
+  )
+  text_remove_backticks(out)
+}
+
+
+#' @export
+get_parameters.survreg <- function(x, ...) {
+  s <- summary(x)
+  out <- data.frame(
+    Parameter = rownames(s$table),
+    Estimate = as.vector(s$table[, 1]),
+    stringsAsFactors = FALSE
+  )
+  text_remove_backticks(out)
+}
+
+
+#' @export
+get_parameters.riskRegression <- function(x, ...) {
+  junk <- utils::capture.output(cs <- stats::coef(x))
+  out <- data.frame(
+    Parameter = as.vector(cs[, 1]),
+    Estimate = as.numeric(cs[, 2]),
+    stringsAsFactors = FALSE
+  )
+  text_remove_backticks(out)
+}
+
+
+#' @export
+get_parameters.mipo <- function(x, ...) {
+  out <- data.frame(
+    Parameter = as.vector(summary(x)$term),
+    Estimate = as.vector(summary(x)$estimate),
+    stringsAsFactors = FALSE
+  )
+  text_remove_backticks(out)
+}
+
+
+#' @export
+get_parameters.mira <- function(x, ...) {
+  # installed?
+  check_if_installed("mice")
+  get_parameters(mice::pool(x), ...)
+}
+
+
+#' @export
+get_parameters.margins <- function(x, ...) {
+  s <- summary(x)
+  param <- as.vector(s$factor)
+  estimate_pos <- which(colnames(s) == "AME")
+
+  if (estimate_pos > 2) {
+    out <- s[1:(estimate_pos - 1)]
+    r <- apply(out, 1, function(i) paste0(colnames(out), " [", i, "]"))
+    param <- unname(sapply(as.data.frame(r), paste, collapse = ", "))
+  }
+
+  out <- data.frame(
+    Parameter = param,
+    Estimate = as.vector(summary(x)$AME),
+    stringsAsFactors = FALSE
+  )
+  text_remove_backticks(out)
+}
+
+
+#' @export
+get_parameters.glht <- function(x, ...) {
+  s <- summary(x)
+  alt <- switch(x$alternative,
+    two.sided = "==",
+    less = ">=",
+    greater = "<="
+  )
+  out <- data.frame(
+    Parameter = paste(names(s$test$coefficients), alt, x$rhs),
+    Estimate = unname(s$test$coefficients),
+    stringsAsFactors = FALSE
+  )
+  text_remove_backticks(out)
+}
+
+
+#' @export
+get_parameters.mle2 <- function(x, ...) {
+  # installed?
+  check_if_installed("bbmle")
+  s <- bbmle::summary(x)
+
+  params <- data.frame(
+    Parameter = names(s@coef[, 1]),
+    Estimate = unname(s@coef[, 1]),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+
+  text_remove_backticks(params)
+}
+
+#' @export
+get_parameters.mle <- get_parameters.mle2
+
+
+
+#' @export
+get_parameters.lrm <- function(x, ...) {
+  tryCatch(
+    {
+      cf <- stats::coef(x)
+
+      params <- data.frame(
+        Parameter = names(cf),
+        Estimate = unname(cf),
+        stringsAsFactors = FALSE,
+        row.names = NULL
+      )
+
+      text_remove_backticks(params)
+    },
+    error = function(x) {
+      NULL
     }
-    lme4::ranef(x)
-  }
+  )
 }
-
 
 
 #' @export
-get_parameters.nlmerMod <- function(x, effects = c("fixed", "random"), ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("To use this function, please install package 'lme4'.")
-  }
-
-  effects <- match.arg(effects)
-  startvectors <- .get_startvector_from_env(x)
-  fx <- lme4::fixef(x)
-
-  l <- .compact_list(list(
-    conditional = fx[setdiff(names(fx), startvectors)],
-    nonlinear = fx[startvectors],
-    random = lapply(lme4::ranef(x), colnames)
-  ))
-
-  fixed <- data.frame(
-    Parameter = c(
-      gsub("`", "", names(l$conditional), fixed = TRUE),
-      gsub("`", "", names(l$nonlinear), fixed = TRUE)
-    ),
-    Estimate = c(unname(l$conditional), unname(l$nonlinear)),
-    Component = c(
-      rep("fixed", length(l$conditional)),
-      rep("nonlinear", length(l$nonlinear))
-    ),
-    stringsAsFactors = FALSE
-  )
-
-  if (effects == "fixed") {
-    fixed
-  } else {
-    l$random
-  }
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.merMod <- function(x, effects = c("fixed", "random"), ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("To use this function, please install package 'lme4'.")
-  }
-
-  effects <- match.arg(effects)
-
-  l <- .compact_list(list(
-    conditional = lme4::fixef(x),
-    random = lme4::ranef(x)
-  ))
-
-  fixed <- data.frame(
-    Parameter = gsub("`", "", names(l$conditional), fixed = TRUE),
-    Estimate = unname(l$conditional),
-    stringsAsFactors = FALSE
-  )
-
-  if (effects == "fixed") {
-    fixed
-  } else {
-    l$random
-  }
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.rlmerMod <- function(x, effects = c("fixed", "random"), ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("To use this function, please install package 'lme4'.")
-  }
-
-  effects <- match.arg(effects)
-
-  l <- .compact_list(list(
-    conditional = lme4::fixef(x),
-    random = lme4::ranef(x)
-  ))
-
-  fixed <- data.frame(
-    Parameter = names(l$conditional),
-    Estimate = unname(l$conditional),
-    stringsAsFactors = FALSE
-  )
-
-  if (effects == "fixed") {
-    fixed
-  } else {
-    l$random
-  }
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.mixed <- function(x, effects = c("fixed", "random"), ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("To use this function, please install package 'lme4'.")
-  }
-
-  effects <- match.arg(effects)
-
-  l <- .compact_list(list(
-    conditional = lme4::fixef(x$full_model),
-    random = lme4::ranef(x$full_model)
-  ))
-
-  fixed <- data.frame(
-    Parameter = names(l$conditional),
-    Estimate = unname(l$conditional),
-    stringsAsFactors = FALSE
-  )
-
-  if (effects == "fixed") {
-    fixed
-  } else {
-    l$random
-  }
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.lme <- function(x, effects = c("fixed", "random"), ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("To use this function, please install package 'lme4'.")
-  }
-
-  effects <- match.arg(effects)
-
-  l <- .compact_list(list(
-    conditional = lme4::fixef(x),
-    random = lme4::ranef(x)
-  ))
-
-  fixed <- data.frame(
-    Parameter = names(l$conditional),
-    Estimate = unname(l$conditional),
-    stringsAsFactors = FALSE
-  )
-
-  if (effects == "fixed") {
-    fixed
-  } else {
-    l$random
-  }
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.MixMod <- function(x, effects = c("fixed", "random"), component = c("all", "conditional", "zi", "zero_inflated", "dispersion"), ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("To use this function, please install package 'lme4'.")
-  }
-
-  effects <- match.arg(effects)
-  component <- match.arg(component)
-
-  has_zeroinf <- !is.null(find_formula(x)[["zero_inflated"]])
-
-  if (component %in% c("zi", "zero_inflated") && !has_zeroinf) {
-    stop("Model has no zero-inflation component.", call. = FALSE)
-  }
-
-
-  re.names <- dimnames(lme4::ranef(x))[[2]]
-  re <- lme4::ranef(x)
-
-
-  if (has_zeroinf) {
-    z_inflated <- lme4::fixef(x, sub_model = "zero_part")
-    z_inflated_random <- re[grepl("^zi_", re.names, perl = TRUE)]
-  } else {
-    z_inflated <- NULL
-    z_inflated_random <- NULL
-    component <- "conditional"
-  }
-
-
-  l <- .compact_list(list(
-    conditional = lme4::fixef(x, sub_model = "main"),
-    random = re[grepl("^(?!zi_)", re.names, perl = TRUE)],
-    zero_inflated = z_inflated,
-    zero_inflated_random = z_inflated_random
-  ))
-
-  fixed <- data.frame(
-    Parameter = names(l$conditional),
-    Estimate = unname(l$conditional),
-    Component = "conditional",
-    stringsAsFactors = FALSE
-  )
-
-  if (has_zeroinf) {
-    fixedzi <- data.frame(
-      Parameter = names(l$zero_inflated),
-      Estimate = unname(l$zero_inflated),
-      Component = "zero_inflated",
-      stringsAsFactors = FALSE
-    )
-  } else {
-    fixedzi <- NULL
-  }
-
-  if (effects == "fixed") {
-    switch(
-      component,
-      all = rbind(fixed, fixedzi),
-      conditional = fixed,
-      zi = ,
-      zero_inflated = fixedzi
-    )
-  } else if (effects == "random") {
-    switch(
-      component,
-      all = .compact_list(list(random = l$random, zero_inflated_random = l$zero_inflated_random)),
-      conditional = list(random = l$random),
-      zi = ,
-      zero_inflated = list(zero_inflated_random = l$zero_inflated_random)
-    )
-  }
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.glmmTMB <- function(x, effects = c("fixed", "random"), component = c("all", "conditional", "zi", "zero_inflated", "dispersion"), ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("To use this function, please install package 'lme4'.")
-  }
-
-  effects <- match.arg(effects)
-  component <- match.arg(component)
-
-  l <- .compact_list(list(
-    conditional = lme4::fixef(x)$cond,
-    random = lme4::ranef(x)$cond,
-    zero_inflated = lme4::fixef(x)$zi,
-    zero_inflated_random = lme4::ranef(x)$zi,
-    dispersion = lme4::fixef(x)$disp
-  ))
-
-  fixed <- data.frame(
-    Parameter = names(l$conditional),
-    Estimate = unname(l$conditional),
-    Component = "conditional",
-    stringsAsFactors = FALSE
-  )
-
-  if (.obj_has_name(l, "zero_inflated")) {
-    fixedzi <- data.frame(
-      Parameter = names(l$zero_inflated),
-      Estimate = unname(l$zero_inflated),
-      Component = "zero_inflated",
-      stringsAsFactors = FALSE
-    )
-  } else {
-    fixedzi <- NULL
-  }
-
-  if (effects == "fixed") {
-    switch(
-      component,
-      all = rbind(fixed, fixedzi),
-      conditional = fixed,
-      zi = ,
-      zero_inflated = fixedzi
-    )
-  } else if (effects == "random") {
-    switch(
-      component,
-      all = .compact_list(list(random = l$random, zero_inflated_random = l$zero_inflated_random)),
-      conditional = l$random,
-      zi = ,
-      zero_inflated = l$zero_inflated_random
-    )
-  }
-}
-
-
-
+get_parameters.orm <- get_parameters.lrm
 
 
 #' @export
@@ -916,198 +415,353 @@ get_parameters.multinom <- function(x, ...) {
     )
   }
 
+  text_remove_backticks(out)
+}
+
+
+#' @export
+get_parameters.brmultinom <- get_parameters.multinom
+
+
+
+
+#' @export
+get_parameters.mlm <- function(x, ...) {
+  cs <- stats::coef(summary(x))
+
+  out <- lapply(names(cs), function(i) {
+    params <- data.frame(
+      Parameter = rownames(cs[[i]]),
+      Estimate = cs[[i]][, 1],
+      Response = gsub("^Response (.*)", "\\1", i),
+      stringsAsFactors = FALSE,
+      row.names = NULL
+    )
+
+    text_remove_backticks(params)
+  })
+
+  do.call(rbind, out)
+}
+
+
+#' @export
+get_parameters.gbm <- function(x, ...) {
+  s <- summary(x, plotit = FALSE)
+
+  params <- data.frame(
+    Parameter = as.character(s$var),
+    Estimate = s$rel.inf,
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+
+  text_remove_backticks(params)
+}
+
+
+
+#' @export
+get_parameters.BBreg <- function(x, ...) {
+  pars <- summary(x)$coefficients
+
+  params <- data.frame(
+    Parameter = rownames(pars),
+    Estimate = pars[, "Estimate"],
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+
+  text_remove_backticks(params)
+}
+
+
+#' @export
+get_parameters.rma <- function(x, ...) {
+  tryCatch(
+    {
+      cf <- stats::coef(x)
+
+      params <- data.frame(
+        Parameter = names(cf),
+        Estimate = unname(cf),
+        stringsAsFactors = FALSE,
+        row.names = NULL
+      )
+
+      params$Parameter[grepl("intrcpt", params$Parameter)] <- "(Intercept)"
+      text_remove_backticks(params)
+    },
+    error = function(x) {
+      NULL
+    }
+  )
+}
+
+
+#' @export
+get_parameters.meta_random <- function(x, ...) {
+  tryCatch(
+    {
+      cf <- x$estimates
+
+      params <- data.frame(
+        Parameter = rownames(cf),
+        Estimate = unname(cf[, 1]),
+        stringsAsFactors = FALSE,
+        row.names = NULL
+      )
+
+      params$Parameter[grepl("d", params$Parameter)] <- "(Intercept)"
+      text_remove_backticks(params)
+    },
+    error = function(x) {
+      NULL
+    }
+  )
+}
+
+
+#' @export
+get_parameters.meta_fixed <- get_parameters.meta_random
+
+#' @export
+get_parameters.meta_bma <- get_parameters.meta_random
+
+
+#' @export
+get_parameters.metaplus <- function(x, ...) {
+  params <- data.frame(
+    Parameter = rownames(x$results),
+    Estimate = unname(x$results[, 1]),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+
+  params$Parameter[grepl("muhat", params$Parameter)] <- "(Intercept)"
+  text_remove_backticks(params)
+}
+
+
+
+
+
+
+# SEM models ---------------------------------------------
+
+
+#' @export
+get_parameters.blavaan <- function(x, summary = FALSE, standardize = FALSE, ...) {
+  if (isTRUE(summary)) {
+    return(get_parameters.lavaan(x, standardize = standardize, ...))
+  }
+  # installed?
+  check_if_installed("lavaan")
+  check_if_installed("blavaan")
+
+  if (isTRUE(standardize)) {
+    draws <- blavaan::standardizedPosterior(x)
+  } else {
+    draws <- blavaan::blavInspect(x, "draws")
+  }
+  posteriors <- as.data.frame(as.matrix(draws))
+
+  param_tab <- lavaan::parameterEstimates(x)
+  params <- paste0(param_tab$lhs, param_tab$op, param_tab$rhs)
+
+  coef_labels <- names(lavaan::coef(x))
+
+  if ("group" %in% colnames(param_tab) && n_unique(param_tab$group) > 1) {
+    params <- paste0(params, " (group ", param_tab$group, ")")
+    groups <- grepl("(.*)\\.g(.*)", coef_labels)
+    coef_labels[!groups] <- paste0(coef_labels[!groups], " (group 1)")
+    coef_labels[groups] <- gsub("(.*)\\.g(.*)", "\\1 \\(group \\2\\)", coef_labels[groups])
+  }
+
+  are_labels <- !coef_labels %in% params
+  if (any(are_labels)) {
+    unique_labels <- unique(coef_labels[are_labels])
+    for (ll in seq_along(unique_labels)) {
+      coef_labels[coef_labels == unique_labels[ll]] <-
+        params[param_tab$label == unique_labels[ll]]
+    }
+  }
+
+  colnames(posteriors) <- coef_labels
+
+  posteriors
+}
+
+
+
+#' @export
+get_parameters.lavaan <- function(x, standardize = FALSE, ...) {
+  # installed?
+  check_if_installed("lavaan")
+
+  if (standardize) {
+    params <- lavaan::standardizedSolution(x)
+  } else {
+    params <- lavaan::parameterEstimates(x)
+  }
+
+  params$parameter <- paste0(params$lhs, params$op, params$rhs)
+  params$comp <- NA
+
+  params$comp[params$op == "~"] <- "regression"
+  params$comp[params$op == "=~"] <- "latent"
+  params$comp[params$op == "~~"] <- "residual"
+  params$comp[params$op == "~1"] <- "intercept"
+
+  params <- data.frame(
+    Parameter = params$parameter,
+    Estimate = params$est,
+    Component = params$comp,
+    stringsAsFactors = FALSE
+  )
+
+  text_remove_backticks(params)
+}
+
+
+
+
+# Ordinal models ---------------------------------------------
+
+
+#' @export
+get_parameters.polr <- function(x, ...) {
+  pars <- c(sprintf("Intercept: %s", names(x$zeta)), names(x$coefficients))
+
+  params <- data.frame(
+    Parameter = pars,
+    Estimate = c(unname(x$zeta), unname(x$coefficients)),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+
+  text_remove_backticks(params)
+}
+
+
+#' @export
+get_parameters.bracl <- function(x, ...) {
+  pars <- stats::coef(x)
+
+  params <- data.frame(
+    Parameter = names(pars),
+    Estimate = unname(pars),
+    Response = gsub("(.*):(.*)", "\\1", names(pars)),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+
+  text_remove_backticks(params)
+}
+
+
+
+
+
+
+
+
+
+# Standard models --------------------------------------------------
+
+
+#' @export
+get_parameters.aov <- function(x, ...) {
+  cf <- stats::coef(x)
+
+  params <- data.frame(
+    Parameter = names(cf),
+    Estimate = unname(cf),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+
+  text_remove_backticks(params)
+}
+
+
+
+#' @export
+get_parameters.aovlist <- function(x, ...) {
+  cs <- stats::coef(x)
+  out <- do.call(rbind, lapply(names(cs), function(i) {
+    params <- data.frame(
+      Parameter = names(cs[[i]]),
+      Estimate = unname(cs[[i]]),
+      Group = i,
+      stringsAsFactors = FALSE
+    )
+    text_remove_backticks(params)
+  }))
+  rownames(out) <- NULL
   out
 }
 
 
 
-
-
-#' @rdname get_parameters
 #' @export
-get_parameters.brmsfit <- function(x, effects = c("fixed", "random", "all"), component = c("all", "conditional", "zi", "zero_inflated", "dispersion", "simplex", "sigma", "smooth_terms"), parameters = NULL, ...) {
-  effects <- match.arg(effects)
+get_parameters.manova <- function(x, ...) {
+  params <- stats::na.omit(stats::coef(x))
+  out <- .gather(as.data.frame(params), names_to = "Response", values_to = "Estimate")
+  out$Parameter <- rownames(out)
+
+  out <- out[c("Parameter", "Estimate", "Response")]
+  rownames(out) <- NULL
+
+  pattern <- paste0("(", paste0(paste0(".", unique(out$Response)), collapse = "|"), ")$")
+  out$Parameter <- gsub(pattern, "", out$Parameter)
+
+  text_remove_backticks(out)
+}
+
+#' @export
+get_parameters.maov <- get_parameters.manova
+
+
+
+#' @export
+get_parameters.afex_aov <- function(x, ...) {
+  if (!is.null(x$aov)) {
+    get_parameters(x$aov, ...)
+  } else {
+    get_parameters(x$lm, ...)
+  }
+}
+
+
+#' @export
+get_parameters.pgmm <- function(x, component = c("conditional", "all"), ...) {
   component <- match.arg(component)
-
-  if (is_multivariate(x)) {
-    parms <- find_parameters(x, flatten = FALSE, parameters = parameters)
-    elements <- .get_elements(effects, component)
-    as.data.frame(x)[unlist(lapply(parms, function(i) i[elements]))]
-  } else {
-    as.data.frame(x)[.get_parms_data(x, effects, component, parameters)]
-  }
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.stanreg <- function(x, effects = c("fixed", "random", "all"), parameters = NULL, ...) {
-  effects <- match.arg(effects)
-  as.data.frame(x)[.get_parms_data(x, effects, "all", parameters)]
-}
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.sim.merMod <- function(x, effects = c("fixed", "random", "all"), parameters = NULL, ...) {
-  effects <- match.arg(effects)
-  fe <- re <- NULL
-  if (effects %in% c("fixed", "all")) fe <- .get_armsim_fixef_parms(x)
-  if (effects %in% c("random", "all")) re <- .get_armsim_ranef_parms(x)
-
-  dat <- do.call(cbind, .compact_list(list(fe, re)))
-
-  as.data.frame(dat)[.get_parms_data(x, effects, "all", parameters)]
-}
-
-
-
-#' @export
-get_parameters.sim <- function(x, parameters = NULL, ...) {
-  dat <- .get_armsim_fixef_parms(x)
-  as.data.frame(dat)[.get_parms_data(x, "all", "all", parameters)]
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.BFBayesFactor <- function(x, iterations = 4000, progress = FALSE, ...) {
-  if (!requireNamespace("BayesFactor", quietly = TRUE)) {
-    stop("This function requires package `BayesFactor` to work. Please install it.")
-  }
-
-  if (.classify_BFBayesFactor(x) == "correlation") {
-    posteriors <-
-      as.data.frame(suppressMessages(
-        BayesFactor::posterior(x, iterations = iterations, progress = progress, ...)
-      ))
-    data.frame("rho" = as.numeric(posteriors$rho))
-  } else if (.classify_BFBayesFactor(x) == "ttest") {
-    posteriors <-
-      as.data.frame(suppressMessages(
-        BayesFactor::posterior(x, iterations = iterations, progress = progress, ...)
-      ))
-    data.frame("Difference" = as.numeric(posteriors[, 2]))
-  } else if (.classify_BFBayesFactor(x) == "meta") {
-    posteriors <-
-      as.data.frame(suppressMessages(
-        BayesFactor::posterior(x, iterations = iterations, progress = progress, ...)
-      ))
-    data.frame("Effect" = as.numeric(posteriors$delta))
-  } else {
-    NULL
-  }
-}
-
-
-
-#' @rdname get_parameters
-#' @export
-get_parameters.stanmvreg <- function(x, effects = c("fixed", "random", "all"), parameters = NULL, ...) {
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, "all")
-  parms <- find_parameters(x, flatten = FALSE, parameters = parameters)
-
-  for (i in names(parms)) {
-    parms[[i]]$conditional <- sprintf("%s|%s", i, parms[[i]]$conditional)
-    find_bracket <- regexpr(pattern = "\\[", parms[[i]]$random)
-    parms[[i]]$random <- paste0(
-      substr(parms[[i]]$random, start = 1, stop = find_bracket),
-      i, "|",
-      substr(parms[[i]]$random, start = find_bracket + 1, stop = 1000000L)
-    )
-    parms[[i]]$sigma <- NULL
-  }
-
-  as.data.frame(x)[unlist(lapply(.compact_list(parms), function(i) i[elements]))]
-}
-
-
-
-
-
-.get_parms_data <- function(x, effects, component, parameters = NULL) {
-  elements <- .get_elements(effects, component)
-  unlist(find_parameters(x, flatten = FALSE, parameters = parameters)[elements])
-}
-
-
-
-.return_zeroinf_parms <- function(x, component) {
-  cf <- stats::coef(x)
-
-  conditional <- grepl("^count_", names(cf), perl = TRUE)
-  zero_inflated <- grepl("^zero_", names(cf), perl = TRUE)
-
-  cond <- data.frame(
-    Parameter = names(cf)[conditional],
-    Estimate = unname(cf)[conditional],
+  cs <- stats::coef(summary(x, time.dummies = TRUE, robust = FALSE))
+  params <- data.frame(
+    Parameter = rownames(cs),
+    Estimate = unname(cs[, 1]),
     Component = "conditional",
     stringsAsFactors = FALSE,
     row.names = NULL
   )
 
-  zi <- data.frame(
-    Parameter = names(cf)[zero_inflated],
-    Estimate = unname(cf)[zero_inflated],
-    Component = "zero_inflated",
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
+  params$Component[params$Parameter %in% x$args$namest] <- "time_dummies"
 
-  pars <- switch(
-    component,
-    all = rbind(cond, zi),
-    conditional = cond,
-    zi = ,
-    zero_inflated = zi
-  )
-
-  if (component != "all") {
-    pars <- .remove_column(pars, "Component")
+  if (component == "conditional") {
+    params <- params[params$Component == "conditional", ]
+    params <- .remove_column(params, "Component")
   }
 
-  pars
+  text_remove_backticks(params)
 }
 
 
 
-.return_smooth_parms <- function(conditional, smooth_terms, component) {
-  cond <- data.frame(
-    Parameter = names(conditional),
-    Estimate = conditional,
-    Component = "conditional",
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
 
-  smooth <- data.frame(
-    Parameter = names(smooth_terms),
-    Estimate = smooth_terms,
-    Component = "smooth_terms",
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-
-  pars <- switch(
-    component,
-    all = rbind(cond, smooth),
-    conditional = cond,
-    smooth_terms = smooth
-  )
-
-  if (component != "all") {
-    pars <- .remove_column(pars, "Component")
-  }
-
-  pars
-}
+# utility functions ---------------------------------
 
 
-
-#' @importFrom methods slot slotNames
 .get_armsim_fixef_parms <- function(x) {
   sn <- methods::slotNames(x)
   as.data.frame(methods::slot(x, sn[1]))
@@ -1115,7 +769,6 @@ get_parameters.stanmvreg <- function(x, effects = c("fixed", "random", "all"), p
 
 
 
-#' @importFrom methods .hasSlot
 .get_armsim_ranef_parms <- function(x) {
   dat <- NULL
   if (methods::.hasSlot(x, "ranef")) {
@@ -1130,10 +783,11 @@ get_parameters.stanmvreg <- function(x, effects = c("fixed", "random", "all"), p
         colnames(d) <- sprintf("%s.%s", cn, dn[j])
         d
       })
-      if (ncol(dat) == 0)
+      if (ncol(dat) == 0) {
         dat <- do.call(cbind, l)
-      else
+      } else {
         dat <- cbind(dat, do.call(cbind, l))
+      }
     }
   }
 

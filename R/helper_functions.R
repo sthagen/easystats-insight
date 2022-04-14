@@ -1,18 +1,3 @@
-# remove trailing/leading spaces from character vectors
-.trim <- function(x) gsub("^\\s+|\\s+$", "", x)
-
-
-
-# remove NULL elements from lists
-.compact_list <- function(x) x[!sapply(x, function(i) length(i) == 0 || is.null(i) || any(i == "NULL"))]
-
-
-
-# remove empty string from character
-.compact_character <- function(x) x[!sapply(x, function(i) nchar(i) == 0 || is.null(i) || any(i == "NULL"))]
-
-
-
 # remove values from vector
 .remove_values <- function(x, values) {
   remove <- x %in% values
@@ -38,36 +23,13 @@
 }
 
 
-# is string empty?
-.is_empty_object <- function(x) {
-  if (is.list(x)) {
-    x <- tryCatch({
-      .compact_list(x)
-    },
-    error = function(x) {
-      x
-    }
-    )
-  }
-  # this is an ugly fix because of ugly tibbles
-  if (inherits(x, c("tbl_df", "tbl"))) x <- as.data.frame(x)
-  x <- suppressWarnings(x[!is.na(x)])
-  length(x) == 0 || is.null(x)
-}
-
-
-
 # does string contain pattern?
 .string_contains <- function(pattern, x) {
-  pattern <- paste0("\\Q", pattern, "\\E")
-  grepl(pattern, x, perl = TRUE)
-}
+  # This is a bit slower - restore if tests fail...
+  # pattern <- paste0("\\Q", pattern, "\\E")
+  # grepl(pattern, x, perl = TRUE)
 
-
-
-# has object an element with given name?
-.obj_has_name <- function(x, name) {
-  name %in% names(x)
+  grepl(pattern, x, fixed = TRUE)
 }
 
 
@@ -121,66 +83,55 @@
 
 
 # removes random effects from a formula that is in lmer-notation
-#' @importFrom stats terms drop.terms update
 .get_fixed_effects <- function(f) {
-  f_string <- .safe_deparse(f)
+  # remove random effects from RHS
+  fl <- length(f)
+  f[[fl]] <- .nobars(f[[fl]])
+  f
+}
 
-  # for some wird brms-models, we also have a "|" in the response.
-  # in order to check for "|" only in the random effects, we have
-  # to remove the response here...
 
-  f_response <- .safe_deparse(f[[2]])
-  f_predictors <- sub(f_response, "", f_string, fixed = TRUE)
-
-  if (grepl("|", f_predictors, fixed = TRUE)) {
-    # intercept only model, w/o "1" in formula notation?
-    # e.g. "Reaction ~ (1 + Days | Subject)"
-    if (length(f) > 2 && grepl("^\\(", .safe_deparse(f[[3]]))) {
-      .trim(paste0(.safe_deparse(f[[2]]), " ~ 1"))
-    } else if (!grepl("\\+(\\s)*\\((.*)\\)", f_string)) {
-      f_terms <- stats::terms(f)
-      pos_bar <- grep("|", labels(f_terms), fixed = TRUE)
-      no_bars <- stats::drop.terms(f_terms, pos_bar, keep.response = TRUE)
-      stats::update(f_terms, no_bars)
-    } else {
-      .trim(gsub("\\+(\\s)*\\((.*)\\)", "", f_string))
-    }
-  } else {
-    .trim(gsub("\\+(\\s)*\\((.*)\\)", "", f_string))
-  }
+# check if any terms appear in the formula after random effects
+# like "~ (1|school) + open + extro + agree + school"
+# this regex removes "(1|school)", as well as any +, -, *, whitespace etc.
+# if there are any chars left, these come from further terms that come after
+# random effects...
+.formula_empty_after_random_effect <- function(f) {
+  nchar(gsub("(~|\\+|\\*|-|/|:)", "", gsub(" ", "", gsub("\\((.*)\\)", "", f)))) == 0
 }
 
 
 
 # extract random effects from formula
 .get_model_random <- function(f, split_nested = FALSE, model) {
-  is_special <- inherits(model, c("MCMCglmm", "gee", "LORgee", "clmm2", "felm", "feis", "BFBayesFactor", "BBmm", "glimML"))
+  is_special <- inherits(
+    model,
+    c(
+      "MCMCglmm", "gee", "LORgee", "mixor", "clmm2", "felm", "feis", "bife",
+      "BFBayesFactor", "BBmm", "glimML", "MANOVA", "RM", "cglm", "glmm"
+    )
+  )
 
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("To use this function, please install package 'lme4'.")
-  }
-
-  if (identical(.safe_deparse(f), "~0") ||
-    identical(.safe_deparse(f), "~1")) {
+  if (identical(safe_deparse(f), "~0") || identical(safe_deparse(f), "~1")) {
     return(NULL)
   }
 
-  re <- sapply(lme4::findbars(f), .safe_deparse)
+  re <- sapply(.findbars(f), safe_deparse)
 
-  if (is_special && .is_empty_object(re)) {
+  if (is_special && is_empty_object(re)) {
     re <- all.vars(f[[2L]])
     if (length(re) > 1) {
       re <- as.list(re)
       split_nested <- FALSE
     }
   } else {
-    re <- .trim(substring(re, max(gregexpr(pattern = "\\|", re)[[1]]) + 1))
+    re <- trim_ws(substring(re, max(gregexpr(pattern = "\\|", re)[[1]]) + 1))
   }
 
   # check for multi-membership models
   if (inherits(model, "brmsfit")) {
     if (grepl("mm\\((.*)\\)", re)) {
-      re <- trimws(unlist(strsplit(gsub("mm\\((.*)\\)", "\\1", re), ",")))
+      re <- trim_ws(unlist(strsplit(gsub("mm\\((.*)\\)", "\\1", re), ",")))
     }
   }
 
@@ -190,11 +141,11 @@
 
     # nested random effects, e.g. g1 / g2 / g3, deparse to "g0:(g1:g2)".
     # when we split at ":", we have "g0", "(g1" and "g2)". In such cases,
-    # we need to remove the parantheses. But we need to preserve them in
+    # we need to remove the parentheses. But we need to preserve them in
     # case we have group factors in other models, like panelr, where we can
-    # have "lag(union)" as group factor. In such cases, parantheses should be
+    # have "lag(union)" as group factor. In such cases, parentheses should be
     # preserved. We here check if group factors, after passing to "clean_names()",
-    # still have "(" or ")" in their name, and if so, just remove parantheses
+    # still have "(" or ")" in their name, and if so, just remove parentheses
     # for these cases...
 
     has_parantheses <- vapply(
@@ -244,32 +195,80 @@
 
 
 
-# to reduce redundant code, I extract this part which is used several
-# times accross this package
-.get_elements <- function(effects, component) {
-  elements <- c("conditional", "nonlinear", "random", "zero_inflated", "zero_inflated_random", "dispersion", "instruments", "simplex", "smooth_terms", "sigma", "nu", "tau", "correlation", "slopes")
+# helper to access model components ----------------
 
-  elements <- switch(
-    effects,
+
+.all_elements <- function() {
+  c(
+    "conditional", "conditional1", "conditional2", "conditional3", "precision",
+    "nonlinear", "random", "zi", "zero_inflated", "zero_inflated_random", "shape",
+    "dispersion", "instruments", "interactions", "simplex", "smooth_terms",
+    "sigma", "nu", "tau", "correlation", "slopes", "cluster", "extra", "scale",
+    "marginal", "alpha", "beta", "survival", "infrequent_purchase", "auxiliary",
+    "mix", "shiftprop", "phi", "ndt", "hu", "xi", "coi", "zoi", "aux", "dist",
+    "selection", "outcome", "time_dummies", "sigma_random", "beta_random", "car"
+  )
+}
+
+.aux_elements <- function() {
+  c(
+    "sigma", "alpha", "beta", "dispersion", "precision", "nu", "tau", "shape",
+    "phi", "(phi)", "ndt", "hu", "xi", "coi", "zoi", "mix", "shiftprop", "auxiliary",
+    "aux", "dist",
+
+    # random parameters
+    "sigma_random", "beta_random"
+  )
+}
+
+.get_elements <- function(effects, component) {
+
+  # all elements of a model
+  elements <- .all_elements()
+
+  # zero-inflation component
+  zero_inflated_component <- c("zi", "zero_inflated", "zero_inflated_random")
+
+  # auxiliary parameters
+  auxiliary_parameters <- .aux_elements()
+
+  # random parameters
+  random_parameters <- c("random", "zero_inflated_random", "sigma_random", "beta_random", "car")
+
+  # conditional component
+  conditional_component <- setdiff(elements, c(auxiliary_parameters, zero_inflated_component, "smooth_terms"))
+
+  # location parameters
+  location_parameters <- if (effects == "fixed") {
+    setdiff(elements, c(auxiliary_parameters, random_parameters))
+  } else {
+    setdiff(elements, auxiliary_parameters)
+  }
+
+  # fixed pattern?
+  if (all(component == "location")) {
+    return(location_parameters)
+  }
+
+  # fixed pattern?
+  if (all(component %in% c("aux", "dist", "distributional", "auxiliary"))) {
+    return(auxiliary_parameters)
+  }
+
+
+  elements <- switch(effects,
     all = elements,
-    fixed = elements[elements %in% c("conditional", "zero_inflated", "dispersion", "instruments", "simplex", "smooth_terms", "correlation", "slopes", "sigma", "nonlinear")],
-    random = elements[elements %in% c("random", "zero_inflated_random")]
+    fixed = elements[!elements %in% random_parameters],
+    random = elements[elements %in% random_parameters]
   )
 
-  elements <- switch(
-    component,
+  elements <- switch(component,
     all = elements,
-    conditional = elements[elements %in% c("conditional", "nonlinear", "random", "slopes")],
+    cond = ,
+    conditional = elements[elements %in% conditional_component],
     zi = ,
-    zero_inflated = elements[elements %in% c("zero_inflated", "zero_inflated_random")],
-    dispersion = elements[elements == "dispersion"],
-    instruments = elements[elements == "instruments"],
-    simplex = elements[elements == "simplex"],
-    sigma = elements[elements == "sigma"],
-    smooth_terms = elements[elements == "smooth_terms"],
-    correlation = elements[elements == "correlation"],
-    nonlinear = elements[elements == "nonlinear"],
-    slopes = elements[elements == "slopes"]
+    zero_inflated = elements[elements %in% zero_inflated_component],
+    elements[elements == component]
   )
 
   elements
@@ -277,35 +276,36 @@
 
 
 
+
 # checks if a mixed model fit is singular or not. Need own function,
 # because lme4::isSingular() does not work with glmmTMB
-#' @importFrom stats na.omit
 .is_singular <- function(x, vals, tolerance = 1e-5) {
   if (!requireNamespace("lme4", quietly = TRUE)) {
     stop("Package `lme4` needs to be installed to compute variances for mixed models.", call. = FALSE)
   }
 
-  tryCatch({
-    if (inherits(x, c("glmmTMB", "clmm"))) {
-      is_si <- any(sapply(vals$vc, function(.x) any(abs(diag(.x)) < tolerance)))
-    } else if (inherits(x, "merMod")) {
-      theta <- lme4::getME(x, "theta")
-      diag.element <- lme4::getME(x, "lower") == 0
-      is_si <- any(abs(theta[diag.element]) < tolerance)
-    } else if (inherits(x, "MixMod")) {
-      vc <- diag(x$D)
-      is_si <- any(sapply(vc, function(.x) any(abs(.x) < tolerance)))
-    } else if (inherits(x, "lme")) {
-      is_si <- any(abs(stats::na.omit(as.numeric(diag(vals$vc))) < tolerance))
-    } else {
-      is_si <- FALSE
-    }
+  tryCatch(
+    {
+      if (inherits(x, c("glmmTMB", "clmm", "cpglmm"))) {
+        is_si <- any(sapply(vals$vc, function(.x) any(abs(diag(.x)) < tolerance)))
+      } else if (inherits(x, "merMod")) {
+        theta <- lme4::getME(x, "theta")
+        diag.element <- lme4::getME(x, "lower") == 0
+        is_si <- any(abs(theta[diag.element]) < tolerance)
+      } else if (inherits(x, "MixMod")) {
+        vc <- diag(x$D)
+        is_si <- any(sapply(vc, function(.x) any(abs(.x) < tolerance)))
+      } else if (inherits(x, "lme")) {
+        is_si <- any(abs(stats::na.omit(as.numeric(diag(vals$vc))) < tolerance))
+      } else {
+        is_si <- FALSE
+      }
 
-    is_si
-  },
-  error = function(x) {
-    FALSE
-  }
+      is_si
+    },
+    error = function(x) {
+      FALSE
+    }
   )
 }
 
@@ -362,6 +362,7 @@
     grepl("^(VGAM::s\\()", x, perl = TRUE) |
     grepl("^(mgcv::s\\()", x, perl = TRUE) |
     grepl("^(mgcv::ti\\()", x, perl = TRUE) |
+    grepl("^(mgcv::t2\\()", x, perl = TRUE) |
     grepl("^(mgcv::te\\()", x, perl = TRUE) |
     grepl("^(brms::s\\()", x, perl = TRUE) |
     grepl("^(brms::t2\\()", x, perl = TRUE) |
@@ -405,7 +406,7 @@
 #   else
 #     f[[2L]]
 #
-#   lapply(.extract_formula_parts(rhs), .safe_deparse)
+#   lapply(.extract_formula_parts(rhs), safe_deparse)
 # }
 #
 #
@@ -424,19 +425,14 @@
 
 
 
-.safe_deparse <- function(string) {
-  paste0(sapply(deparse(string, width.cutoff = 500), .trim, simplify = TRUE), collapse = " ")
-}
-
-
-
-#' @importFrom stats family
 .gam_family <- function(x) {
   faminfo <- tryCatch(
     {
       stats::family(x)
     },
-    error = function(e) { NULL }
+    error = function(e) {
+      NULL
+    }
   )
 
   # try to set manually, if not found otherwise
@@ -445,7 +441,9 @@
       {
         x$family
       },
-      error = function(e) { NULL }
+      error = function(e) {
+        NULL
+      }
     )
   }
 
@@ -457,14 +455,18 @@
 # for models with zero-inflation component, return
 # required component of model-summary
 .filter_component <- function(dat, component) {
-  switch(
-    component,
+  switch(component,
     "cond" = ,
-    "conditional" = dat[dat$component == "conditional", ],
+    "conditional" = dat[dat$Component == "conditional", , drop = FALSE],
     "zi" = ,
-    "zero_inflated" = dat[dat$component == "zero_inflated", ],
-    "dispersion" = dat[dat$component == "dispersion", ],
-    "smooth_terms" = dat[dat$component == "smooth_terms", ],
+    "zero_inflated" = dat[dat$Component == "zero_inflated", , drop = FALSE],
+    "dispersion" = dat[dat$Component == "dispersion", , drop = FALSE],
+    "smooth_terms" = dat[dat$Component == "smooth_terms", , drop = FALSE],
+    "ip" = ,
+    "infrequent_purchase" = dat[dat$Component == "infrequent_purchase", , drop = FALSE],
+    "auxiliary" = dat[dat$Component == "auxiliary", , drop = FALSE],
+    "distributional" = dat[dat$Component == "distributional", , drop = FALSE],
+    "sigma" = dat[dat$Component == "sigma", , drop = FALSE],
     dat
   )
 }
@@ -472,9 +474,319 @@
 
 
 
-# capitalizes the first letter in a string
-.capitalize <- function(x) {
-  capped <- grep("^[A-Z]", x, invert = TRUE)
-  substr(x[capped], 1, 1) <- toupper(substr(x[capped], 1, 1))
-  x
+#' @keywords internal
+.gather <- function(x,
+                    names_to = "key",
+                    values_to = "value",
+                    columns = colnames(x)) {
+  if (is.numeric(columns)) columns <- colnames(x)[columns]
+
+  dat <- stats::reshape(
+    x,
+    idvar = "id",
+    ids = row.names(x),
+    times = columns,
+    timevar = names_to,
+    v.names = values_to,
+    varying = list(columns),
+    direction = "long"
+  )
+
+  if (is.factor(dat[[values_to]])) {
+    dat[[values_to]] <- as.character(dat[[values_to]])
+  }
+
+  dat[, 1:(ncol(dat) - 1), drop = FALSE]
+}
+
+
+
+.is_baysian_emmeans <- function(x) {
+  if (inherits(x, "emm_list")) {
+    x <- x[[1]]
+  }
+  post.beta <- methods::slot(x, "post.beta")
+  !(all(dim(post.beta) == 1) && is.na(post.beta))
+}
+
+
+
+.is_bayesian_model <- function(x) {
+  inherits(x, c(
+    "brmsfit", "stanfit", "MCMCglmm", "stanreg",
+    "stanmvreg", "bmerMod", "BFBayesFactor", "bamlss",
+    "bayesx", "mcmc", "bcplm", "bayesQR", "BGGM",
+    "meta_random", "meta_fixed", "meta_bma", "blavaan",
+    "blrm"
+  ))
+}
+
+
+
+# safe conversion from factor to numeric
+.factor_to_numeric <- function(x, lowest = NULL) {
+  if (is.data.frame(x)) {
+    as.data.frame(lapply(x, .factor_to_numeric_helper, lowest = lowest))
+  } else {
+    .factor_to_numeric_helper(x, lowest = lowest)
+  }
+}
+
+
+.factor_to_numeric_helper <- function(x, lowest = NULL) {
+  if (is.numeric(x)) {
+    return(x)
+  }
+
+  if (is.logical(x)) {
+    return(as.numeric(x))
+  }
+
+  if (anyNA(suppressWarnings(as.numeric(as.character(stats::na.omit(x)))))) {
+    if (is.character(x)) {
+      x <- as.factor(x)
+    }
+    x <- droplevels(x)
+    levels(x) <- 1:nlevels(x)
+  }
+
+  out <- as.numeric(as.character(x))
+
+  if (!is.null(lowest)) {
+    difference <- min(out) - lowest
+    out <- out - difference
+  }
+
+  out
+}
+
+
+
+
+
+## copied from lme4::findbars() -----------------------
+
+
+.expandDoubleVert <- function(term) {
+  frml <- stats::formula(substitute(~x, list(x = term[[2]])))
+  newtrms <- paste0("0+", attr(stats::terms(frml), "term.labels"))
+  if (attr(stats::terms(frml), "intercept") != 0) {
+    newtrms <- c("1", newtrms)
+  }
+  stats::as.formula(paste("~(", paste(vapply(newtrms, function(trm) {
+    paste0(trm, "|", deparse(term[[3]]))
+  }, ""), collapse = ")+("), ")"))[[2]]
+}
+
+
+
+.expandDoubleVerts <- function(term) {
+  if (!is.name(term) && is.language(term)) {
+    if (term[[1]] == as.name("(")) {
+      term[[2]] <- .expandDoubleVerts(term[[2]])
+    }
+    stopifnot(is.call(term))
+    if (term[[1]] == as.name("||")) {
+      return(.expandDoubleVert(term))
+    }
+    term[[2]] <- .expandDoubleVerts(term[[2]])
+    if (length(term) != 2 && length(term) == 3) {
+      term[[3]] <- .expandDoubleVerts(term[[3]])
+    }
+  }
+  term
+}
+
+
+
+.findbars <- function(term) {
+  fb <- function(term) {
+    if (is.name(term) || !is.language(term)) {
+      return(NULL)
+    }
+    if (term[[1]] == as.name("(")) {
+      return(fb(term[[2]]))
+    }
+    stopifnot(is.call(term))
+    if (term[[1]] == as.name("|")) {
+      return(term)
+    }
+    if (length(term) == 2) {
+      return(fb(term[[2]]))
+    }
+    c(fb(term[[2]]), fb(term[[3]]))
+  }
+
+  expandSlash <- function(bb) {
+    makeInteraction <- function(x) {
+      if (length(x) < 2) {
+        return(x)
+      }
+      trm1 <- makeInteraction(x[[1]])
+      trm11 <- if (is.list(trm1)) {
+        trm1[[1]]
+      } else {
+        trm1
+      }
+      list(substitute(foo:bar, list(foo = x[[2]], bar = trm11)), trm1)
+    }
+    slashTerms <- function(x) {
+      if (!("/" %in% all.names(x))) {
+        return(x)
+      }
+      if (x[[1]] != as.name("/")) {
+        stop("unparseable formula for grouping factor", call. = FALSE)
+      }
+      list(slashTerms(x[[2]]), slashTerms(x[[3]]))
+    }
+    if (!is.list(bb)) {
+      expandSlash(list(bb))
+    } else {
+      unlist(lapply(bb, function(x) {
+        if (length(x) > 2 && is.list(trms <- slashTerms(x[[3]]))) {
+          lapply(unlist(makeInteraction(trms)), function(trm) {
+            substitute(foo | bar, list(foo = x[[2]], bar = trm))
+          })
+        } else {
+          x
+        }
+      }))
+    }
+  }
+  modterm <- .expandDoubleVerts(if (methods::is(term, "formula")) {
+    term[[length(term)]]
+  } else {
+    term
+  })
+  expandSlash(fb(modterm))
+}
+
+
+
+
+## copied from lme4::nobars() -----------------------
+
+
+.nobars <- function(term) {
+  nb <- .nobars_(term)
+  if (methods::is(term, "formula") && length(term) == 3 && is.symbol(nb)) {
+    nb <- stats::reformulate("1", response = deparse(nb))
+  }
+  if (is.null(nb)) {
+    nb <- if (methods::is(term, "formula")) {
+      ~1
+    } else {
+      1
+    }
+  }
+  nb
+}
+
+
+
+.nobars_ <- function(term) {
+  if (!(any(c("|", "||") %in% all.names(term)))) {
+    return(term)
+  }
+
+  if (.isBar(term)) {
+    return(NULL)
+  }
+
+  if (.isAnyArgBar(term)) {
+    return(NULL)
+  }
+
+  if (length(term) == 2) {
+    nb <- .nobars_(term[[2]])
+    if (is.null(nb)) {
+      return(NULL)
+    }
+    term[[2]] <- nb
+    return(term)
+  }
+
+  nb2 <- .nobars_(term[[2]])
+  nb3 <- .nobars_(term[[3]])
+
+  if (is.null(nb2)) {
+    return(nb3)
+  }
+
+  if (is.null(nb3)) {
+    return(nb2)
+  }
+
+  term[[2]] <- nb2
+  term[[3]] <- nb3
+  term
+}
+
+
+
+.isBar <- function(term) {
+  if (is.call(term)) {
+    if ((term[[1]] == as.name("|")) || (term[[1]] == as.name("||"))) {
+      return(TRUE)
+    }
+  }
+  FALSE
+}
+
+
+.isAnyArgBar <- function(term) {
+  if ((term[[1]] != as.name("~")) && (term[[1]] != as.name("("))) {
+    for (i in seq_along(term)) {
+      if (.isBar(term[[i]])) {
+        return(TRUE)
+      }
+    }
+  }
+  FALSE
+}
+
+
+
+# classify emmeans objects -------------
+
+
+is.emmeans.contrast <- function(x) {
+  if (inherits(x, "list")) {
+    out <- vector("list", length = length(x))
+    for (i in seq_along(x)) {
+      out[[i]] <- is.emmeans.contrast(x[[i]])
+    }
+    return(unlist(out))
+  }
+
+  res <- "con.coef" %in% names(x@misc)
+  rep(res, nrow(x@linfct))
+}
+
+
+is.emmeans.trend <- function(x) {
+  if (inherits(x, "list")) {
+    out <- vector("list", length = length(x))
+    for (i in seq_along(x)) {
+      out[[i]] <- is.emmeans.trend(x[[i]])
+    }
+    return(unlist(out))
+  }
+
+  "trend" %in% names(x@roles) & !is.emmeans.contrast(x)
+}
+
+
+is.emmean <- function(x) {
+  !is.emmeans.trend(x) & !is.emmeans.contrast(x)
+}
+
+
+.classify_emmeans <- function(x) {
+  c_ <- is.emmeans.contrast(x)
+  t_ <- is.emmeans.trend(x)
+
+  ifelse(c_, "contrasts",
+    ifelse(t_, "emtrends", "emmeans")
+  )
 }

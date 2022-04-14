@@ -1,19 +1,16 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("splines") &&
-  require("glmmTMB")) {
-  context("insight, get_data")
+.runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
+if (.runThisTest &&
+  requiet("testthat") &&
+  requiet("insight") &&
+  requiet("splines") &&
+  requiet("glmmTMB")) {
   data(iris)
 
   m1 <- lm(Sepal.Length ~ Species + ns(Petal.Width), data = iris)
-  m2 <-
-    lm(Sepal.Length ~ Species + ns(Petal.Width, knots = 2), data = iris)
-  m3 <-
-    lm(Sepal.Length ~ Species + bs(Petal.Width, degree = 3), data = iris)
-  m4 <-
-    lm(Sepal.Length ~ Species + bs(Petal.Width, degree = 1), data = iris)
-
+  m2 <- lm(Sepal.Length ~ Species + ns(Petal.Width, knots = 2), data = iris)
+  m3 <- lm(Sepal.Length ~ Species + bs(Petal.Width, degree = 3), data = iris)
+  m4 <- lm(Sepal.Length ~ Species + bs(Petal.Width, degree = 1), data = iris)
   m5 <- lm(Sepal.Length ~ Species + Petal.Width, data = iris)
 
 

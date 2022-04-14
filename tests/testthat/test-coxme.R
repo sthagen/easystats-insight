@@ -1,21 +1,21 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("survival") &&
-  require("coxme")) {
-  context("insight, model_info")
-
-  data(lung)
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("survival") &&
+  requiet("lme4") &&
+  requiet("nlme") &&
+  requiet("bdsmatrix") &&
+  requiet("coxme")) {
   set.seed(1234)
-  lung$inst2 <- sample(1:10, size = nrow(lung), replace = T)
+  lung$inst2 <- sample(1:10, size = nrow(lung), replace = TRUE)
   lung <- subset(lung, subset = ph.ecog %in% 0:2)
-  lung$ph.ecog <-
-    factor(lung$ph.ecog, labels = c("good", "ok", "limited"))
+  lung$ph.ecog <- factor(lung$ph.ecog, labels = c("good", "ok", "limited"))
 
   m1 <- coxme(Surv(time, status) ~ ph.ecog + age + (1 | inst), lung)
   m2 <- coxme(Surv(time, status) ~ ph.ecog + age + (1 | inst) + (1 | inst2), lung)
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_logit)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -72,7 +72,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("Surv(time, status) ~ ph.ecog + age"),
         random = as.formula("~1 | inst")
-      )
+      ),
+      ignore_attr = TRUE
     )
 
     expect_length(find_formula(m2), 2)
@@ -81,7 +82,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("Surv(time, status) ~ ph.ecog + age"),
         random = list(as.formula("~1 | inst"), as.formula("~1 | inst2"))
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 

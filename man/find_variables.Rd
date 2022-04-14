@@ -4,9 +4,14 @@
 \alias{find_variables}
 \title{Find names of all variables}
 \usage{
-find_variables(x, effects = c("all", "fixed", "random"),
-  component = c("all", "conditional", "zi", "zero_inflated",
-  "dispersion", "instruments"), flatten = FALSE)
+find_variables(
+  x,
+  effects = c("all", "fixed", "random"),
+  component = c("all", "conditional", "zi", "zero_inflated", "dispersion",
+    "instruments", "smooth_terms"),
+  flatten = FALSE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{x}{A fitted model.}
@@ -18,59 +23,65 @@ or both be returned? Only applies to mixed models. May be abbreviated.}
 conditional model, the zero-inflated part of the model, the dispersion
 term or the instrumental variables be returned? Applies to models
 with zero-inflated and/or dispersion formula, or to models with instrumental
-variable (so called fixed-effects regressions). May be abbreviated.}
+variable (so called fixed-effects regressions). May be abbreviated. Note that the
+\emph{conditional} component is also called \emph{count} or \emph{mean}
+component, depending on the model.}
 
 \item{flatten}{Logical, if \code{TRUE}, the values are returned
 as character vector, not as list. Duplicated values are removed.}
+
+\item{verbose}{Toggle warnings.}
 }
 \value{
 A list with (depending on the model) following elements (character
-   vectors):
-   \itemize{
-     \item \code{response}, the name of the response variable
-     \item \code{conditional}, the names of the predictor variables from the \emph{conditional} model (as opposed to the zero-inflated part of a model)
-     \item \code{random}, the names of the random effects (grouping factors)
-     \item \code{zero_inflated}, the names of the predictor variables from the \emph{zero-inflated} part of the model
-     \item \code{zero_inflated_random}, the names of the random effects (grouping factors)
-     \item \code{dispersion}, the name of the dispersion terms
-     \item \code{instruments}, the names of instrumental variables
-   }
+vectors):
+\itemize{
+\item \code{response}, the name of the response variable
+\item \code{conditional}, the names of the predictor variables from the \emph{conditional} model (as opposed to the zero-inflated part of a model)
+\item \code{cluster}, the names of cluster or grouping variables
+\item \code{dispersion}, the name of the dispersion terms
+\item \code{instruments}, the names of instrumental variables
+\item \code{random}, the names of the random effects (grouping factors)
+\item \code{zero_inflated}, the names of the predictor variables from the \emph{zero-inflated} part of the model
+\item \code{zero_inflated_random}, the names of the random effects (grouping factors)
+}
 }
 \description{
 Returns a list with the names of all variables, including
-  response value and random effects.
+response value and random effects.
 }
 \note{
-The difference to \code{\link{find_terms}} is that \code{find_variables()}
-  returns each variable name only once, while \code{find_terms()} may return a
-  variable multiple times in case of transformations or when arithmetic expressions
-  were used in the formula.
+The difference to \code{\link[=find_terms]{find_terms()}} is that
+\code{find_variables()} returns each variable name only once, while
+\code{find_terms()} may return a variable multiple times in case of
+transformations or when arithmetic expressions were used in the formula.
 }
 \examples{
-library(lme4)
-data(cbpp)
-data(sleepstudy)
-# some data preparation...
-cbpp$trials <- cbpp$size - cbpp$incidence
-sleepstudy$mygrp <- sample(1:5, size = 180, replace = TRUE)
-sleepstudy$mysubgrp <- NA
-for (i in 1:5) {
-  filter_group <- sleepstudy$mygrp == i
-  sleepstudy$mysubgrp[filter_group] <-
-    sample(1:30, size = sum(filter_group), replace = TRUE)
+if (require("lme4")) {
+  data(cbpp)
+  data(sleepstudy)
+  # some data preparation...
+  cbpp$trials <- cbpp$size - cbpp$incidence
+  sleepstudy$mygrp <- sample(1:5, size = 180, replace = TRUE)
+  sleepstudy$mysubgrp <- NA
+  for (i in 1:5) {
+    filter_group <- sleepstudy$mygrp == i
+    sleepstudy$mysubgrp[filter_group] <-
+      sample(1:30, size = sum(filter_group), replace = TRUE)
+  }
+
+  m1 <- glmer(
+    cbind(incidence, size - incidence) ~ period + (1 | herd),
+    data = cbpp,
+    family = binomial
+  )
+  find_variables(m1)
+
+  m2 <- lmer(
+    Reaction ~ Days + (1 | mygrp / mysubgrp) + (1 | Subject),
+    data = sleepstudy
+  )
+  find_variables(m2)
+  find_variables(m2, flatten = TRUE)
 }
-
-m1 <- glmer(
-  cbind(incidence, size - incidence) ~ period + (1 | herd),
-  data = cbpp,
-  family = binomial
-)
-find_variables(m1)
-
-m2 <- lmer(
-  Reaction ~ Days + (1 | mygrp / mysubgrp) + (1 | Subject),
-  data = sleepstudy
-)
-find_variables(m2)
-find_variables(m2, flatten = TRUE)
 }

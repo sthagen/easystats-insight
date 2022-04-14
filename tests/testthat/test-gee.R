@@ -1,10 +1,10 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("gee")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("gee")) {
   data(warpbreaks)
-  m1 <- gee(breaks ~ tension, id = wool, data = warpbreaks)
+  void <- capture.output(suppressMessages(
+    m1 <- gee(breaks ~ tension, id = wool, data = warpbreaks)
+  ))
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_linear)
@@ -36,7 +36,7 @@ if (require("testthat") &&
   })
 
   test_that("get_random", {
-    expect_equal(get_random(m1), warpbreaks[, "wool", drop = FALSE])
+    expect_equal(get_random(m1), warpbreaks[, "wool", drop = FALSE], ignore_attr = TRUE)
   })
 
   test_that("get_predictors", {
@@ -59,7 +59,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("breaks ~ tension"),
         random = as.formula("~wool")
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 

@@ -1,10 +1,7 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
-if (.runThisTest || Sys.getenv("USER") == "travis") {
-  if (require("testthat") &&
-    require("insight") && require("GLMMadaptive") && require("lme4")) {
-    context("insight, model_info")
-
+if (.runThisTest) {
+  if (requiet("testthat") && requiet("insight") && requiet("GLMMadaptive") && requiet("lme4")) {
     m <- download_model("GLMMadaptive_zi_2")
     m2 <- download_model("GLMMadaptive_zi_1")
 
@@ -21,6 +18,20 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
       expect_true(model_info(m)$is_count)
       expect_true(model_info(m)$is_pois)
       expect_false(model_info(m)$is_negbin)
+      expect_false(model_info(m)$is_linear)
+    })
+
+    test_that("get_deviance + logLik", {
+      expect_equal(get_deviance(m3), 183.96674, tolerance = 1e-3)
+      expect_equal(get_loglikelihood(m3), logLik(m3), tolerance = 1e-3, ignore_attr = TRUE)
+      expect_equal(get_df(m3, type = "model"), 5)
+    })
+
+    test_that("n_parameters", {
+      expect_equal(n_parameters(m), 6)
+      expect_equal(n_parameters(m2), 6)
+      expect_equal(n_parameters(m, effects = "random"), 2)
+      expect_equal(n_parameters(m2, effects = "random"), 1)
     })
 
     test_that("find_predictors", {
@@ -144,7 +155,8 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
           "random",
           "zero_inflated",
           "zero_inflated_random"
-        )
+        ),
+        ignore_attr = TRUE
       )
     })
 
@@ -227,7 +239,7 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
         component = "cond", effects = "random"
       )), "persons")
       expect_identical(colnames(get_data(m, component = "dispersion")), "count")
-      expect_null(get_data(m, component = "dispersion", effects = "random"))
+      expect_null(suppressWarnings(get_data(m, component = "dispersion", effects = "random")))
       expect_identical(
         colnames(get_data(m3)),
         c("incidence", "size", "period", "herd")

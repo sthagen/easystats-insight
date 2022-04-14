@@ -1,18 +1,61 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("glmmTMB")) {
-  context("insight, glmmTMB")
+osx <- tryCatch(
+  {
+    si <- Sys.info()
+    if (!is.null(si["sysname"])) {
+      si["sysname"] == "Darwin" || grepl("^darwin", R.version$os)
+    } else {
+      FALSE
+    }
+  },
+  error = function(e) {
+    FALSE
+  }
+)
 
-  fish <- read.csv("https://stats.idre.ucla.edu/stat/data/fish.csv")
-  fish$nofish <- as.factor(fish$nofish)
-  fish$livebait <- as.factor(fish$livebait)
-  fish$camper <- as.factor(fish$camper)
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("glmmTMB")) {
+  # fish <- read.csv("https://stats.idre.ucla.edu/stat/data/fish.csv")
+  # fish$nofish <- as.factor(fish$nofish)
+  # fish$livebait <- as.factor(fish$livebait)
+  # fish$camper <- as.factor(fish$camper)
 
-  m1 <- download_model("glmmTMB_zi_1")
-  m2 <- download_model("glmmTMB_1")
-  m3 <- download_model("glmmTMB_zi_2")
-  m4 <- download_model("glmmTMB_zi_5")
-  m7 <- download_model("glmmTMB_zi_6")
+  data("fish")
+  m1 <- glmmTMB(
+    count ~ child + camper + (1 | persons),
+    ziformula = ~ child + camper + (1 | persons),
+    data = fish,
+    family = truncated_poisson()
+  )
+
+  m2 <- glmmTMB(
+    count ~ child + camper + (1 | persons),
+    data = fish,
+    family = poisson()
+  )
+
+  m3 <- glmmTMB(
+    count ~ child + camper + (1 | persons),
+    ziformula = ~ child + livebait + (1 | persons),
+    data = fish,
+    family = poisson()
+  )
+
+  m4 <- glmmTMB(
+    count ~ child + camper + (1 | persons),
+    ziformula = ~ child + livebait + (1 | ID),
+    dispformula = ~xb,
+    data = fish,
+    family = truncated_poisson()
+  )
+
+  m7 <- suppressWarnings(glmmTMB(
+    count ~ child + camper + (1 + xb | persons),
+    ziformula = ~ child + livebait + (1 + zg + nofish | ID),
+    dispformula = ~xb,
+    data = fish,
+    family = truncated_poisson()
+  ))
 
   data(Salamanders)
   m5 <- glmmTMB(
@@ -37,6 +80,12 @@ if (require("testthat") &&
     expect_null(get_weights(m2))
   })
 
+  test_that("get_deviance + logLik", {
+    expect_equal(get_deviance(m2), 1697.449311, tolerance = 1e-3)
+    expect_equal(get_loglikelihood(m2), logLik(m2), tolerance = 1e-3, ignore_attr = TRUE)
+    expect_equal(get_df(m2, type = "model"), 4)
+  })
+
   test_that("model_info", {
     expect_true(model_info(m1)$is_zero_inflated)
     expect_false(model_info(m2)$is_zero_inflated)
@@ -44,6 +93,7 @@ if (require("testthat") &&
     expect_true(model_info(m3)$is_pois)
     expect_false(model_info(m3)$is_negbin)
     expect_true(model_info(m6)$is_count)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("clean_names", {
@@ -165,10 +215,10 @@ if (require("testthat") &&
       colnames(get_data(m2, effects = "all")),
       c("count", "child", "camper", "persons")
     )
-    expect_equal(colnames(get_data(m2, effects = "random")), "persons")
+    expect_equal(colnames(get_data(m2, effects = "random", verbose = FALSE)), "persons")
     get_data(m3)
-    expect_equal(colnames(get_data(m6)), "count")
-    expect_null(get_data(m6, effects = "random"))
+    expect_equal(colnames(get_data(m6, verbose = FALSE)), "count")
+    expect_null(get_data(m6, effects = "random", verbose = FALSE))
   })
 
   test_that("find_predictors", {
@@ -323,9 +373,10 @@ if (require("testthat") &&
         zero_inflated = as.formula("~child + livebait"),
         zero_inflated_random = as.formula("~1 | ID"),
         dispersion = as.formula("~xb")
-      )
+      ),
+      ignore_attr = TRUE
     )
-    expect_equal(find_formula(m6), list(conditional = as.formula("count ~ 1")))
+    expect_equal(find_formula(m6), list(conditional = as.formula("count ~ 1")), ignore_attr = TRUE)
   })
 
   test_that("find_predictors", {
@@ -499,7 +550,7 @@ if (require("testthat") &&
       colnames(get_predictors(m4)),
       c("child", "camper", "livebait", "xb")
     )
-    expect_null(get_predictors(m6))
+    expect_null(get_predictors(m6, verbose = FALSE))
   })
 
   test_that("get_random", {
@@ -551,7 +602,7 @@ if (require("testthat") &&
       m4,
       component = "disp", effects = "fixed"
     )), c("count", "xb"))
-    expect_null(get_data(m4, component = "disp", effects = "random"))
+    expect_null(get_data(m4, component = "disp", effects = "random", verbose = FALSE))
   })
 
   test_that("find_paramaters", {
@@ -785,4 +836,96 @@ if (require("testthat") &&
     expect_identical(find_statistic(m6), "z-statistic")
     expect_identical(find_statistic(m7), "z-statistic")
   })
+
+
+  # dispersion model, example from ?glmmTMB
+  sim1 <- function(nfac = 40, nt = 100, facsd = 0.1, tsd = 0.15, mu = 0, residsd = 1) {
+    dat <- expand.grid(fac = factor(letters[1:nfac]), t = 1:nt)
+    n <- nrow(dat)
+    dat$REfac <- rnorm(nfac, sd = facsd)[dat$fac]
+    dat$REt <- rnorm(nt, sd = tsd)[dat$t]
+    dat$x <- rnorm(n, mean = mu, sd = residsd) + dat$REfac + dat$REt
+    dat
+  }
+  set.seed(101)
+  d1 <- sim1(mu = 100, residsd = 10)
+  d2 <- sim1(mu = 200, residsd = 5)
+  d1$sd <- "ten"
+  d2$sd <- "five"
+  dat <- rbind(d1, d2)
+  m0 <- glmmTMB(x ~ sd + (1 | t), dispformula = ~sd, data = dat)
+
+  test_that("get_paramaters", {
+    expect_equal(nrow(get_parameters(m0)), 4)
+    expect_equal(
+      colnames(get_parameters(m0)),
+      c("Parameter", "Estimate", "Component")
+    )
+    expect_equal(
+      get_parameters(m0)$Parameter,
+      c(
+        "(Intercept)",
+        "sdten",
+        "(Intercept)",
+        "sdten"
+      )
+    )
+    expect_equal(
+      get_parameters(m0)$Estimate,
+      c(200.03431, -99.71491, 3.20287, 1.38648),
+      tolerance = 1e-3
+    )
+    expect_equal(
+      get_parameters(m0)$Component,
+      c("conditional", "conditional", "dispersion", "dispersion")
+    )
+  })
+
+  if (!osx) {
+    test_that("get_predicted", {
+
+      # response
+      x <- get_predicted(m1, predict = "expectation", verbose = FALSE, include_random = TRUE)
+      y <- get_predicted(m1, predict = "response", include_random = TRUE)
+      z <- predict(m1, type = "response")
+      expect_equal(x, y, ignore_attr = TRUE)
+      expect_equal(x, z, ignore_attr = TRUE)
+      expect_equal(y, z, ignore_attr = TRUE)
+      expect_error(get_predicted(m1, predict = NULL, type = "response"))
+
+      # should be the same, when include_random = "default"
+      x <- get_predicted(m1, predict = "expectation", verbose = FALSE)
+      y <- get_predicted(m1, predict = "response")
+      z <- predict(m1, type = "response")
+      expect_equal(x, y, ignore_attr = TRUE)
+      expect_equal(x, z, ignore_attr = TRUE)
+      expect_equal(y, z, ignore_attr = TRUE)
+
+
+      # link
+      x <- get_predicted(m1, predict = "link", include_random = TRUE)
+      y <- get_predicted(m1, predict = NULL, type = "link", include_random = TRUE)
+      z <- predict(m1, type = "link")
+      expect_equal(x, y, ignore_attr = TRUE)
+      expect_equal(y, z, ignore_attr = TRUE)
+      expect_equal(x, z, ignore_attr = TRUE)
+
+      # unsupported: zprob
+      x <- suppressWarnings(get_predicted(m1, predict = "zprob", include_random = TRUE))
+      y <- get_predicted(m1, predict = NULL, type = "zprob", include_random = TRUE)
+      z <- predict(m1, type = "zprob")
+      expect_equal(x, y)
+      expect_equal(x, z, ignore_attr = TRUE)
+
+      ## TODO
+
+      # not official supported raise warning
+      # expect_warning(get_predicted(m1, predict = "zprob"))
+      # expect_warning(get_predicted(m1, predict = "zprob", verbose = FALSE), NA)
+      # the second warning is raised for zero-inflation models only. remove when
+      # the zprob correction is implemented
+      expect_warning(get_predicted(m1, predict = "prediction"))
+      expect_warning(get_predicted(m1, predict = "classification"))
+    })
+  }
 }

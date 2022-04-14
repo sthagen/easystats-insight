@@ -1,14 +1,13 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("logistf")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("logistf")) {
   data(sex2)
   m1 <- logistf(case ~ age + oc + vic + vicl + vis + dia, data = sex2)
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_binomial)
     expect_true(model_info(m1)$is_logit)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -61,7 +60,8 @@ if (require("testthat") &&
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("case ~ age + oc + vic + vicl + vis + dia"))
+      list(conditional = as.formula("case ~ age + oc + vic + vicl + vis + dia")),
+      ignore_attr = TRUE
     )
   })
 

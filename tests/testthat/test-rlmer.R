@@ -1,10 +1,8 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
 if (.runThisTest) {
-  if (require("testthat") &&
-    require("insight") && require("lme4") && require("robustlmm")) {
-    context("insight, find_predictors")
-
+  if (requiet("testthat") &&
+    requiet("insight") && requiet("lme4") && requiet("robustlmm")) {
     data(sleepstudy)
 
     set.seed(123)
@@ -26,13 +24,12 @@ if (.runThisTest) {
       rho.sigma.b = chgDefaults(smoothPsi, k = 5.11, s = 10)
     )
 
-    m2 <-
-      rlmer(
-        Reaction ~ Days + (1 | mygrp / mysubgrp) + (1 | Subject),
-        data = sleepstudy,
-        rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
-        rho.sigma.b = chgDefaults(smoothPsi, k = 5.11, s = 10)
-      )
+    m2 <- rlmer(
+      Reaction ~ Days + (1 | mygrp / mysubgrp) + (1 | Subject),
+      data = sleepstudy,
+      rho.sigma.e = psi2propII(smoothPsi, k = 2.28),
+      rho.sigma.b = chgDefaults(smoothPsi, k = 5.11, s = 10)
+    )
 
     test_that("model_info", {
       expect_true(model_info(m1)$is_linear)
@@ -139,7 +136,8 @@ if (.runThisTest) {
         list(
           conditional = as.formula("Reaction ~ Days"),
           random = as.formula("~Days | Subject")
-        )
+        ),
+        ignore_attr = TRUE
       )
       expect_equal(
         find_formula(m2, component = "conditional"),
@@ -150,7 +148,8 @@ if (.runThisTest) {
             as.formula("~1 | mygrp"),
             as.formula("~1 | Subject")
           )
-        )
+        ),
+        ignore_attr = TRUE
       )
     })
 
@@ -260,38 +259,28 @@ if (.runThisTest) {
 
     test_that("get_variance", {
       skip_on_cran()
-      skip_on_travis()
 
       expect_equal(
         get_variance(m1),
         list(
-          var.fixed = 972.98333873885542288917,
-          var.random = 1909.82627106414997797401,
-          var.residual = 401.79840084390571064432,
-          var.distribution = 401.79840084390571064432,
-          var.dispersion = 0,
-          var.intercept = c(Subject = 750.51639089692923789698),
-          var.slope = c(Subject.Days = 41.06728604073937560770),
-          cor.slope_intercept = c(Subject = -0.00703001666895963079)
+          var.fixed = 996.527014102253, var.random = 1900.02213435247,
+          var.residual = 406.64157297696, var.distribution = 406.64157297696,
+          var.dispersion = 0, var.intercept = c(Subject = 709.851005030477),
+          var.slope = c(Subject.Days = 39.9364799454489),
+          cor.slope_intercept = c(Subject = 0.0343034180029383)
         ),
-        tolerance = 1e-4
+        tolerance = 1e-3
       )
 
       expect_equal(
         get_variance(m2),
         list(
-          var.fixed = 914.841369525452,
-          var.random = 1406.78220090082,
-          var.residual = 809.318117324236,
-          var.distribution = 809.318117324236,
+          var.fixed = 914.841369705921, var.random = 1406.78220075798,
+          var.residual = 809.318117542254, var.distribution = 809.318117542254,
           var.dispersion = 0,
-          var.intercept = c(
-            `mysubgrp:mygrp` = 0,
-            Subject = 1390.66848951126,
-            mygrp = 16.113711389561
-          )
+          var.intercept = c(`mysubgrp:mygrp` = 0, Subject = 1390.66848960835, mygrp = 16.1137111496379)
         ),
-        tolerance = 1e-4
+        tolerance = 1e-3
       )
     })
 

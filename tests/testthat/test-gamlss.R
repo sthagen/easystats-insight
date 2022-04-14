@@ -1,17 +1,17 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("gamlss")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("gamlss")) {
   data(abdom)
-  m1 <-
-    gamlss(
-      y ~ pb(x),
-      sigma.formula =  ~ pb(x),
-      family = BCT,
-      data = abdom,
-      method = mixed(1, 20)
-    )
+  void <- capture.output(
+    m1 <-
+      gamlss(
+        y ~ pb(x),
+        sigma.formula =  ~ pb(x),
+        family = BCT,
+        data = abdom,
+        method = mixed(1, 20)
+      )
+  )
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_linear)
@@ -57,7 +57,8 @@ if (require("testthat") &&
         sigma = as.formula("~pb(x)"),
         nu = as.formula("~1"),
         tau = as.formula("~1")
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 

@@ -1,10 +1,10 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("lme4")) {
-  context("insight, find_predictors")
+.runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
+if (.runThisTest &&
+  requiet("testthat") &&
+  requiet("insight") &&
+  requiet("lme4")) {
   data(sleepstudy)
-
   set.seed(123)
   sleepstudy$mygrp <- sample(1:5, size = 180, replace = TRUE)
   sleepstudy$mysubgrp <- NA
@@ -25,6 +25,29 @@ if (require("testthat") &&
   test_that("model_info", {
     expect_true(model_info(m1)$is_linear)
     expect_true(model_info(m2)$is_linear)
+  })
+
+  test_that("loglik", {
+    expect_equal(get_loglikelihood(m1, estimator = "REML"), logLik(m1), ignore_attr = TRUE)
+    expect_equal(get_loglikelihood(m2, estimator = "REML"), logLik(m2), ignore_attr = TRUE)
+    expect_equal(get_loglikelihood(m1), logLik(m1), ignore_attr = TRUE)
+    expect_equal(get_loglikelihood(m2), logLik(m2), ignore_attr = TRUE)
+    expect_equal(get_loglikelihood(m1, estimator = "ML"), logLik(m1, REML = FALSE), ignore_attr = TRUE)
+    expect_equal(get_loglikelihood(m2, estimator = "ML"), logLik(m2, REML = FALSE), ignore_attr = TRUE)
+  })
+
+  test_that("get_df", {
+    expect_equal(get_df(m1), df.residual(m1), ignore_attr = TRUE)
+    expect_equal(get_df(m2), df.residual(m2), ignore_attr = TRUE)
+    expect_equal(get_df(m1, type = "model"), attr(logLik(m1), "df"), ignore_attr = TRUE)
+    expect_equal(get_df(m2, type = "model"), attr(logLik(m2), "df"), ignore_attr = TRUE)
+  })
+
+  test_that("n_parameters", {
+    expect_equal(n_parameters(m1), 2)
+    expect_equal(n_parameters(m2), 2)
+    expect_equal(n_parameters(m1, effects = "random"), 2)
+    expect_equal(n_parameters(m2, effects = "random"), 3)
   })
 
   test_that("find_predictors", {
@@ -125,7 +148,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("Reaction ~ Days"),
         random = as.formula("~1 + Days | Subject")
-      )
+      ),
+      ignore_attr = TRUE
     )
     expect_equal(
       find_formula(m2, component = "conditional"),
@@ -136,7 +160,8 @@ if (require("testthat") &&
           as.formula("~1 | mygrp"),
           as.formula("~1 | Subject")
         )
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 
@@ -258,78 +283,77 @@ if (require("testthat") &&
   })
 
   test_that("get_variance", {
-    skip_on_cran()
-    skip_on_travis()
-
     expect_equal(
       get_variance(m1),
       list(
-        var.fixed = 908.953362623165,
-        var.random = 1698.23306388298,
-        var.residual = 654.940795852432,
-        var.distribution = 654.940795852432,
+        var.fixed = 908.9534,
+        var.random = 1698.084,
+        var.residual = 654.94,
+        var.distribution = 654.94,
         var.dispersion = 0,
-        var.intercept = c(Subject = 611.897607104638),
-        var.slope = c(Subject.Days = 35.081069440305),
-        cor.slope_intercept = c(Subject = 0.0656180314242511)
+        var.intercept = c(Subject = 612.1002),
+        var.slope = c(Subject.Days = 35.07171),
+        cor.slope_intercept = c(Subject = 0.06555124)
       ),
-      tolerance = 1e-4
+      tolerance = 1e-1
     )
 
     expect_equal(get_variance_fixed(m1),
-      c(var.fixed = 908.95336262316459396970),
-      tolerance = 1e-4
+      c(var.fixed = 908.9534),
+      tolerance = 1e-1
     )
     expect_equal(get_variance_random(m1),
-      c(var.random = 1698.23306388298283309268),
-      tolerance = 1e-4
+      c(var.random = 1698.084),
+      tolerance = 1e-1
     )
     expect_equal(
       get_variance_residual(m1),
-      c(var.residual = 654.94079585243218843971),
-      tolerance = 1e-4
+      c(var.residual = 654.94),
+      tolerance = 1e-1
     )
     expect_equal(
       get_variance_distribution(m1),
-      c(var.distribution = 654.94079585243218843971),
-      tolerance = 1e-4
+      c(var.distribution = 654.94),
+      tolerance = 1e-1
     )
     expect_equal(get_variance_dispersion(m1),
       c(var.dispersion = 0),
-      tolerance = 1e-4
+      tolerance = 1e-1
     )
 
     expect_equal(
       get_variance_intercept(m1),
-      c(var.intercept.Subject = 611.89760710463770010392),
-      toleance = 1e-4
+      c(var.intercept.Subject = 612.1002),
+      tolerance = 1e-1
     )
     expect_equal(
       get_variance_slope(m1),
-      c(var.slope.Subject.Days = 35.08106944030500073950),
-      toleance = 1e-4
+      c(var.slope.Subject.Days = 35.07171),
+      tolerance = 1e-1
     )
     expect_equal(
       get_correlation_slope_intercept(m1),
-      c(cor.slope_intercept.Subject = 0.06561803),
-      toleance = 1e-4
+      c(cor.slope_intercept.Subject = 0.06555124),
+      tolerance = 1e-1
     )
 
-    expect_warning(expect_equal(
-      get_variance(m2),
-      list(
-        var.fixed = 889.329700216337,
-        var.residual = 941.817768377025,
-        var.distribution = 941.817768377025,
-        var.dispersion = 0,
-        var.intercept = c(
-          `mysubgrp:mygrp` = 0,
-          Subject = 1357.35782386825,
-          mygrp = 24.4073139080596
-        )
-      ),
-      tolerance = 1e-4,
-    ))
+    if (.runThisTest) {
+      expect_equal(
+        suppressWarnings(get_variance(m2)),
+        list(
+          var.fixed = 889.3301,
+          var.residual = 941.8135,
+          var.distribution = 941.8135,
+          var.dispersion = 0,
+          var.intercept = c(
+            `mysubgrp:mygrp` = 0,
+            Subject = 1357.4257,
+            mygrp = 24.4064
+          )
+        ),
+        tolerance = 1e-1
+      )
+    }
   })
 
   test_that("find_algorithm", {
@@ -369,7 +393,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("Reaction ~ 1"),
         random = as.formula("~1 + Days | Subject")
-      )
+      ),
+      ignore_attr = TRUE
     )
 
     expect_equal(
@@ -377,7 +402,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("Reaction ~ 1"),
         random = as.formula("~1 + Days | Subject")
-      )
+      ),
+      ignore_attr = TRUE
     )
 
     expect_equal(
@@ -389,7 +415,8 @@ if (require("testthat") &&
           as.formula("~1 | mygrp"),
           as.formula("~1 | Subject")
         )
-      )
+      ),
+      ignore_attr = TRUE
     )
 
     expect_equal(
@@ -401,12 +428,38 @@ if (require("testthat") &&
           as.formula("~1 | mygrp"),
           as.formula("~1 | Subject")
         )
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 
   test_that("find_statistic", {
     expect_identical(find_statistic(m1), "t-statistic")
     expect_identical(find_statistic(m2), "t-statistic")
+  })
+
+  test_that("get_call", {
+    expect_equal(class(get_call(m1)), "call")
+    expect_equal(class(get_call(m2)), "call")
+  })
+
+  test_that("get_predicted_ci: warning when model matrix and varcovmat do not match", {
+    mod <- lmer(
+      weight ~ 1 + Time + I(Time^2) + Diet + Time:Diet + I(Time^2):Diet + (1 + Time + I(Time^2) | Chick),
+      data = ChickWeight
+    )
+    newdata <- ChickWeight[ChickWeight$Time %in% 0:10 & ChickWeight$Chick %in% c(1, 40), ]
+    newdata$Chick[newdata$Chick == "1"] <- NA
+    expect_equal(
+      head(as.data.frame(get_predicted(mod, data = newdata, include_random = FALSE))),
+      data.frame(
+        Predicted = c(37.53433, 47.95719, 58.78866, 70.02873, 81.67742, 93.73472),
+        SE = c(1.68687, 0.82574, 1.52747, 2.56109, 3.61936, 4.76178),
+        CI_low = c(34.22096, 46.33525, 55.78837, 64.99819, 74.56822, 84.38154),
+        CI_high = c(40.84771, 49.57913, 61.78894, 75.05927, 88.78662, 103.08789)
+      ),
+      tolerance = 1e-3,
+      ignore_attr = TRUE
+    )
   })
 }

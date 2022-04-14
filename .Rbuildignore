@@ -11,4 +11,7 @@
 ^README.Rmd
 ^paper$
 ^Meta$
+^WIP$
 ^.github$
+^cran-comments.md$
+^CODE_OF_CONDUCT\.md$

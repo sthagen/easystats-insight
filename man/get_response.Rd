@@ -4,33 +4,36 @@
 \alias{get_response}
 \title{Get the values from the response variable}
 \usage{
-get_response(x, select = NULL)
+get_response(x, select = NULL, verbose = TRUE)
 }
 \arguments{
 \item{x}{A fitted model.}
 
 \item{select}{Optional name(s) of response variables for which to extract values.
 Can be used in case of regression models with multiple response variables.}
+
+\item{verbose}{Toggle warnings.}
 }
 \value{
 The values of the response variable, as vector, or a data frame if
-  \code{x} has more than one defined response variable.
+\code{x} has more than one defined response variable.
 }
 \description{
 Returns the values the response variable(s) from a model object.
-   If the model is a multivariate response model, a data frame with values
-   from all response variables is returned.
+If the model is a multivariate response model, a data frame with values
+from all response variables is returned.
 }
 \examples{
-library(lme4)
-data(cbpp)
+if (require("lme4")) {
+  data(cbpp)
+  cbpp$trials <- cbpp$size - cbpp$incidence
+
+  m <- glm(cbind(incidence, trials) ~ period, data = cbpp, family = binomial)
+  head(get_response(m))
+  get_response(m, select = "incidence")
+}
+
 data(mtcars)
-cbpp$trials <- cbpp$size - cbpp$incidence
-
-m <- glm(cbind(incidence, trials) ~ period, data = cbpp, family = binomial)
-head(get_response(m))
-get_response(m, select = "incidence")
-
 m <- lm(mpg ~ wt + cyl + vs, data = mtcars)
 get_response(m)
 }

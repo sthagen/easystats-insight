@@ -1,8 +1,24 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("ordinal")) {
-  context("insight, model_info")
+osx <- tryCatch(
+  {
+    si <- Sys.info()
+    if (!is.null(si["sysname"])) {
+      si["sysname"] == "Darwin" || grepl("^darwin", R.version$os)
+    } else {
+      FALSE
+    }
+  },
+  error = function(e) {
+    FALSE
+  }
+)
 
+.runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
+
+if (.runThisTest &&
+  requiet("testthat") &&
+  requiet("insight") &&
+  requiet("lme4") &&
+  requiet("ordinal")) {
   data(wine, package = "ordinal")
   data(soup)
 
@@ -18,6 +34,8 @@ if (require("testthat") &&
     expect_true(model_info(m2)$is_ordinal)
     expect_true(model_info(m1)$is_logit)
     expect_true(model_info(m2)$is_probit)
+    expect_false(model_info(m1)$is_multinomial)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -54,8 +72,8 @@ if (require("testthat") &&
   })
 
   test_that("get_random", {
-    expect_equal(get_random(m1), wine[, "judge", drop = FALSE])
-    expect_equal(get_random(m2), soup[, c("RESP", "PROD"), drop = FALSE])
+    expect_equal(get_random(m1), wine[, "judge", drop = FALSE], ignore_attr = TRUE)
+    expect_equal(get_random(m2), soup[, c("RESP", "PROD"), drop = FALSE], ignore_attr = TRUE)
   })
 
   test_that("find_response", {
@@ -95,7 +113,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("rating ~ temp + contact"),
         random = as.formula("~1 | judge")
-      )
+      ),
+      ignore_attr = TRUE
     )
     expect_length(find_formula(m2), 2)
     expect_equal(
@@ -103,7 +122,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("SURENESS ~ PROD"),
         random = list(as.formula("~1 | RESP"), as.formula("~1 | RESP:PROD"))
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 
@@ -162,32 +182,34 @@ if (require("testthat") &&
     expect_false(is_multivariate(m2))
   })
 
-  test_that("get_variance", {
-    expect_equal(
-      get_variance(m1),
-      list(
-        var.fixed = 3.23207765938872,
-        var.random = 1.27946088209319,
-        var.residual = 3.28986813369645,
-        var.distribution = 3.28986813369645,
-        var.dispersion = 0,
-        var.intercept = c(judge = 1.27946088209319)
-      ),
-      tolerance = 1e-4
-    )
-    expect_equal(
-      get_variance(m2),
-      list(
-        var.fixed = 0.132313576370902,
-        var.random = 0.193186321588604,
-        var.residual = 1,
-        var.distribution = 1,
-        var.dispersion = 0,
-        var.intercept = c(`RESP:PROD` = 0.148265480396059, RESP = 0.0449208411925493)
-      ),
-      tolerance = 1e-4
-    )
-  })
+  if (getRversion() > "3.6.3" && !isTRUE(osx)) {
+    test_that("get_variance", {
+      expect_equal(
+        get_variance(m1),
+        list(
+          var.fixed = 3.23207765938872,
+          var.random = 1.27946088209319,
+          var.residual = 3.28986813369645,
+          var.distribution = 3.28986813369645,
+          var.dispersion = 0,
+          var.intercept = c(judge = 1.27946088209319)
+        ),
+        tolerance = 1e-4
+      )
+      expect_equal(
+        get_variance(m2),
+        list(
+          var.fixed = 0.132313576370902,
+          var.random = 0.193186321588604,
+          var.residual = 1,
+          var.distribution = 1,
+          var.dispersion = 0,
+          var.intercept = c(`RESP:PROD` = 0.148265480396059, RESP = 0.0449208411925493)
+        ),
+        tolerance = 1e-4
+      )
+    })
+  }
 
   test_that("find_statistic", {
     expect_identical(find_statistic(m1), "z-statistic")

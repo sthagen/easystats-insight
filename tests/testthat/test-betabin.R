@@ -1,13 +1,12 @@
-if (require("testthat") && require("insight") && require("aod")) {
-  context("insight, betabin")
-
+if (requiet("testthat") && requiet("insight") && requiet("aod")) {
   data(dja)
-  m1 <- betabin(cbind(y, n - y) ~ group * trisk, ~village, data = dja)
+  m1 <- suppressWarnings(betabin(cbind(y, n - y) ~ group * trisk, ~village, data = dja))
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_binomial)
     expect_true(model_info(m1)$is_betabinomial)
     expect_true(model_info(m1)$is_mixed)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -28,7 +27,7 @@ if (require("testthat") && require("insight") && require("aod")) {
   })
 
   test_that("get_random", {
-    expect_equal(get_random(m1), dja[, "village", drop = FALSE])
+    expect_equal(get_random(m1), dja[, "village", drop = FALSE], ignore_attr = TRUE)
   })
 
   test_that("find_response", {
@@ -64,7 +63,8 @@ if (require("testthat") && require("insight") && require("aod")) {
       list(
         conditional = as.formula("cbind(y, n - y) ~ group * trisk"),
         random = as.formula("~village")
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 

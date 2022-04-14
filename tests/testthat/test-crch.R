@@ -1,8 +1,6 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("crch")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("crch")) {
   data("RainIbk")
   RainIbk$sqrtensmean <- apply(sqrt(RainIbk[, grep("^rainfc", names(RainIbk))]), 1, mean)
   RainIbk$sqrtenssd <- apply(sqrt(RainIbk[, grep("^rainfc", names(RainIbk))]), 1, sd)
@@ -10,7 +8,7 @@ if (require("testthat") &&
   m1 <- crch(sqrt(rain) ~ sqrtensmean, data = RainIbk, dist = "gaussian")
 
   test_that("model_info", {
-    expect_true(model_info(m1)$is_linear)
+    expect_false(model_info(m1)$is_linear)
     expect_true(model_info(m1)$is_censored)
   })
 
@@ -33,7 +31,7 @@ if (require("testthat") &&
   })
 
   test_that("get_response", {
-    expect_equal(get_response(m1), sqrt(RainIbk$rain))
+    expect_equal(get_response(m1), RainIbk$rain)
   })
 
   test_that("get_predictors", {
@@ -53,7 +51,8 @@ if (require("testthat") &&
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("sqrt(rain) ~ sqrtensmean"))
+      list(conditional = as.formula("sqrt(rain) ~ sqrtensmean")),
+      ignore_attr = TRUE
     )
   })
 

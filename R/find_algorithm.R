@@ -11,34 +11,34 @@
 #'   \cr
 #'   For frequentist models:
 #'    \itemize{
-#'      \item \code{algorithm}, for instance \code{"OLS"} or \code{"ML"}
-#'      \item \code{optimizer}, name of optimizing function, only applies to specific models (like \code{gam})
+#'      \item `algorithm`, for instance `"OLS"` or `"ML"`
+#'      \item `optimizer`, name of optimizing function, only applies to
+#'      specific models (like `gam`)
 #'    }
 #'   For frequentist mixed models:
 #'    \itemize{
-#'      \item \code{algorithm}, for instance \code{"REML"} or \code{"ML"}
-#'      \item \code{optimizer}, name of optimizing function
+#'      \item `algorithm`, for instance `"REML"` or `"ML"`
+#'      \item `optimizer`, name of optimizing function
 #'    }
 #'   For Bayesian models:
 #'    \itemize{
-#'      \item \code{algorithm}, the algorithm
-#'      \item \code{chains}, number of chains
-#'      \item \code{iterations}, number of iterations per chain
-#'      \item \code{warmup}, number of warmups per chain
+#'      \item `algorithm`, the algorithm
+#'      \item `chains`, number of chains
+#'      \item `iterations`, number of iterations per chain
+#'      \item `warmup`, number of warmups per chain
 #'    }
 #'
-#'
 #' @examples
-#' library(lme4)
-#' data(sleepstudy)
-#' m <- lmer(Reaction ~ Days + (1 | Subject), data = sleepstudy)
-#' find_algorithm(m)
+#' if (require("lme4")) {
+#'   data(sleepstudy)
+#'   m <- lmer(Reaction ~ Days + (1 | Subject), data = sleepstudy)
+#'   find_algorithm(m)
+#' }
 #' \dontrun{
 #' library(rstanarm)
 #' m <- stan_lmer(Reaction ~ Days + (1 | Subject), data = sleepstudy)
 #' find_algorithm(m)
 #' }
-#'
 #' @export
 find_algorithm <- function(x, ...) {
   UseMethod("find_algorithm")
@@ -95,6 +95,12 @@ find_algorithm.BBreg <- function(x, ...) {
 
 
 #' @export
+find_algorithm.Arima <- function(x, ...) {
+  list("algorithm" = "ML")
+}
+
+
+#' @export
 find_algorithm.glimML <- function(x, ...) {
   list("algorithm" = "ML")
 }
@@ -102,7 +108,7 @@ find_algorithm.glimML <- function(x, ...) {
 
 #' @export
 find_algorithm.BBmm <- function(x, ...) {
-  method <- parse(text = .safe_deparse(x$call))[[1]]$method
+  method <- parse(text = safe_deparse(x$call))[[1]]$method
   if (is.null(method)) method <- "BB-NR"
   list(algorithm = "extended likelihood", optimizer = method)
 }
@@ -128,9 +134,24 @@ find_algorithm.gam <- function(x, ...) {
   )
 }
 
+#' @export
+find_algorithm.scam <- find_algorithm.gam
+
 
 #' @export
 find_algorithm.lm <- function(x, ...) {
+  list("algorithm" = "OLS")
+}
+
+
+#' @export
+find_algorithm.systemfit <- function(x, ...) {
+  list("algorithm" = x$method)
+}
+
+
+#' @export
+find_algorithm.afex_aov <- function(x, ...) {
   list("algorithm" = "OLS")
 }
 
@@ -143,9 +164,8 @@ find_algorithm.speedlm <- function(x, ...) {
 
 #' @export
 find_algorithm.blavaan <- function(x, ...) {
-  if (!requireNamespace("blavaan", quietly = TRUE)) {
-    stop("Package 'blavaan' required for this function to work. Please install it.")
-  }
+  # installed?
+  check_if_installed("blavaan")
 
   list(
     "chains" = blavaan::blavInspect(x, "n.chains"),
@@ -211,15 +231,12 @@ find_algorithm.merMod <- function(x, ...) {
   )
 }
 
+#' @export
+find_algorithm.rlmerMod <- find_algorithm.merMod
 
 #' @export
-find_algorithm.rlmerMod <- function(x, ...) {
-  algorithm <- ifelse(as.logical(x@devcomp$dims[["REML"]]), "REML", "ML")
-
-  list(
-    "algorithm" = algorithm,
-    "optimizer" = as.character(x@optinfo$optimizer)
-  )
+find_algorithm.merModList <- function(x, ...) {
+  find_algorithm(x[[1]], ...)
 }
 
 
@@ -279,6 +296,29 @@ find_algorithm.stanreg <- function(x, ...) {
     "chains" = info$chains,
     "iterations" = info$iter,
     "warmup" = info$warmup
+  )
+}
+
+
+#' @export
+find_algorithm.stanfit <- function(x, ...) {
+  info <- x@sim
+  algorithm <- unlist(x@stan_args)
+
+  list(
+    "algorithm" = as.vector(algorithm["algorithm"]),
+    "chains" = info$chains,
+    "iterations" = info$iter,
+    "warmup" = info$warmup
+  )
+}
+
+
+#' @export
+find_algorithm.bayesQR <- function(x, ...) {
+  list(
+    "algorithm" = x[[1]]$method,
+    "iterations" = nrow(x[[1]]$betadraw)
   )
 }
 

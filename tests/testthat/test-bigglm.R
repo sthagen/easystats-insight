@@ -1,10 +1,8 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
-if (.runThisTest || Sys.getenv("USER") == "travis") {
-  if (require("testthat") &&
-    require("insight") && require("glmmTMB") && require("biglm")) {
-    context("insight, model_info")
-
+if (.runThisTest) {
+  if (requiet("testthat") &&
+    requiet("insight") && requiet("glmmTMB") && requiet("biglm")) {
     data(Salamanders)
     Salamanders$cover <- abs(Salamanders$cover)
 
@@ -19,6 +17,7 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
       expect_true(model_info(m1)$is_count)
       expect_false(model_info(m1)$is_negbin)
       expect_false(model_info(m1)$is_binomial)
+      expect_false(model_info(m1)$is_linear)
     })
 
     test_that("find_predictors", {
@@ -79,7 +78,8 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
       expect_length(find_formula(m1), 1)
       expect_equal(
         find_formula(m1),
-        list(conditional = as.formula("count ~ mined + log(cover) + sample"))
+        list(conditional = as.formula("count ~ mined + log(cover) + sample")),
+        ignore_attr = TRUE
       )
     })
 

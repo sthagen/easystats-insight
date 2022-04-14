@@ -2,133 +2,39 @@
 % Please edit documentation in R/get_parameters.R
 \name{get_parameters}
 \alias{get_parameters}
-\alias{get_parameters.BBmm}
-\alias{get_parameters.glimML}
-\alias{get_parameters.gam}
-\alias{get_parameters.vgam}
-\alias{get_parameters.rqss}
-\alias{get_parameters.Gam}
-\alias{get_parameters.zeroinfl}
-\alias{get_parameters.gamm}
-\alias{get_parameters.aovlist}
-\alias{get_parameters.hurdle}
-\alias{get_parameters.MCMCglmm}
-\alias{get_parameters.coxme}
-\alias{get_parameters.merMod}
-\alias{get_parameters.rlmerMod}
-\alias{get_parameters.mixed}
-\alias{get_parameters.lme}
-\alias{get_parameters.MixMod}
-\alias{get_parameters.glmmTMB}
-\alias{get_parameters.brmsfit}
-\alias{get_parameters.stanreg}
-\alias{get_parameters.sim.merMod}
-\alias{get_parameters.BFBayesFactor}
-\alias{get_parameters.stanmvreg}
+\alias{get_parameters.default}
 \title{Get model parameters}
 \usage{
 get_parameters(x, ...)
 
-\method{get_parameters}{BBmm}(x, effects = c("fixed", "random"), ...)
-
-\method{get_parameters}{glimML}(x, effects = c("fixed", "random", "all"),
-  ...)
-
-\method{get_parameters}{gam}(x, component = c("all", "conditional",
-  "smooth_terms"), ...)
-
-\method{get_parameters}{vgam}(x, component = c("all", "conditional",
-  "smooth_terms"), ...)
-
-\method{get_parameters}{rqss}(x, component = c("all", "conditional",
-  "smooth_terms"), ...)
-
-\method{get_parameters}{Gam}(x, component = c("all", "conditional",
-  "smooth_terms"), ...)
-
-\method{get_parameters}{zeroinfl}(x, component = c("all", "conditional",
-  "zi", "zero_inflated"), ...)
-
-\method{get_parameters}{gamm}(x, component = c("all", "conditional",
-  "smooth_terms"), ...)
-
-\method{get_parameters}{aovlist}(x, effects = c("fixed", "random",
-  "all"), ...)
-
-\method{get_parameters}{hurdle}(x, component = c("all", "conditional",
-  "zi", "zero_inflated"), ...)
-
-\method{get_parameters}{MCMCglmm}(x, effects = c("fixed", "random",
-  "all"), ...)
-
-\method{get_parameters}{coxme}(x, effects = c("fixed", "random"), ...)
-
-\method{get_parameters}{merMod}(x, effects = c("fixed", "random"), ...)
-
-\method{get_parameters}{rlmerMod}(x, effects = c("fixed", "random"), ...)
-
-\method{get_parameters}{mixed}(x, effects = c("fixed", "random"), ...)
-
-\method{get_parameters}{lme}(x, effects = c("fixed", "random"), ...)
-
-\method{get_parameters}{MixMod}(x, effects = c("fixed", "random"),
-  component = c("all", "conditional", "zi", "zero_inflated",
-  "dispersion"), ...)
-
-\method{get_parameters}{glmmTMB}(x, effects = c("fixed", "random"),
-  component = c("all", "conditional", "zi", "zero_inflated",
-  "dispersion"), ...)
-
-\method{get_parameters}{brmsfit}(x, effects = c("fixed", "random",
-  "all"), component = c("all", "conditional", "zi", "zero_inflated",
-  "dispersion", "simplex", "sigma", "smooth_terms"), parameters = NULL,
-  ...)
-
-\method{get_parameters}{stanreg}(x, effects = c("fixed", "random",
-  "all"), parameters = NULL, ...)
-
-\method{get_parameters}{sim.merMod}(x, effects = c("fixed", "random",
-  "all"), parameters = NULL, ...)
-
-\method{get_parameters}{BFBayesFactor}(x, iterations = 4000,
-  progress = FALSE, ...)
-
-\method{get_parameters}{stanmvreg}(x, effects = c("fixed", "random",
-  "all"), parameters = NULL, ...)
+\method{get_parameters}{default}(x, verbose = TRUE, ...)
 }
 \arguments{
 \item{x}{A fitted model.}
 
 \item{...}{Currently not used.}
 
-\item{effects}{Should parameters for fixed effects, random effects
-or both be returned? Only applies to mixed models. May be abbreviated.}
-
-\item{component}{Should all parameters, parameters for the
-conditional model, the zero-inflated part of the model, the dispersion
-term or the instrumental variables be returned? Applies to models
-with zero-inflated and/or dispersion formula, or to models with instrumental
-variable (so called fixed-effects regressions). May be abbreviated.}
-
-\item{parameters}{Regular expression pattern that describes the parameters that
-should be returned.}
-
-\item{iterations}{Number of posterior draws.}
-
-\item{progress}{Display progress.}
+\item{verbose}{Toggle messages and warnings.}
 }
 \value{
 \itemize{
-  \item for non-Bayesian models and if \code{effects = "fixed"}, a data frame with two columns: the parameter names and the related point estimates
-  \item if \code{effects = "random"}, a list of data frames with the random effects (as returned by \code{ranef()}), unless the random effects have the same simplified structure as fixed effects (e.g. for models from \pkg{MCMCglmm})
-  \item for Bayesian models, the posterior samples from the requested parameters as data frame
-  \item for Anova (\code{aov()}) with error term, a list of parameters for the conditional and the random effects parameters
-  \item for models with smooth terms or zero-inflation component, a data frame with three columns: the parameter names, the related point estimates and the component
+\item for non-Bayesian models, a data frame with two columns: the parameter names and the related point estimates.
+\item for Anova (\code{aov()}) with error term, a list of parameters for the conditional and the random effects parameters
 }
 }
 \description{
 Returns the coefficients (or posterior samples for Bayesian
-   models) from a model.
+models) from a model. See the documentation for your object's class:
+\itemize{
+\item{\link[=get_parameters.BGGM]{Bayesian models} (\pkg{rstanarm}, \pkg{brms}, \pkg{MCMCglmm}, ...)}
+\item{\link[=get_parameters.emmGrid]{Estimated marginal means} (\pkg{emmeans})}
+\item{\link[=get_parameters.gamm]{Generalized additive models} (\pkg{mgcv}, \pkg{VGAM}, ...)}
+\item{\link[=get_parameters.betamfx]{Marginal effects models} (\pkg{mfx})}
+\item{\link[=get_parameters.glmm]{Mixed models} (\pkg{lme4}, \pkg{glmmTMB}, \pkg{GLMMadaptive}, ...)}
+\item{\link[=get_parameters.zeroinfl]{Zero-inflated and hurdle models} (\pkg{pscl}, ...)}
+\item{\link[=get_parameters.betareg]{Models with special components} (\pkg{betareg}, \pkg{MuMIn}, ...)}
+\item{\link[=get_parameters.htest]{Hypothesis tests} (\code{htest})}
+}
 }
 \details{
 In most cases when models either return different "effects" (fixed,

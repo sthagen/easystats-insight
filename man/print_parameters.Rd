@@ -4,11 +4,20 @@
 \alias{print_parameters}
 \title{Prepare summary statistics of model parameters for printing}
 \usage{
-print_parameters(x, ..., split_by = c("Effects", "Component", "Group",
-  "Response"))
+print_parameters(
+  x,
+  ...,
+  split_by = c("Effects", "Component", "Group", "Response"),
+  format = "text",
+  parameter_column = "Parameter",
+  keep_parameter_column = TRUE,
+  remove_empty_column = FALSE,
+  titles = NULL,
+  subtitles = NULL
+)
 }
 \arguments{
-\item{x}{A fitted model, or a data frame returned by \code{\link{clean_parameters}}.}
+\item{x}{A fitted model, or a data frame returned by \code{\link[=clean_parameters]{clean_parameters()}}.}
 
 \item{...}{One or more objects (data frames), which contain information about
 the model parameters and related statistics (like confidence intervals, HDI,
@@ -17,30 +26,61 @@ ROPE, ...).}
 \item{split_by}{\code{split_by} should be a character vector with one or
 more of the following elements: \code{"Effects"}, \code{"Component"},
 \code{"Response"} and \code{"Group"}. These are the column names returned
-by \code{\link{clean_parameters}}, which is used to extract the information
+by \code{\link[=clean_parameters]{clean_parameters()}}, which is used to extract the information
 from which the group or component model parameters belong. If \code{NULL}, the
 merged data frame is returned. Else, the data frame is split into a list,
 split by the values from those columns defined in \code{split_by}.}
+
+\item{format}{Name of output-format, as string. If \code{NULL} (or \code{"text"}),
+assumed use for output is basic printing. If \code{"markdown"}, markdown-format
+is assumed. This only affects the style of title- and table-caption
+attributes, which are used in \code{\link[=export_table]{export_table()}}.}
+
+\item{parameter_column}{String, name of the column that contains the
+parameter names. Usually, for data frames returned by functions the
+easystats-packages, this will be \code{"Parameter"}.}
+
+\item{keep_parameter_column}{Logical, if \code{TRUE}, the data frames in the
+returned list have both a \code{"Cleaned_Parameter"} and \code{"Parameter"}
+column. If \code{FALSE}, the (unformatted) \code{"Parameter"} is removed,
+and the column with cleaned parameter names (\code{"Cleaned_Parameter"}) is
+renamed into \code{"Parameter"}.}
+
+\item{remove_empty_column}{Logical, if \code{TRUE}, columns with completely
+empty character values will be removed.}
+
+\item{titles, subtitles}{By default, the names of the model components (like
+fixed or random effects, count or zero-inflated model part) are added as
+attributes \code{"table_title"} and \code{"table_subtitle"} to each list
+element returned by \code{print_parameters()}. These attributes are then
+extracted and used as table (sub) titles in \code{\link[=export_table]{export_table()}}.
+Use \code{titles} and \code{subtitles} to override the default attribute
+values for \code{"table_title"} and \code{"table_subtitle"}. \code{titles}
+and \code{subtitles} may be any length from 1 to same length as returned
+list elements. If \code{titles} and \code{subtitles} are shorter than
+existing elements, only the first default attributes are overwritten.}
 }
 \value{
-A data frame or a list of data frames (if \code{split_by} is not \code{NULL}).
-If a list is returned, the element names reflect the model components where the
-extracted information in the data frames belong to, e.g. \code{`random.zero_inflated.Intercept: persons`}.
-This is the data frame that contains the parameters for the random effects from
-group-level "persons" from the zero-inflated model component.
+A data frame or a list of data frames (if \code{split_by} is not \code{NULL}). If a
+list is returned, the element names reflect the model components where the
+extracted information in the data frames belong to, e.g.
+\code{random.zero_inflated.Intercept: persons}. This is the data frame that
+contains the parameters for the random effects from group-level "persons"
+from the zero-inflated model component.
 }
 \description{
-This function takes a data frame, typically a data frame with
-information on summaries of model parameters like \code{\link[bayestestR]{hdi}}
-or \code{\link[bayestestR]{equivalence_test}}, as input and splits this information
-into several parts, depending on the model. See details below.
+This function takes a data frame, typically a data frame with information on
+summaries of model parameters like \code{\link[bayestestR:describe_posterior]{bayestestR::describe_posterior()}},
+\code{\link[bayestestR:hdi]{bayestestR::hdi()}} or \code{\link[parameters:model_parameters]{parameters::model_parameters()}}, as input and splits
+this information into several parts, depending on the model. See details
+below.
 }
 \details{
 This function prepares data frames that contain information
 about model parameters for clear printing.
 \cr \cr
 First, \code{x} is required, which should either be a model object or a
-prepared data frame as returned by \code{\link{clean_parameters}}. If
+prepared data frame as returned by \code{\link[=clean_parameters]{clean_parameters()}}. If
 \code{x} is a model, \code{clean_parameters()} is called on that model
 object to get information with which model components the parameters
 are associated.
@@ -48,17 +88,19 @@ are associated.
 Then, \code{...} take one or more data frames that also contain information
 about parameters from the same model, but also have additional information
 provided by other methods. For instance, a data frame in \code{...} might
-be the result of \code{\link[bayestestR]{hdi}}, where we
-have a) a \code{Parameters} column and b) columns with the HDI values.
+be the result of, for instance, \code{\link[bayestestR:describe_posterior]{bayestestR::describe_posterior()}},
+or \code{\link[parameters:model_parameters]{parameters::model_parameters()}}, where we have a) a
+\code{Parameter} column and b) columns with other parameter values (like
+CI, HDI, test statistic, etc.).
 \cr \cr
 Now we have a data frame with model parameters and information about the
 association to the different model components, a data frame with model
-parameters, and some summary statistics. \code{print_parameters()}
-then merges these data frames, so the statistic of interest (in our example:
-the HDI) is also associated with the different model components. The data
-frame is split into a list, so for a clear printing. Users can loop over this
-list and print each component for a better overview. Further, parameter
-names are "cleaned", if necessary, also for a cleaner print. See also 'Examples'.
+parameters, and some summary statistics. \code{print_parameters()} then merges
+these data frames, so the parameters or statistics of interest are also
+associated with the different model components. The data frame is split into
+a list, so for a clear printing. Users can loop over this list and print each
+component for a better overview. Further, parameter names are "cleaned", if
+necessary, also for a cleaner print. See also 'Examples'.
 }
 \examples{
 \dontrun{
@@ -66,8 +108,8 @@ library(bayestestR)
 model <- download_model("brms_zi_2")
 x <- hdi(model, effects = "all", component = "all")
 
-# hdi() returns a data frame; here we use only the informaton on
-# parameter names and HDI values
+# hdi() returns a data frame; here we use only the
+# information on parameter names and HDI values
 tmp <- as.data.frame(x)[, 1:4]
 tmp
 
@@ -81,5 +123,4 @@ print_parameters(model, tmp)
 # different model components.
 x
 }
-
 }

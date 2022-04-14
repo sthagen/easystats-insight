@@ -1,8 +1,6 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("quantreg")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("quantreg")) {
   data(stackloss)
   m1 <-
     rq(stack.loss ~ Air.Flow + Water.Temp,
@@ -58,7 +56,8 @@ if (require("testthat") &&
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("stack.loss ~ Air.Flow + Water.Temp"))
+      list(conditional = as.formula("stack.loss ~ Air.Flow + Water.Temp")),
+      ignore_attr = TRUE
     )
   })
 

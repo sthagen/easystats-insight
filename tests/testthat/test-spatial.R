@@ -1,9 +1,7 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
 if (.runThisTest || Sys.getenv("USER") == "travis") {
-
-  if (require("testthat") && require("insight") && require("glmmTMB")) {
-    context("insight, glmmTMB")
+  if (requiet("testthat") && requiet("insight") && requiet("glmmTMB")) {
     m1 <- download_model("glmmTMB_spatial_1")
 
     test_that("find_weights", {
@@ -79,7 +77,8 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
         list(
           conditional = as.formula("calcium ~ elevation + region"),
           random = as.formula("~pos + 0 | ID")
-        )
+        ),
+        ignore_attr = TRUE
       )
     })
 
@@ -133,10 +132,10 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
 
 
     test_that("get_paramaters", {
-      expect_equal(nrow(get_parameters(m1)),4)
+      expect_equal(nrow(get_parameters(m1)), 5)
       expect_equal(
         get_parameters(m1)$Parameter,
-        c("(Intercept)", "elevation", "region2", "region3")
+        c("(Intercept)", "elevation", "region2", "region3", "(Intercept)")
       )
     })
 

@@ -4,10 +4,12 @@
 \alias{has_intercept}
 \title{Checks if model has an intercept}
 \usage{
-has_intercept(x)
+has_intercept(x, verbose = TRUE)
 }
 \arguments{
 \item{x}{A model object.}
+
+\item{verbose}{Toggle warnings.}
 }
 \value{
 \code{TRUE} if \code{x} has an intercept, \code{FALSE} otherwise.
@@ -22,10 +24,11 @@ has_intercept(model)
 model <- lm(mpg ~ gear, data = mtcars)
 has_intercept(model)
 
-library(lme4)
-model <- lmer(Reaction ~ 0 + Days + (Days | Subject), data = sleepstudy)
-has_intercept(model)
+if (require("lme4")) {
+  model <- lmer(Reaction ~ 0 + Days + (Days | Subject), data = sleepstudy)
+  has_intercept(model)
 
-model <- lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
-has_intercept(model)
+  model <- lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
+  has_intercept(model)
+}
 }

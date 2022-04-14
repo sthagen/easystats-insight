@@ -1,8 +1,4 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("rms")) {
-  context("insight, rms")
-
+if (requiet("testthat") && requiet("insight") && requiet("rms")) {
   n <- 400
   set.seed(1)
   age <- rnorm(n, 50, 12)
@@ -70,7 +66,8 @@ if (require("testthat") &&
       find_formula(m1),
       list(conditional = as.formula(
         "Surv(d.time, death) ~ sex * pol(age, 2)"
-      ))
+      )),
+      ignore_attr = TRUE
     )
   })
 

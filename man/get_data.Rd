@@ -3,58 +3,83 @@
 \name{get_data}
 \alias{get_data}
 \alias{get_data.gee}
+\alias{get_data.rqss}
 \alias{get_data.hurdle}
+\alias{get_data.zcpglm}
 \alias{get_data.glmmTMB}
 \alias{get_data.merMod}
+\alias{get_data.glmmadmb}
 \alias{get_data.rlmerMod}
-\alias{get_data.mixed}
 \alias{get_data.clmm}
+\alias{get_data.mixed}
+\alias{get_data.afex_aov}
 \alias{get_data.lme}
 \alias{get_data.MixMod}
 \alias{get_data.brmsfit}
 \alias{get_data.stanreg}
 \alias{get_data.MCMCglmm}
-\alias{get_data.rqss}
-\alias{get_data.nlrq}
 \title{Get the data that was used to fit the model}
 \usage{
 get_data(x, ...)
 
-\method{get_data}{gee}(x, effects = c("all", "fixed", "random"), ...)
+\method{get_data}{gee}(x, effects = c("all", "fixed", "random"), verbose = TRUE, ...)
 
-\method{get_data}{hurdle}(x, component = c("all", "conditional", "zi",
-  "zero_inflated", "dispersion"), ...)
+\method{get_data}{rqss}(
+  x,
+  component = c("all", "conditional", "smooth_terms"),
+  verbose = TRUE,
+  ...
+)
 
-\method{get_data}{glmmTMB}(x, effects = c("all", "fixed", "random"),
-  component = c("all", "conditional", "zi", "zero_inflated",
-  "dispersion"), ...)
+\method{get_data}{hurdle}(
+  x,
+  component = c("all", "conditional", "zi", "zero_inflated", "dispersion"),
+  verbose = TRUE,
+  ...
+)
 
-\method{get_data}{merMod}(x, effects = c("all", "fixed", "random"), ...)
+\method{get_data}{zcpglm}(
+  x,
+  component = c("all", "conditional", "zi", "zero_inflated"),
+  verbose = TRUE,
+  ...
+)
 
-\method{get_data}{rlmerMod}(x, effects = c("all", "fixed", "random"),
-  ...)
+\method{get_data}{glmmTMB}(
+  x,
+  effects = c("all", "fixed", "random"),
+  component = c("all", "conditional", "zi", "zero_inflated", "dispersion"),
+  verbose = TRUE,
+  ...
+)
 
-\method{get_data}{mixed}(x, effects = c("all", "fixed", "random"), ...)
+\method{get_data}{merMod}(x, effects = c("all", "fixed", "random"), verbose = TRUE, ...)
+
+\method{get_data}{glmmadmb}(x, effects = c("all", "fixed", "random"), verbose = TRUE, ...)
+
+\method{get_data}{rlmerMod}(x, effects = c("all", "fixed", "random"), ...)
 
 \method{get_data}{clmm}(x, effects = c("all", "fixed", "random"), ...)
 
+\method{get_data}{mixed}(x, effects = c("all", "fixed", "random"), ...)
+
+\method{get_data}{afex_aov}(x, shape = c("long", "wide"), ...)
+
 \method{get_data}{lme}(x, effects = c("all", "fixed", "random"), ...)
 
-\method{get_data}{MixMod}(x, effects = c("all", "fixed", "random"),
-  component = c("all", "conditional", "zi", "zero_inflated",
-  "dispersion"), ...)
+\method{get_data}{MixMod}(
+  x,
+  effects = c("all", "fixed", "random"),
+  component = c("all", "conditional", "zi", "zero_inflated", "dispersion"),
+  verbose = TRUE,
+  ...
+)
 
-\method{get_data}{brmsfit}(x, effects = c("all", "fixed", "random"),
-  component = c("all", "conditional", "zi", "zero_inflated"), ...)
+\method{get_data}{brmsfit}(x, effects = "all", component = "all", verbose = TRUE, ...)
 
-\method{get_data}{stanreg}(x, effects = c("all", "fixed", "random"), ...)
+\method{get_data}{stanreg}(x, effects = c("all", "fixed", "random"), verbose = TRUE, ...)
 
-\method{get_data}{MCMCglmm}(x, effects = c("all", "fixed", "random"),
-  ...)
-
-\method{get_data}{rqss}(x, effects = c("all", "fixed", "random"), ...)
-
-\method{get_data}{nlrq}(x, ...)
+\method{get_data}{MCMCglmm}(x, effects = c("all", "fixed", "random"), verbose = TRUE, ...)
 }
 \arguments{
 \item{x}{A fitted model.}
@@ -64,28 +89,39 @@ get_data(x, ...)
 \item{effects}{Should model data for fixed effects, random effects
 or both be returned? Only applies to mixed models.}
 
+\item{verbose}{Toggle messages and warnings.}
+
 \item{component}{Should all predictor variables, predictor variables for the
 conditional model, the zero-inflated part of the model, the dispersion
 term or the instrumental variables be returned? Applies to models
 with zero-inflated and/or dispersion formula, or to models with instrumental
-variable (so called fixed-effects regressions). May be abbreviated.}
+variable (so called fixed-effects regressions). May be abbreviated. Note that the
+\emph{conditional} component is also called \emph{count} or \emph{mean}
+component, depending on the model.}
+
+\item{shape}{Return long or wide data? Only applicable in repeated measures
+designs.}
 }
 \value{
 The data that was used to fit the model.
 }
 \description{
 This functions tries to get the data that was used to fit the
-  model and returns it as data frame.
+model and returns it as data frame.
 }
 \note{
 Unlike \code{model.frame()}, which may contain transformed variables
-  (e.g. if \code{poly()} or \code{scale()} was used inside the formula to
-  specify the model), \code{get_data()} aims at returning the "original",
-  untransformed data.
+(e.g. if \code{poly()} or \code{scale()} was used inside the formula to
+specify the model), \code{get_data()} aims at returning the "original",
+untransformed data (if possible). Consequently, column names are changed
+accordingly, i.e. \code{"log(x)"} will become \code{"x"} etc. for all data
+columns with transformed values.
 }
 \examples{
-data(cbpp, package = "lme4")
-cbpp$trials <- cbpp$size - cbpp$incidence
-m <- glm(cbind(incidence, trials) ~ period, data = cbpp, family = binomial)
-head(get_data(m))
+if (require("lme4")) {
+  data(cbpp, package = "lme4")
+  cbpp$trials <- cbpp$size - cbpp$incidence
+  m <- glm(cbind(incidence, trials) ~ period, data = cbpp, family = binomial)
+  head(get_data(m))
+}
 }

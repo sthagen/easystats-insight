@@ -3,6 +3,7 @@
 #'
 #' @description Retrieve information from model objects.
 #'
+#' @param verbose Toggle off warnings.
 #' @inheritParams find_predictors
 #' @inheritParams link_inverse
 #' @inheritParams find_formula
@@ -10,38 +11,50 @@
 #' @return A list with information about the model, like family, link-function
 #'   etc. (see 'Details').
 #'
-#' @details \code{model_info()} returns a list with information about the
-#'   model for many different model objects. Following information
-#'    is returned, where all values starting with \code{is_} are logicals.
-#'    \itemize{
-#'      \item \code{is_binomial}: family is binomial (but not negative binomial)
-#'      \item \code{is_poisson}: family is poisson
-#'      \item \code{is_negbin}: family is negative binomial
-#'      \item \code{is_count}: model is a count model (i.e. family is either poisson or negative binomial)
-#'      \item \code{is_beta}: family is beta
-#'      \item \code{is_betabinomial}: family is beta-binomial
-#'      \item \code{is_exponential}: family is exponential (e.g. Gamma or Weibull)
-#'      \item \code{is_logit}: model has logit link
-#'      \item \code{is_progit}: model has probit link
-#'      \item \code{is_linear}: family is gaussian
-#'      \item \code{is_tweedie}: family is tweedie
-#'      \item \code{is_ordinal}: family is ordinal or cumulative link
-#'      \item \code{is_categorical}: family is categorical link
-#'      \item \code{is_censored}: model is a censored model (has a censored response, including survival models)
-#'      \item \code{is_truncated}: model is a truncated model (has a truncated response)
-#'      \item \code{is_survival}: model is a survival model
-#'      \item \code{is_zero_inflated}: model has zero-inflation component
-#'      \item \code{is_hurdle}: model has zero-inflation component and is a hurdle-model (truncated family distribution)
-#'      \item \code{is_mixed}: model is a mixed effects model (with random effects)
-#'      \item \code{is_multivariate}: model is a multivariate response model (currently only works for \emph{brmsfit} objects)
-#'      \item \code{is_trial}: model response contains additional information about the trials
-#'      \item \code{is_bayesian}: model is a Bayesian model
-#'      \item \code{is_anova}: model is an Anova object
-#'      \item \code{link_function}: the link-function
-#'      \item \code{family}: the family-object
-#'      \item \code{n_obs}: number of observations
-#'      \item \code{model_terms}: a list with all model terms, including terms such as random effects or from zero-inflated model parts.
-#'    }
+#' @details `model_info()` returns a list with information about the
+#' model for many different model objects. Following information
+#' is returned, where all values starting with `is_` are logicals.
+#' * `is_binomial`: family is binomial (but not negative binomial)
+#' * `is_bernoulli`: special case of binomial models: family is Bernoulli
+#' * `is_poisson`: family is poisson
+#' * `is_negbin`: family is negative binomial
+#' * `is_count`: model is a count model (i.e. family is either poisson or negative binomial)
+#' * `is_beta`: family is beta
+#' * `is_betabinomial`: family is beta-binomial
+#' * `is_dirichlet`: family is dirichlet
+#' * `is_exponential`: family is exponential (e.g. Gamma or Weibull)
+#' * `is_logit`: model has logit link
+#' * `is_probit`: model has probit link
+#' * `is_linear`: family is gaussian
+#' * `is_tweedie`: family is tweedie
+#' * `is_ordinal`: family is ordinal or cumulative link
+#' * `is_cumulative`: family is ordinal or cumulative link
+#' * `is_multinomial`: family is multinomial or categorical link
+#' * `is_categorical`: family is categorical link
+#' * `is_censored`: model is a censored model (has a censored response, including survival models)
+#' * `is_truncated`: model is a truncated model (has a truncated response)
+#' * `is_survival`: model is a survival model
+#' * `is_zero_inflated`: model has zero-inflation component
+#' * `is_hurdle`: model has zero-inflation component and is a hurdle-model (truncated family distribution)
+#' * `is_dispersion`: model has dispersion component (not only dispersion _parameter_)
+#' * `is_mixed`: model is a mixed effects model (with random effects)
+#' * `is_multivariate`: model is a multivariate response model (currently only works for _brmsfit_ objects)
+#' * `is_trial`: model response contains additional information about the trials
+#' * `is_bayesian`: model is a Bayesian model
+#' * `is_gam`: model is a generalized additive model
+#' * `is_anova`: model is an Anova object
+#' * `is_ttest`: model is an an object of class `htest`, returned by `t.test()`
+#' * `is_correlation`: model is an an object of class `htest`, returned by `cor.test()`
+#' * `is_ranktest`: model is an an object of class `htest`, returned by `cor.test()` (if Spearman's rank correlation), `wilcox.text()` or `kruskal.test()`.
+#' * `is_levenetest`: model is an an object of class `anova`, returned by `car::leveneTest()`.
+#' * `is_onewaytest`: model is an an object of class `htest`, returned by `oneway.test()`
+#' * `is_proptest`: model is an an object of class `htest`, returned by `prop.test()`
+#' * `is_binomtest`: model is an an object of class `htest`, returned by `binom.test()`
+#' * `is_chi2test`: model is an an object of class `htest`, returned by `chisq.test()`
+#' * `is_xtab`: model is an an object of class `htest` or `BFBayesFactor`, and test-statistic stems from a contingency table (i.e. `chisq.test()` or `BayesFactor::contingencyTableBF()`).
+#' * `link_function`: the link-function
+#' * `family`: the family-object
+#' * `n_obs`: number of observations
 #'
 #' @examples
 #' ldose <- rep(0:5, 2)
@@ -65,85 +78,769 @@
 #' }
 #'
 #' model_info(m)
-#' @importFrom stats formula terms
 #' @export
 model_info <- function(x, ...) {
   UseMethod("model_info")
 }
 
 
+# Default methods --------------------------------------
+
 #' @export
 model_info.data.frame <- function(x, ...) {
-  stop("A data frame is no valid object for this function")
+  stop("A data frame is no valid object for this function.", call. = FALSE)
 }
 
 
-#' @importFrom stats family
+#' @rdname model_info
 #' @export
-model_info.default <- function(x, ...) {
-  if (inherits(x, "list") && .obj_has_name(x, "gam")) {
+model_info.default <- function(x, verbose = TRUE, ...) {
+  if (inherits(x, "list") && object_has_names(x, "gam")) {
     x <- x$gam
     class(x) <- c(class(x), c("glm", "lm"))
   }
 
-  faminfo <- tryCatch({
-    if (inherits(x, c("Zelig-relogit"))) {
-      stats::binomial(link = "logit")
-    } else {
-      stats::family(x)
+  faminfo <- tryCatch(
+    {
+      if (inherits(x, c("Zelig-relogit"))) {
+        stats::binomial(link = "logit")
+      } else {
+        stats::family(x)
+      }
+    },
+    error = function(x) {
+      NULL
     }
-  },
-  error = function(x) {
-    NULL
-  }
   )
 
   if (!is.null(faminfo)) {
-    make_family(
+    .make_family(
       x = x,
       fitfam = faminfo$family,
       logit.link = faminfo$link == "logit",
       link.fun = faminfo$link,
+      verbose = verbose,
       ...
     )
   } else {
-    warning("Could not access model information.", call. = FALSE)
+    if (isTRUE(verbose)) {
+      warning("Could not access model information.", call. = FALSE)
+    }
+    NULL
   }
 }
 
 
-#' @importFrom stats family
 #' @export
-model_info.bamlss <- function(x, ...) {
-  faminfo <- stats::family(x)
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$links[1] == "logit",
-    link.fun = faminfo$links[1],
-    ...
-  )
+model_info.model_fit <- function(x, verbose = TRUE, ...) {
+  model_info(x$fit, verbose = verbose, ...)
 }
 
 
-#' @importFrom stats family
+# Models with general handling, Gaussian ----------------------------------
+
+
 #' @export
-model_info.speedglm <- function(x, ...) {
-  faminfo <- stats::family(x)
-  make_family(
+model_info.anova <- function(x, verbose = TRUE, ...) {
+  if (!is.null(attributes(x)$heading) && grepl("Levene's Test", attributes(x)$heading, fixed = TRUE)) {
+    .make_family(x, verbose = verbose, ...)
+  } else {
+    NULL
+  }
+}
+
+
+#' @export
+model_info.mmclogit <- function(x, verbose = TRUE, ...) {
+  .make_family(x, verbose = verbose, ...)
+}
+
+#' @export
+model_info.maxLik <- model_info.mmclogit
+
+#' @export
+model_info.mjoint <- model_info.mmclogit
+
+#' @export
+model_info.censReg <- model_info.mmclogit
+
+#' @export
+model_info.htest <- model_info.mmclogit
+
+#' @export
+model_info.BFBayesFactor <- model_info.mmclogit
+
+#' @export
+model_info.lme <- model_info.mmclogit
+
+#' @export
+model_info.bayesx <- model_info.mmclogit
+
+#' @export
+model_info.rq <- model_info.mmclogit
+
+#' @export
+model_info.crq <- model_info.mmclogit
+
+#' @export
+model_info.crqs <- model_info.mmclogit
+
+#' @export
+model_info.nlrq <- model_info.mmclogit
+
+#' @export
+model_info.rqss <- model_info.mmclogit
+
+#' @export
+model_info.mixed <- model_info.mmclogit
+
+#' @export
+model_info.plm <- model_info.mmclogit
+
+#' @export
+model_info.mcmc <- model_info.mmclogit
+
+#' @export
+model_info.bayesQR <- model_info.mmclogit
+
+#' @export
+model_info.gls <- model_info.mmclogit
+
+#' @export
+model_info.nls <- model_info.mmclogit
+
+#' @export
+model_info.MANOVA <- model_info.mmclogit
+
+#' @export
+model_info.RM <- model_info.mmclogit
+
+#' @export
+model_info.truncreg <- model_info.mmclogit
+
+#' @export
+model_info.lmRob <- model_info.mmclogit
+
+#' @export
+model_info.speedlm <- model_info.mmclogit
+
+#' @export
+model_info.lmrob <- model_info.mmclogit
+
+#' @export
+model_info.complmrob <- model_info.mmclogit
+
+#' @export
+model_info.lm_robust <- model_info.mmclogit
+
+#' @export
+model_info.iv_robust <- model_info.mmclogit
+
+#' @export
+model_info.systemfit <- model_info.mmclogit
+
+#' @export
+model_info.lqmm <- model_info.mmclogit
+
+#' @export
+model_info.lqm <- model_info.mmclogit
+
+#' @export
+model_info.felm <- model_info.mmclogit
+
+#' @export
+model_info.feis <- model_info.mmclogit
+
+#' @export
+model_info.ivreg <- model_info.mmclogit
+
+#' @export
+model_info.ivFixed <- model_info.mmclogit
+
+#' @export
+model_info.aovlist <- model_info.mmclogit
+
+#' @export
+model_info.rma <- model_info.mmclogit
+
+#' @export
+model_info.meta_random <- model_info.mmclogit
+
+#' @export
+model_info.meta_bma <- model_info.mmclogit
+
+#' @export
+model_info.meta_fixed <- model_info.mmclogit
+
+#' @export
+model_info.metaplus <- model_info.mmclogit
+
+#' @export
+model_info.mclogit <- model_info.mmclogit
+
+#' @export
+model_info.mlm <- function(x, ...) {
+  .make_family(x, multi.var = TRUE, ...)
+}
+
+#' @export
+model_info.afex_aov <- function(x, verbose = TRUE, ...) {
+  if (!is.null(x$aov)) {
+    .make_family(x$aov, verbose = verbose, ...)
+  } else {
+    .make_family(x$lm, verbose = verbose, ...)
+  }
+}
+
+
+# Models with logit-link --------------------------------
+
+#' @export
+model_info.logistf <- function(x, verbose = TRUE, ...) {
+  faminfo <- stats::binomial(link = "logit")
+  .make_family(
     x = x,
     fitfam = faminfo$family,
     logit.link = faminfo$link == "logit",
     link.fun = faminfo$link,
+    verbose = verbose,
+    ...
+  )
+}
+
+#' @export
+model_info.lrm <- model_info.logistf
+
+#' @export
+model_info.blrm <- model_info.logistf
+
+#' @export
+model_info.multinom <- model_info.logistf
+
+#' @export
+model_info.mlogit <- model_info.logistf
+
+#' @export
+model_info.gmnl <- model_info.logistf
+
+
+
+# Models with ordinal family ------------------------------------
+
+
+#' @export
+model_info.clm <- function(x, verbose = TRUE, ...) {
+  faminfo <- stats::binomial(link = .get_ordinal_link(x))
+  .make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$link == "logit",
+    link.fun = faminfo$link,
+    verbose = verbose,
+    ...
+  )
+}
+
+#' @export
+model_info.clm2 <- model_info.clm
+
+#' @export
+model_info.clmm <- model_info.clm
+
+#' @export
+model_info.mixor <- model_info.clm
+
+#' @export
+model_info.mvord <- function(x, verbose = verbose, ...) {
+  link_name <- x$rho$link$name
+  faminfo <- stats::binomial(link = ifelse(link_name == "mvprobit", "probit", "logit"))
+  .make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$link == "logit",
+    link.fun = faminfo$link,
+    multi.var = TRUE,
+    verbose = verbose,
+    ...
+  )
+}
+
+
+
+# Models with family-function  ----------------------------------
+
+#' @export
+model_info.bamlss <- function(x, verbose = TRUE, ...) {
+  faminfo <- stats::family(x)
+  .make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$links[1] == "logit",
+    link.fun = faminfo$links[1],
+    verbose = verbose,
     ...
   )
 }
 
 
 #' @export
-model_info.glmmPQL <- function(x, ...) {
+model_info.speedglm <- function(x, verbose = TRUE, ...) {
+  faminfo <- stats::family(x)
+  .make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$link == "logit",
+    link.fun = faminfo$link,
+    verbose = verbose,
+    ...
+  )
+}
+
+#' @export
+model_info.brmultinom <- model_info.speedglm
+
+
+
+# Models with tobit family ----------------------------------
+
+#' @export
+model_info.flexsurvreg <- function(x, verbose = TRUE, ...) {
+  dist <- parse(text = safe_deparse(x$call))[[1]]$dist
+  faminfo <- .make_tobit_family(x, dist)
+
+  .make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$link == "logit",
+    link.fun = faminfo$link,
+    verbose = verbose,
+    ...
+  )
+}
+
+#' @export
+model_info.tobit <- function(x, verbose = TRUE, ...) {
+  faminfo <- .make_tobit_family(x)
+
+  .make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$link == "logit",
+    link.fun = faminfo$link,
+    verbose = verbose,
+    ...
+  )
+}
+
+#' @export
+model_info.crch <- model_info.tobit
+
+#' @export
+model_info.survreg <- model_info.tobit
+
+
+
+# Models with family in object ----------------------------------
+
+
+#' @export
+model_info.MixMod <- function(x, verbose = TRUE, ...) {
   faminfo <- x$family
-  make_family(
+  .make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$link == "logit",
+    link.fun = faminfo$link,
+    verbose = verbose,
+    ...
+  )
+}
+
+#' @export
+model_info.glmmPQL <- model_info.MixMod
+
+#' @export
+model_info.bife <- model_info.MixMod
+
+
+#' @export
+model_info.glmx <- function(x, verbose = TRUE, ...) {
+  faminfo <- x$family$glm
+  .make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$link == "logit",
+    link.fun = faminfo$link,
+    verbose = verbose,
+    ...
+  )
+}
+
+
+#' @export
+model_info.fixest <- function(x, verbose = TRUE, ...) {
+  faminfo <- x$family
+
+  if (is.null(faminfo)) {
+    if (!is.null(x$method) && x$method == "feols") {
+      .make_family(x, ...)
+    }
+  } else if (inherits(faminfo, "family")) {
+    .make_family(
+      x = x,
+      fitfam = faminfo$family,
+      logit.link = faminfo$link == "logit",
+      link.fun = faminfo$link,
+      verbose = verbose,
+      ...
+    )
+  } else {
+    fitfam <- switch(faminfo,
+      "negbin" = "negative binomial",
+      "logit" = "binomial",
+      faminfo
+    )
+
+    link <- switch(faminfo,
+      "poisson" = ,
+      "negbin" = "log",
+      "logit" = "logit",
+      "gaussian" = "identity"
+    )
+
+    .make_family(
+      x = x,
+      fitfam = fitfam,
+      logit.link = link == "logit",
+      link.fun = link,
+      verbose = verbose,
+      ...
+    )
+  }
+}
+
+#' @export
+model_info.feglm <- model_info.fixest
+
+
+# Survival-models ----------------------------------------
+
+#' @export
+model_info.coxph <- function(x, verbose = TRUE, ...) {
+  .make_family(
+    x = x,
+    fitfam = "survival",
+    logit.link = TRUE,
+    link.fun = NULL,
+    verbose = verbose,
+    ...
+  )
+}
+
+#' @export
+model_info.coxr <- model_info.coxph
+
+#' @export
+model_info.aareg <- model_info.coxph
+
+#' @export
+model_info.survfit <- model_info.coxph
+
+#' @export
+model_info.coxme <- model_info.coxph
+
+#' @export
+model_info.riskRegression <- model_info.coxph
+
+#' @export
+model_info.comprisk <- model_info.coxph
+
+
+
+# Zero-Inflated Models ------------------------------
+
+#' @export
+model_info.zeroinfl <- function(x, ...) {
+  if (is.list(x$dist)) {
+    dist <- x$dist[[1]]
+  } else {
+    dist <- x$dist
+  }
+  fitfam <- switch(dist,
+    poisson = "poisson",
+    negbin = "negative binomial",
+    "poisson"
+  )
+  .make_family(
+    x = x,
+    fitfam = fitfam,
+    zero.inf = TRUE,
+    link.fun = "log",
+    ...
+  )
+}
+
+#' @export
+model_info.zerotrunc <- model_info.zeroinfl
+
+
+#' @export
+model_info.hurdle <- function(x, ...) {
+  if (is.list(x$dist)) {
+    dist <- x$dist[[1]]
+  } else {
+    dist <- x$dist
+  }
+  fitfam <- switch(dist,
+    poisson = "poisson",
+    negbin = "negative binomial",
+    "poisson"
+  )
+  .make_family(
+    x = x,
+    fitfam = fitfam,
+    zero.inf = TRUE,
+    hurdle = TRUE,
+    link.fun = "log",
+    ...
+  )
+}
+
+
+#' @export
+model_info.mhurdle <- function(x, ...) {
+  .make_family(
+    x = x,
+    zero.inf = TRUE,
+    hurdle = TRUE,
+    ...
+  )
+}
+
+
+# Bayesian Models ---------------------------
+
+
+#' @export
+model_info.stanreg <- function(x, ...) {
+  if (inherits(x, "polr")) {
+    model_info.polr(x)
+  } else {
+    model_info.default(x)
+  }
+}
+
+
+#' @export
+model_info.brmsfit <- function(x, ...) {
+  faminfo <- stats::family(x)
+  if (is_multivariate(x)) {
+    lapply(faminfo, function(.x) {
+      .make_family(
+        x = x,
+        fitfam = .x$family,
+        zero.inf = FALSE,
+        logit.link = .x$link == "logit",
+        multi.var = TRUE,
+        link.fun = .x$link,
+        dispersion = !is_empty_object(insight::find_formula(x)$sigma),
+        ...
+      )
+    })
+  } else {
+    .make_family(
+      x = x,
+      fitfam = faminfo$family,
+      logit.link = faminfo$link == "logit",
+      multi.var = FALSE,
+      link.fun = faminfo$link,
+      dispersion = !is_empty_object(insight::find_formula(x)$sigma),
+      ...
+    )
+  }
+}
+
+
+#' @export
+model_info.stanmvreg <- function(x, ...) {
+  faminfo <- stats::family(x)
+  lapply(faminfo, function(.x) {
+    .make_family(
+      x = x,
+      fitfam = .x$family,
+      zero.inf = FALSE,
+      logit.link = .x$link == "logit",
+      multi.var = TRUE,
+      link.fun = .x$link,
+      ...
+    )
+  })
+}
+
+
+#' @export
+model_info.BGGM <- function(x, ...) {
+  link <- switch(x$type,
+    "continuous" = stats::gaussian(),
+    stats::binomial()
+  )
+
+  family <- switch(x$type,
+    "continuous" = "gaussian",
+    "binary" = "binomial",
+    "ordinal"
+  )
+
+  .make_family(
+    x = x,
+    fitfam = family,
+    zero.inf = FALSE,
+    logit.link = link$link == "logit",
+    link.fun = link$link,
+    ...
+  )
+}
+
+
+# Other models ----------------------------
+
+#' @export
+model_info.garch <- function(x, ...) {
+  .make_family(
+    x = x,
+    ...
+  )
+}
+
+
+#' @export
+model_info.Rchoice <- function(x, ...) {
+  .make_family(
+    x = x,
+    fitfam = x$family,
+    logit.link = x$link == "logit",
+    link.fun = x$link,
+    ...
+  )
+}
+
+
+#' @export
+model_info.ivprobit <- function(x, ...) {
+  .make_family(
+    x = x,
+    fitfam = "binomial",
+    logit.link = FALSE,
+    link.fun = "probit",
+    ...
+  )
+}
+
+
+#' @export
+model_info.glht <- function(x, verbose = TRUE, ...) {
+  model_info(x$model, verbose = verbose, ...)
+}
+
+
+#' @export
+model_info.coeftest <- function(x, ...) {
+  NULL
+}
+
+
+#' @export
+model_info.glmm <- function(x, ...) {
+  f <- switch(tolower(x$family.glmm$family.glmm),
+    "bernoulli.glmm" = ,
+    "binomial.glmm" = stats::binomial("logit"),
+    "poisson.glmm" = stats::poisson("log"),
+    stats::gaussian("identity")
+  )
+  .make_family(
+    x = x,
+    fitfam = f$family,
+    logit.link = f$link == "logit",
+    multi.var = FALSE,
+    link.fun = f$link,
+    ...
+  )
+}
+
+
+#' @export
+model_info.robmixglm <- function(x, ...) {
+  f <- switch(tolower(x$family),
+    gaussian = stats::gaussian("identity"),
+    binomial = stats::binomial("logit"),
+    poisson = stats::poisson("log"),
+    gamma = stats::Gamma("inverse"),
+    truncpoisson = stats::poisson("log"),
+    stats::gaussian("identity")
+  )
+  .make_family(
+    x = x,
+    fitfam = f$family,
+    logit.link = f$link == "logit",
+    multi.var = FALSE,
+    link.fun = f$link,
+    zero.inf = x$family == "truncpoisson",
+    hurdle = x$family == "truncpoisson",
+    ...
+  )
+}
+
+
+#' @export
+model_info.Arima <- function(x, ...) {
+  .make_family(x, ...)
+}
+
+
+#' @export
+model_info.summary.lm <- model_info.Arima
+
+
+#' @export
+model_info.averaging <- function(x, ...) {
+  if (is.null(attributes(x)$modelList)) {
+    warning("Can't calculate covariance matrix. Please use 'fit = TRUE' in 'model.avg()'.", call. = FALSE)
+    return(NULL)
+  }
+  model_info.default(x = attributes(x)$modelList[[1]])
+}
+
+
+#' @export
+model_info.merModList <- function(x, ...) {
+  model_info.default(x[[1]], ...)
+}
+
+
+#' @export
+model_info.cglm <- function(x, ...) {
+  link <- parse(text = safe_deparse(x$call))[[1]]$link
+  method <- parse(text = safe_deparse(x$call))[[1]]$method
+
+  if (!is.null(method) && method == "clm") {
+    .make_family(x, ...)
+  } else if (!is.null(link)) {
+    .make_family(
+      x,
+      logit.link = link == "logit",
+      link.fun = link,
+      ...
+    )
+  } else {
+    .make_family(x, ...)
+  }
+}
+
+
+#' @export
+model_info.cgam <- function(x, ...) {
+  faminfo <- x$family
+  .make_family(
     x = x,
     fitfam = faminfo$family,
     logit.link = faminfo$link == "logit",
@@ -161,81 +858,6 @@ model_info.gamm <- function(x, ...) {
 }
 
 
-#' @export
-model_info.MixMod <- function(x, ...) {
-  faminfo <- x$family
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
-
-#' @export
-model_info.tobit <- function(x, ...) {
-  faminfo <- .make_tobit_family(x)
-
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
-
-#' @export
-model_info.censReg <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.crch <- function(x, ...) {
-  faminfo <- .make_tobit_family(x)
-
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
-
-#' @export
-model_info.survreg <- function(x, ...) {
-  faminfo <- .make_tobit_family(x)
-
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
-
-#' @export
-model_info.flexsurvreg <- function(x, ...) {
-  dist <- parse(text = .safe_deparse(x$call))[[1]]$dist
-  faminfo <- .make_tobit_family(x, dist)
-
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
 
 #' @export
 model_info.LORgee <- function(x, ...) {
@@ -251,80 +873,100 @@ model_info.LORgee <- function(x, ...) {
     link <- "logit"
   }
 
-  faminfo <- stats::binomial(link = link)
+  if (x$link == "Cumulative logit") {
+    family <- "ordinal"
+  } else {
+    family <- "multinomial"
+  }
 
-  make_family(
+  .make_family(
     x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
+    fitfam = family,
+    logit.link = link == "logit",
+    link.fun = link,
     ...
   )
 }
 
-
-#' @export
-model_info.htest <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.BFBayesFactor <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.lme <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.bayesx <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.rq <- function(x, ...) {
-  make_family(x, ...)
-}
 
 
 #' @export
 model_info.BBreg <- function(x, ...) {
-  make_family(
+  .make_family(
     x = x,
     fitfam = "betabinomial",
     logit.link = TRUE,
     multi.var = FALSE,
     zero.inf = FALSE,
     link.fun = "logit",
+    ...
+  )
+}
+
+#' @export
+model_info.BBmm <- model_info.BBreg
+
+
+
+#' @export
+model_info.glmmadmb <- function(x, ...) {
+  .make_family(
+    x = x,
+    fitfam = x$family,
+    logit.link = x$link == "logit",
+    multi.var = FALSE,
+    zero.inf = x$zeroInflation,
+    link.fun = x$link,
     ...
   )
 }
 
 
 #' @export
-model_info.BBmm <- function(x, ...) {
-  make_family(
+model_info.cpglmm <- function(x, ...) {
+  link <- parse(text = safe_deparse(x@call))[[1]]$link
+  if (is.null(link)) link <- "log"
+  if (is.numeric(link)) link <- "tweedie"
+  .make_family(
     x = x,
-    fitfam = "betabinomial",
-    logit.link = TRUE,
+    fitfam = "poisson",
+    logit.link = FALSE,
     multi.var = FALSE,
-    zero.inf = FALSE,
-    link.fun = "logit",
+    link.fun = link,
     ...
   )
 }
+
+#' @export
+model_info.zcpglm <- function(x, ...) {
+  link <- parse(text = safe_deparse(x@call))[[1]]$link
+  if (is.null(link)) link <- "log"
+  if (is.numeric(link)) link <- "tweedie"
+  .make_family(
+    x = x,
+    fitfam = "poisson",
+    logit.link = FALSE,
+    multi.var = FALSE,
+    link.fun = link,
+    zero.inf = TRUE,
+    ...
+  )
+}
+
+#' @export
+model_info.cpglm <- model_info.cpglmm
+
+#' @export
+model_info.bcplm <- model_info.cpglmm
 
 
 #' @export
 model_info.glimML <- function(x, ...) {
-  fitfam <- switch(x@method, BB = "betabinomial", NB = "negative binomial")
-  make_family(
+  fitfam <- switch(x@method,
+    BB = "betabinomial",
+    NB = "negative binomial"
+  )
+  .make_family(
     x = x,
     fitfam = fitfam,
     logit.link = x@link == "logit",
@@ -335,65 +977,6 @@ model_info.glimML <- function(x, ...) {
   )
 }
 
-
-#' @export
-model_info.crq <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.nlrq <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.rqss <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.mixed <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.plm <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.gls <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.truncreg <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.lmRob <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.speedlm <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.lmrob <- function(x, ...) {
-  make_family(x, ...)
-}
 
 
 #' @export
@@ -409,10 +992,10 @@ model_info.gam <- function(x, ...) {
 
   if (is.mv) link <- "identity"
 
-  make_family(
+  .make_family(
     x = x,
     fitfam = faminfo$family,
-    logit.link = link == "logit",
+    logit.link = !is.null(link) && (link == "logit" || faminfo$family == "multinom"),
     link.fun = link,
     multi.var = is.mv,
     ...
@@ -420,12 +1003,13 @@ model_info.gam <- function(x, ...) {
 }
 
 
+
 #' @export
 model_info.vgam <- function(x, ...) {
   faminfo <- x@family
   link.fun <- faminfo@blurb[3]
-  if (grepl("^\\Qlogit(\\E", link.fun, perl = TRUE)) link.fun <- "logit"
-  make_family(
+  if (grepl("^(l|L)ogit", link.fun)) link.fun <- "logit"
+  .make_family(
     x = x,
     fitfam = faminfo@vfamily[1],
     logit.link = any(.string_contains("logit", faminfo@blurb)),
@@ -434,144 +1018,42 @@ model_info.vgam <- function(x, ...) {
   )
 }
 
-
 #' @export
-model_info.vglm <- function(x, ...) {
-  faminfo <- x@family
-  link.fun <- faminfo@blurb[3]
-  if (grepl("^\\Qlogit(\\E", link.fun, perl = TRUE)) link.fun <- "logit"
-  make_family(
-    x = x,
-    fitfam = faminfo@vfamily[1],
-    logit.link = any(.string_contains("logit", faminfo@blurb)),
-    link.fun = link.fun,
-    ...
-  )
-}
+model_info.vglm <- model_info.vgam
 
 
 #' @export
-model_info.zeroinfl <- function(x, ...) {
-  if (is.list(x$dist)) {
-    dist <- x$dist[[1]]
-  } else {
-    dist <- x$dist
-  }
-  fitfam <- switch(
-    dist,
-    poisson = "poisson",
-    negbin = "negative binomial",
-    "poisson"
-  )
-  make_family(
-    x = x,
-    fitfam = fitfam,
-    zero.inf = TRUE,
-    link.fun = "log",
-    ...
-  )
-}
-
-
-#' @export
-model_info.hurdle <- function(x, ...) {
-  if (is.list(x$dist)) {
-    dist <- x$dist[[1]]
-  } else {
-    dist <- x$dist
-  }
-  fitfam <- switch(
-    dist,
-    poisson = "poisson",
-    negbin = "negative binomial",
-    "poisson"
-  )
-  make_family(
-    x = x,
-    fitfam = fitfam,
-    zero.inf = TRUE,
-    hurdle = TRUE,
-    link.fun = "log",
-    ...
-  )
-}
-
-
-#' @export
-model_info.zerotrunc <- function(x, ...) {
-  if (is.list(x$dist)) {
-    dist <- x$dist[[1]]
-  } else {
-    dist <- x$dist
-  }
-  fitfam <- switch(
-    dist,
-    poisson = "poisson",
-    negbin = "negative binomial",
-    "poisson"
-  )
-  make_family(
-    x = x,
-    fitfam = fitfam,
-    zero.inf = TRUE,
-    link.fun = "log",
-    ...
-  )
+model_info.svy_vglm <- function(x, verbose = TRUE, ...) {
+  model_info(x$fit, verbose = verbose)
 }
 
 
 #' @export
 model_info.glmmTMB <- function(x, ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("To use this function, please install package 'lme4'.")
-  }
+  # installed?
+  check_if_installed("lme4")
 
   faminfo <- stats::family(x)
-  make_family(
+  zero_inflated <- !is_empty_object(lme4::fixef(x)$zi)
+
+  .make_family(
     x = x,
     fitfam = faminfo$family,
-    zero.inf = !.is_empty_object(lme4::fixef(x)$zi),
-    hurdle = grepl("truncated", faminfo$family),
+    zero.inf = zero_inflated,
+    hurdle = grepl("truncated", faminfo$family, fixed = TRUE),
     logit.link = faminfo$link == "logit",
     link.fun = faminfo$link,
+    dispersion = !is.null(find_formula(x)$dispersion),
+    glmmtmb_zeroinf = zero_inflated,
     ...
   )
 }
 
 
-#' @export
-model_info.lm_robust <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.iv_robust <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.felm <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.feis <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.ivreg <- function(x, ...) {
-  make_family(x, ...)
-}
-
 
 #' @export
 model_info.betareg <- function(x, ...) {
-  make_family(
+  .make_family(
     x = x,
     fitfam = "beta",
     logit.link = x$link$mean$name == "logit",
@@ -581,34 +1063,23 @@ model_info.betareg <- function(x, ...) {
 }
 
 
+
 #' @export
-model_info.coxph <- function(x, ...) {
-  make_family(
+model_info.DirichletRegModel <- function(x, ...) {
+  .make_family(
     x = x,
-    fitfam = "survival",
+    fitfam = "dirichlet",
     logit.link = TRUE,
-    link.fun = NULL,
+    link.fun = "logit",
     ...
   )
 }
 
-
-#' @export
-model_info.survfit <- function(x, ...) {
-  make_family(
-    x = x,
-    fitfam = "survival",
-    logit.link = TRUE,
-    link.fun = NULL,
-    ...
-  )
-}
 
 
 #' @export
 model_info.gbm <- function(x, ...) {
-  faminfo <- switch(
-    x$distribution$name,
+  faminfo <- switch(x$distribution$name,
     laplace = ,
     tdist = ,
     gaussian = list(name = "gaussian", logit = FALSE, link = NULL),
@@ -619,7 +1090,7 @@ model_info.gbm <- function(x, ...) {
     bernoulli = list(name = "binomial", logit = TRUE, link = "logit"),
   )
 
-  make_family(
+  .make_family(
     x = x,
     fitfam = faminfo$name,
     logit.link = faminfo$logit,
@@ -629,21 +1100,10 @@ model_info.gbm <- function(x, ...) {
 }
 
 
-#' @export
-model_info.coxme <- function(x, ...) {
-  make_family(
-    x = x,
-    fitfam = "survival",
-    logit.link = TRUE,
-    link.fun = NULL,
-    ...
-  )
-}
-
 
 #' @export
 model_info.MCMCglmm <- function(x, ...) {
-  make_family(
+  .make_family(
     x = x,
     fitfam = x$Residual$family,
     logit.link = FALSE,
@@ -653,25 +1113,13 @@ model_info.MCMCglmm <- function(x, ...) {
 }
 
 
-#' @export
-model_info.lrm <- function(x, ...) {
-  faminfo <- stats::binomial(link = "logit")
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
 
 #' @export
 model_info.polr <- function(x, ...) {
   link <- x$method
   if (link == "logistic") link <- "logit"
   faminfo <- stats::binomial(link = link)
-  make_family(
+  .make_family(
     x = x,
     fitfam = faminfo$family,
     logit.link = faminfo$link == "logit",
@@ -679,13 +1127,31 @@ model_info.polr <- function(x, ...) {
     ...
   )
 }
+
+
+
+#' @export
+model_info.orm <- function(x, ...) {
+  faminfo <- stats::binomial(link = "logit")
+  .make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$link == "logit",
+    link.fun = faminfo$link,
+    ...
+  )
+}
+
 
 
 #' @export
 model_info.svyolr <- function(x, ...) {
-  l <- switch(x$method, logistic = "logit", x$method)
+  l <- switch(x$method,
+    logistic = "logit",
+    x$method
+  )
   faminfo <- stats::binomial(link = l)
-  make_family(
+  .make_family(
     x = x,
     fitfam = faminfo$family,
     logit.link = faminfo$link == "logit",
@@ -694,24 +1160,12 @@ model_info.svyolr <- function(x, ...) {
   )
 }
 
-
-#' @export
-model_info.multinom <- function(x, ...) {
-  faminfo <- stats::binomial(link = "logit")
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
 
 
 #' @export
 model_info.gamlss <- function(x, ...) {
   faminfo <- get(x$family[1], asNamespace("gamlss"))()
-  make_family(
+  .make_family(
     x = x,
     fitfam = faminfo$family[2],
     logit.link = faminfo$mu.link == "logit",
@@ -722,378 +1176,89 @@ model_info.gamlss <- function(x, ...) {
 
 
 #' @export
-model_info.clm2 <- function(x, ...) {
-  faminfo <- stats::binomial(link = get_ordinal_link(x))
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
-
-#' @export
-model_info.clm <- function(x, ...) {
-  faminfo <- stats::binomial(link = get_ordinal_link(x))
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
-
-#' @export
-model_info.clmm <- function(x, ...) {
-  faminfo <- stats::binomial(link = get_ordinal_link(x))
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
-
-#' @export
-model_info.mlogit <- function(x, ...) {
-  faminfo <- stats::binomial(link = "logit")
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
-
-#' @export
-model_info.logistf <- function(x, ...) {
-  faminfo <- stats::binomial(link = "logit")
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
-
-#' @export
-model_info.gmnl <- function(x, ...) {
-  faminfo <- stats::binomial(link = "logit")
-  make_family(
-    x = x,
-    fitfam = faminfo$family,
-    logit.link = faminfo$link == "logit",
-    link.fun = faminfo$link,
-    ...
-  )
-}
-
-
-#' @export
-model_info.brmsfit <- function(x, ...) {
-  faminfo <- stats::family(x)
-  if (is_multivariate(x)) {
-    lapply(faminfo, function(.x) {
-      make_family(
-        x = x,
-        fitfam = .x$family,
-        zero.inf = FALSE,
-        logit.link = .x$link == "logit",
-        multi.var = TRUE,
-        link.fun = .x$link,
-        ...
-      )
-    })
-  } else {
-    make_family(
-      x = x,
-      fitfam = faminfo$family,
-      logit.link = faminfo$link == "logit",
-      multi.var = FALSE,
-      link.fun = faminfo$link,
-      ...
-    )
-  }
-}
-
-
-#' @export
-model_info.stanmvreg <- function(x, ...) {
-  faminfo <- stats::family(x)
-  lapply(faminfo, function(.x) {
-    make_family(
-      x = x,
-      fitfam = .x$family,
-      zero.inf = FALSE,
-      logit.link = .x$link == "logit",
-      multi.var = TRUE,
-      link.fun = .x$link,
-      ...
-    )
-  })
-}
-
-
-#' @export
-model_info.aovlist <- function(x, ...) {
-  make_family(x, ...)
-}
-
-
-#' @export
-model_info.mlm <- function(x, ...) {
-  make_family(x, multi.var = TRUE, ...)
-}
-
-
-make_family <- function(x, fitfam = "gaussian", zero.inf = FALSE, hurdle = FALSE, logit.link = FALSE, multi.var = FALSE, link.fun = "identity", ...) {
-  # create logical for family
-  binom_fam <-
-    fitfam %in% c("bernoulli", "binomial", "quasibinomial", "binomialff") |
-      grepl("\\Qbinomial\\E", fitfam, ignore.case = TRUE)
-
-  poisson_fam <-
-    fitfam %in% c("poisson", "quasipoisson", "genpois", "ziplss") |
-      grepl("\\Qpoisson\\E", fitfam, ignore.case = TRUE)
-
-  neg_bin_fam <-
-    grepl("\\Qnegative binomial\\E", fitfam, ignore.case = TRUE) |
-      grepl("\\Qnbinom\\E", fitfam, ignore.case = TRUE) |
-      grepl("\\Qnzbinom\\E", fitfam, ignore.case = TRUE) |
-      grepl("\\Qgenpois\\E", fitfam, ignore.case = TRUE) |
-      grepl("\\Qnegbinomial\\E", fitfam, ignore.case = TRUE) |
-      grepl("\\Qneg_binomial\\E", fitfam, ignore.case = TRUE) |
-      fitfam %in% c("ztnbinom", "nbinom")
-
-  beta_fam <-
-    inherits(x, "betareg") |
-    fitfam %in% c(
-      "beta",
-      "Beta",
-      "betabinomial",
-      "Beta Inflated",
-      "Zero Inflated Beta",
-      "Beta Inflated zero",
-      "Beta Inflated one"
-    )
-
-  betabin_fam <- inherits(x, "BBreg") | fitfam %in% "betabinomial"
-
-  ## TODO beta-binomial = binomial?
-  if (betabin_fam) binom_fam <- TRUE
-
-  exponential_fam <- fitfam %in% c("Gamma", "gamma", "weibull")
-
-  linear_model <- (!binom_fam & !exponential_fam & !poisson_fam & !neg_bin_fam & !logit.link) ||
-    fitfam %in% c("Student's-t", "t Family", "gaussian", "Gaussian") || grepl("(\\st)$", fitfam)
-
-  tweedie_model <- linear_model && grepl("tweedie", fitfam, fixed = TRUE)
-
-  zero.inf <- zero.inf | fitfam == "ziplss" |
-    grepl("\\Qzero_inflated\\E", fitfam, ignore.case = TRUE) |
-    grepl("\\Qzero-inflated\\E", fitfam, ignore.case = TRUE) |
-    grepl("\\Qneg_binomial\\E", fitfam, ignore.case = TRUE) |
-    grepl("\\Qhurdle\\E", fitfam, ignore.case = TRUE) |
-    grepl("^(zt|zi|za|hu)", fitfam, perl = TRUE) |
-    grepl("^truncated", fitfam, perl = TRUE)
-
-  hurdle <- hurdle |
-    grepl("\\Qhurdle\\E", fitfam, ignore.case = TRUE) |
-    grepl("^hu", fitfam, perl = TRUE) |
-    grepl("^truncated", fitfam, perl = TRUE) |
-    fitfam == "ztnbinom"
-
-  is.ordinal <-
-    inherits(x, c("svyolr", "polr", "clm", "clm2", "clmm", "gmnl", "mlogit", "multinom", "LORgee")) |
-      fitfam %in% c("cumulative", "cratio", "sratio", "acat", "ordinal", "multinomial")
-
-  is.categorical <- fitfam == "categorical"
-
-  is.bayes <- inherits(x, c("brmsfit", "stanfit", "MCMCglmm", "stanreg",
-                            "stanmvreg", "bmerMod", "BFBayesFactor", "bamlss",
-                            "bayesx"))
-
-  is.survival <- inherits(x, c("survreg", "survfit", "survPresmooth", "flexsurvreg", "coxph", "coxme"))
-
-  # check if we have binomial models with trials instead of binary outcome
-  # and check if we have truncated or censored brms-regression
-
-  is.trial <- FALSE
-  is.censored <- FALSE
-  is.truncated <- FALSE
-
-  if (inherits(x, "brmsfit") && is.null(stats::formula(x)$responses)) {
-    rv <- tryCatch({
-      .safe_deparse(stats::formula(x)$formula[[2L]])
+model_info.mipo <- function(x, verbose = TRUE, ...) {
+  tryCatch(
+    {
+      models <- eval(x$call$object)
+      model_info(models$analyses[[1]], verbose = verbose, ...)
     },
-    error = function(x) {
+    error = function(e) {
       NULL
     }
-    )
-
-    if (!is.null(rv)) {
-      is.trial <- .trim(sub("(.*)\\|(.*)\\(([^,)]*).*", "\\2", rv)) %in% c("trials", "resp_trials")
-      is.censored <- grepl("(.*)\\|(.*)cens\\(", rv)
-      is.truncated <- grepl("(.*)\\|(.*)trunc\\(", rv)
-    }
-  }
-
-  if (binom_fam && !inherits(x, "brmsfit")) {
-    is.trial <- tryCatch({
-      rv <- .safe_deparse(stats::formula(x)[[2L]])
-      grepl("cbind\\((.*)\\)", rv)
-    },
-    error = function(x) {
-      FALSE
-    }
-    )
-  }
-
-
-  dots <- list(...)
-  if (.obj_has_name(dots, "no_terms") && isTRUE(dots$no_terms)) {
-    model_terms <- NULL
-  } else {
-    model_terms <- tryCatch({
-      find_variables(x, effects = "all", component = "all", flatten = FALSE)
-    },
-    error = function(x) {
-      NULL
-    }
-    )
-  }
-
-  if (inherits(x, "htest")) {
-    if (grepl("t-test", x$method)) {
-      is_ttest <- TRUE
-      is_correlation <- FALSE
-    } else {
-      is_ttest <- FALSE
-      is_correlation <- TRUE
-    }
-  } else {
-    is_ttest <- FALSE
-    is_correlation <- FALSE
-  }
-
-
-  is_meta <- FALSE
-
-  if (inherits(x, "BFBayesFactor")) {
-    is_ttest <- FALSE
-    is_correlation <- FALSE
-
-    obj_type <- .classify_BFBayesFactor(x)
-
-    if (obj_type == "correlation") {
-      is_correlation <- TRUE
-    } else if (obj_type == "ttest") {
-      is_ttest <- TRUE
-    } else if (obj_type == "meta") {
-      is_meta <- TRUE
-    }
-  }
-
-
-  list(
-    is_binomial = binom_fam & !neg_bin_fam,
-    is_count = poisson_fam | neg_bin_fam,
-    is_poisson = poisson_fam,
-    is_negbin = neg_bin_fam,
-    is_beta = beta_fam,
-    is_betabinomial = betabin_fam,
-    is_exponential = exponential_fam,
-    is_logit = logit.link,
-    is_probit = link.fun == "probit",
-    is_censored = inherits(x, c("tobit", "crch", "censReg")) | is.censored | is.survival,
-    is_truncated = inherits(x, "truncreg") | is.truncated,
-    is_survival = is.survival,
-    is_linear = linear_model,
-    is_tweedie = tweedie_model,
-    is_zero_inflated = zero.inf,
-    is_hurdle = hurdle,
-    is_ordinal = is.ordinal,
-    is_categorical = is.categorical,
-    is_mixed = !is.null(find_random(x)),
-    is_multivariate = multi.var,
-    is_trial = is.trial,
-    is_bayesian = is.bayes,
-    is_anova = inherits(x, c("aov", "aovlist")),
-    is_ttest = is_ttest,
-    is_correlation = is_correlation,
-    is_meta = is_meta,
-    link_function = link.fun,
-    family = fitfam,
-    n_obs = n_obs(x),
-    model_terms = model_terms
-  )
-}
-
-get_ordinal_link <- function(x) {
-  switch(
-    x$link,
-    logistic = "logit",
-    cloglog = "log",
-    x$link
   )
 }
 
 
-#' @importFrom stats gaussian binomial Gamma
-.make_tobit_family <- function(x, dist = NULL) {
-  if (is.null(dist)) {
-    if (inherits(x, "flexsurvreg"))
-      dist <- parse(text = .safe_deparse(x$call))[[1]]$dist
-    else
-      dist <- x$dist
-  }
-  f <- switch(
-    dist,
-    gaussian = stats::gaussian("identity"),
-    logistic = stats::binomial("logit"),
-    llogis = ,
-    loglogistic = stats::binomial("log"),
-    lnorm = ,
-    lognormal = stats::gaussian("log"),
-    gompertz = stats::Gamma("log"),
-    gamma = ,
-    gengamma = ,
-    gengamma.orig = stats::Gamma(),
-    exponential = ,
-    exp = ,
-    weibull = stats::Gamma("log"),
-    stats::gaussian("identity")
-  )
-
-  if (dist == "weibull") f$family <- "weibull"
-  f
+#' @export
+model_info.mira <- function(x, ...) {
+  model_info(x$analyses[[1]], ...)
 }
 
 
-.classify_BFBayesFactor <- function(x) {
-  if (!requireNamespace("BayesFactor", quietly = TRUE)) {
-    stop("This function needs `BayesFactor` to be installed.")
-  }
+# mfx models -------------------------------
 
-  if (any(class(x@denominator) %in% c("BFcorrelation"))) {
-    "correlation"
-  } else if (any(class(x@denominator) %in% c("BFoneSample", "BFindepSample"))) {
-    "ttest"
-  } else if (any(class(x@denominator) %in% c("BFmetat"))) {
-    "meta"
-  } else if (any(class(x@denominator) %in% c("BFlinearModel"))) {
-    "linear"
-  } else {
-    class(x@denominator)
-  }
+#' @export
+model_info.betamfx <- function(x, ...) {
+  model_info.betareg(x$fit)
+}
+
+#' @export
+model_info.betaor <- model_info.betamfx
+
+#' @export
+model_info.logitmfx <- function(x, ...) {
+  model_info.default(x$fit, ...)
+}
+
+#' @export
+model_info.poissonmfx <- model_info.logitmfx
+
+#' @export
+model_info.negbinmfx <- model_info.logitmfx
+
+#' @export
+model_info.probitmfx <- model_info.logitmfx
+
+#' @export
+model_info.logitor <- model_info.logitmfx
+
+#' @export
+model_info.poissonirr <- model_info.logitmfx
+
+#' @export
+model_info.negbinirr <- model_info.logitmfx
+
+
+#' @export
+model_info.bfsl <- function(x, verbose = TRUE, ...) {
+  .make_family(
+    x = x,
+    fitfam = "gaussian",
+    logit.link = FALSE,
+    link.fun = "identity",
+    verbose = verbose,
+    ...
+  )
+}
+
+# marginaleffects objects -------------------------------
+
+#' @export
+model_info.marginaleffects <- function(x, ...) {
+  model_info(attributes(x)$model)
+}
+
+
+
+
+# not yet supported -------------------------------
+
+#' @export
+model_info.earth <- function(x, ...) {
+  stop("Models of class 'earth' are not yet supported.", call. = FALSE)
+}
+
+#' @export
+model_info.deltaMethod <- function(x, ...) {
+  NULL
 }

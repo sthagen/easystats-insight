@@ -14,7 +14,7 @@ is_nullmodel(x)
 }
 \description{
 Checks if model is a null-model (intercept-only), i.e. if
-  the conditional part of the model has no predictors.
+the conditional part of the model has no predictors.
 }
 \examples{
 model <- lm(mpg ~ 1, data = mtcars)
@@ -23,10 +23,11 @@ is_nullmodel(model)
 model <- lm(mpg ~ gear, data = mtcars)
 is_nullmodel(model)
 
-library(lme4)
-model <- lmer(Reaction ~ 1 + (Days | Subject), data = sleepstudy)
-is_nullmodel(model)
+if (require("lme4")) {
+  model <- lmer(Reaction ~ 1 + (Days | Subject), data = sleepstudy)
+  is_nullmodel(model)
 
-model <- lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
-is_nullmodel(model)
+  model <- lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
+  is_nullmodel(model)
+}
 }

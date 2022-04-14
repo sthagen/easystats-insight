@@ -1,8 +1,6 @@
 unloadNamespace("gam")
 
-if (require("testthat") && require("insight") && require("VGAM")) {
-  context("insight, model_info")
-
+if (requiet("testthat") && requiet("insight") && requiet("VGAM")) {
   d.AD <- data.frame(
     treatment = gl(3, 3),
     outcome = gl(3, 1, 9),
@@ -14,12 +12,13 @@ if (require("testthat") && require("insight") && require("VGAM")) {
       counts ~ outcome + treatment,
       family = poissonff,
       data = d.AD,
-      trace = TRUE
+      trace = FALSE
     )
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_poisson)
     expect_false(model_info(m1)$is_bayesian)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -66,7 +65,8 @@ if (require("testthat") && require("insight") && require("VGAM")) {
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("counts ~ outcome + treatment"))
+      list(conditional = as.formula("counts ~ outcome + treatment")),
+      ignore_attr = TRUE
     )
   })
 

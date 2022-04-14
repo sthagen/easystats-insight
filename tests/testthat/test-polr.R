@@ -1,14 +1,13 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("MASS")) {
-  context("insight, polr")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("MASS")) {
   data(housing, package = "MASS")
 
   m1 <- polr(Sat ~ Infl + Type + Cont, data = housing, weights = Freq)
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_ordinal)
+    expect_false(model_info(m1)$is_multinomial)
   })
 
   test_that("find_predictors", {
@@ -40,7 +39,8 @@ if (require("testthat") &&
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("Sat ~ Infl + Type + Cont"))
+      list(conditional = as.formula("Sat ~ Infl + Type + Cont")),
+      ignore_attr = TRUE
     )
   })
 
@@ -115,5 +115,29 @@ if (require("testthat") &&
 
   test_that("find_statistic", {
     expect_identical(find_statistic(m1), "t-statistic")
+  })
+
+  test_that("get_predicted", {
+    p1 <- get_predicted(m1, predict = "expectation")
+    p2 <- get_predicted(m1, predict = "classification")
+    p3 <- get_predicted(m1, predict = NULL, type = "probs")
+    p4 <- get_predicted(m1, predict = NULL, type = "class")
+    expect_s3_class(p1, "get_predicted")
+    expect_s3_class(p2, "get_predicted")
+    expect_s3_class(p3, "get_predicted")
+    expect_s3_class(p4, "get_predicted")
+    expect_equal(p1, p3)
+    expect_equal(p2, p4)
+    expect_true(inherits(p1, "data.frame"))
+    expect_true(inherits(p2, "factor"))
+    expect_true(inherits(p3, "data.frame"))
+    expect_true(inherits(p4, "factor"))
+    expect_true(all(c("Row", "Response", "Predicted") %in% colnames(p1)))
+    expect_true(all(c("Row", "Response", "Predicted") %in% colnames(p3)))
+
+    d <- get_datagrid(m1, at = "Type")
+    p1 <- get_predicted(m1, predict = "expectation", data = d)
+    expect_equal(colnames(p1), c("Row", "Type", "Response", "Predicted"))
+    expect_equal(dim(p1), c(12, 4))
   })
 }

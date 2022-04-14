@@ -2,18 +2,35 @@
 % Please edit documentation in R/link_function.R
 \name{link_function}
 \alias{link_function}
+\alias{link_function.betamfx}
+\alias{link_function.gamlss}
+\alias{link_function.betareg}
+\alias{link_function.DirichletRegModel}
 \title{Get link-function from model object}
 \usage{
 link_function(x, ...)
+
+\method{link_function}{betamfx}(x, what = c("mean", "precision"), ...)
+
+\method{link_function}{gamlss}(x, what = c("mu", "sigma", "nu", "tau"), ...)
+
+\method{link_function}{betareg}(x, what = c("mean", "precision"), ...)
+
+\method{link_function}{DirichletRegModel}(x, what = c("mean", "precision"), ...)
 }
 \arguments{
 \item{x}{A fitted model.}
 
 \item{...}{Currently not used.}
+
+\item{what}{For \code{gamlss} models, indicates for which distribution
+parameter the link (inverse) function should be returned; for
+\code{betareg} or \code{DirichletRegModel}, can be \code{"mean"} or
+\code{"precision"}.}
 }
 \value{
 A function, describing the link-function from a model-object.
-   For multivariate-response models, a list of functions is returned.
+For multivariate-response models, a list of functions is returned.
 }
 \description{
 Returns the link-function from a model object.

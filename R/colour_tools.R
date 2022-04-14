@@ -79,6 +79,20 @@
   x
 }
 
+.black <- function(x) {
+  if (.supports_color()) {
+    x[!is.na(x)] <- paste0("\033[30m", x[!is.na(x)], "\033[39m")
+  }
+  x
+}
+
+.white <- function(x) {
+  if (.supports_color()) {
+    x[!is.na(x)] <- paste0("\033[37m", x[!is.na(x)], "\033[39m")
+  }
+  x
+}
+
 .yellow <- function(x) {
   if (.supports_color()) {
     x[!is.na(x)] <- paste0("\033[33m", x[!is.na(x)], "\033[39m")
@@ -109,12 +123,13 @@
 
 
 .colour <- function(colour = "red", x) {
-  switch(
-    colour,
+  switch(colour,
     red = .red(x),
     yellow = .yellow(x),
     green = .green(x),
     blue = .blue(x),
+    black = .black(x),
+    white = .white(x),
     violet = .violet(x),
     cyan = .cyan(x),
     grey = .grey(x),
@@ -122,4 +137,9 @@
     italic = .italic(x),
     warning(paste0("`color` ", colour, " not yet supported."))
   )
+}
+
+
+.is_valid_colour <- function(colour) {
+  colour %in% c("red", "yellow", "green", "blue", "violet", "cyan", "grey", "bold", "italic")
 }

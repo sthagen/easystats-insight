@@ -1,8 +1,6 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("estimatr")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("estimatr")) {
   data(mtcars)
   m1 <- iv_robust(mpg ~ gear + cyl | carb + wt, data = mtcars)
 
@@ -64,7 +62,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("mpg ~ gear + cyl"),
         instruments = as.formula("~carb + wt")
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 
@@ -118,4 +117,33 @@ if (require("testthat") &&
   test_that("find_statistic", {
     expect_identical(find_statistic(m1), "t-statistic")
   })
+
+  if (requiet("ivreg")) {
+    data("CigaretteDemand", package = "ivreg")
+    m2 <- iv_robust(
+      log(packs) ~ log(rprice) + log(rincome) | salestax + log(rincome),
+      data = CigaretteDemand
+    )
+    m3 <- iv_robust(
+      packs ~ log(rprice) + log(rincome) | salestax + log(rincome),
+      data = CigaretteDemand
+    )
+
+    m4 <- lm_robust(
+      log(packs) ~ log(rprice) + log(rincome) | salestax + log(rincome),
+      data = CigaretteDemand
+    )
+    m5 <- lm_robust(
+      packs ~ log(rprice) + log(rincome) | salestax + log(rincome),
+      data = CigaretteDemand
+    )
+
+    test_that("get_loglikelihood", {
+      expect_equal(as.numeric(get_loglikelihood(m2)), -286.56173, tolerance = 1e-3)
+      expect_equal(as.numeric(get_loglikelihood(m3)), -206.39546, tolerance = 1e-3)
+      expect_equal(as.numeric(get_loglikelihood(m4)), -286.55949, tolerance = 1e-3)
+      expect_equal(as.numeric(get_loglikelihood(m5)), -205.63306, tolerance = 1e-3)
+    })
+  }
+
 }

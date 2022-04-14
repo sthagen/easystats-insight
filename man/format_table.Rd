@@ -2,33 +2,106 @@
 % Please edit documentation in R/format_table.R
 \name{format_table}
 \alias{format_table}
-\title{Dataframe and Tables Pretty Formatting}
+\alias{parameters_table}
+\title{Parameter table formatting}
 \usage{
-format_table(x, sep = " | ", header = "-", digits = 2,
-  protect_integers = TRUE, missing = "", width = NULL)
+format_table(
+  x,
+  pretty_names = TRUE,
+  stars = FALSE,
+  digits = 2,
+  ci_width = "auto",
+  ci_brackets = TRUE,
+  ci_digits = 2,
+  p_digits = 3,
+  rope_digits = 2,
+  zap_small = FALSE,
+  preserve_attributes = FALSE,
+  verbose = TRUE,
+  ...
+)
+
+parameters_table(
+  x,
+  pretty_names = TRUE,
+  stars = FALSE,
+  digits = 2,
+  ci_width = "auto",
+  ci_brackets = TRUE,
+  ci_digits = 2,
+  p_digits = 3,
+  rope_digits = 2,
+  zap_small = FALSE,
+  preserve_attributes = FALSE,
+  verbose = TRUE,
+  ...
+)
 }
 \arguments{
-\item{x}{A data frame.}
+\item{x}{A data frame of model's parameters, as returned by various functions
+of the \strong{easystats}-packages. May also be a result from
+\code{broom::tidy()}.}
 
-\item{sep}{Column separator.}
+\item{pretty_names}{Return "pretty" (i.e. more human readable) parameter
+names.}
 
-\item{header}{Header separator. Can be \code{NULL}.}
+\item{stars}{Add significance stars (e.g., p < .001***).}
 
-\item{digits}{Number of significant digits.}
+\item{digits, ci_digits, p_digits, rope_digits}{Number of digits for rounding or
+significant figures. May also be \code{"signif"} to return significant
+figures or \code{"scientific"} to return scientific notation. Control the
+number of digits by adding the value as suffix, e.g. \code{digits = "scientific4"}
+to have scientific notation with 4 decimal places, or \code{digits = "signif5"}
+for 5 significant figures (see also \code{\link[=signif]{signif()}}).}
 
-\item{protect_integers}{Should integers be kept as integers (i.e., without decimals)?}
+\item{ci_width}{Minimum width of the returned string for confidence
+intervals. If not \code{NULL} and width is larger than the string's length,
+leading whitespaces are added to the string. If \code{width="auto"}, width
+will be set to the length of the longest string.}
 
-\item{missing}{Value by which \code{NA} values are replaced. By default, an empty string (i.e. \code{""}) is returned for \code{NA}.}
+\item{ci_brackets}{Logical, if \code{TRUE} (default), CI-values are
+encompassed in square brackets (else in parentheses).}
 
-\item{width}{Minimum width of the returned string. If not \code{NULL} and \code{width} is larger than the string's length, leading whitespaces are added to the string.}
+\item{zap_small}{Logical, if \code{TRUE}, small values are rounded after
+\code{digits} decimal places. If \code{FALSE}, values with more decimal
+places than \code{digits} are printed in scientific notation.}
+
+\item{preserve_attributes}{Logical, if \code{TRUE}, preserves all attributes
+from the input data frame.}
+
+\item{verbose}{Toggle messages and warnings.}
+
+\item{...}{Arguments passed to or from other methods.}
 }
 \value{
-A data frame in character format.
+A data frame. Note that \code{format_table()} converts all columns
+into character vectors!
 }
 \description{
-Dataframe and Tables Pretty Formatting
+This functions takes a data frame with model parameters as input
+and formats certain columns into a more readable layout (like collapsing
+separate columns for lower and upper confidence interval values). Furthermore,
+column names are formatted as well. Note that \code{format_table()}
+converts all columns into character vectors!
 }
 \examples{
-cat(format_table(iris))
-cat(format_table(iris, sep = " ", header = "*", digits = 1))
+format_table(head(iris), digits = 1)
+
+if (require("parameters")) {
+  x <- model_parameters(lm(Sepal.Length ~ Species * Sepal.Width, data = iris))
+  as.data.frame(format_table(x))
+  as.data.frame(format_table(x, p_digits = "scientific"))
+}
+\donttest{
+if (require("rstanarm", warn.conflicts = FALSE) &&
+  require("parameters", , warn.conflicts = FALSE)) {
+  model <- stan_glm(Sepal.Length ~ Species, data = iris, refresh = 0, seed = 123)
+  x <- model_parameters(model, ci = c(0.69, 0.89, 0.95))
+  as.data.frame(format_table(x))
+}
+}
+}
+\seealso{
+Vignettes \href{https://easystats.github.io/insight/articles/display.html}{Formatting, printing and exporting tables}
+and \href{https://easystats.github.io/parameters/articles/model_parameters_formatting.html}{Formatting model parameters}.
 }

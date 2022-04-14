@@ -1,8 +1,21 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("MCMCglmm")) {
-  context("insight, model_info")
+osx <- tryCatch(
+  {
+    si <- Sys.info()
+    if (!is.null(si["sysname"])) {
+      si["sysname"] == "Darwin" || grepl("^darwin", R.version$os)
+    } else {
+      FALSE
+    }
+  },
+  error = function(e) {
+    FALSE
+  }
+)
 
+
+if (!osx && requiet("testthat") &&
+  requiet("insight") &&
+  requiet("MCMCglmm")) {
   data(PlodiaPO)
   m1 <- MCMCglmm(
     PO ~ plate,
@@ -16,6 +29,7 @@ if (require("testthat") &&
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_mixed)
+    expect_true(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -32,7 +46,7 @@ if (require("testthat") &&
   })
 
   test_that("get_random", {
-    expect_equal(get_random(m1), data.frame(FSfamily = PlodiaPO$FSfamily))
+    expect_equal(get_random(m1), data.frame(FSfamily = PlodiaPO$FSfamily), ignore_attr = TRUE)
   })
 
   test_that("find_response", {
@@ -48,7 +62,7 @@ if (require("testthat") &&
   })
 
   test_that("link_inverse", {
-    expect_null(link_inverse(m1))
+    expect_equal(link_inverse(m1)(.5), .5, tolerance = 1e-1)
   })
 
   test_that("get_data", {
@@ -63,7 +77,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("PO ~ plate"),
         random = as.formula("~FSfamily")
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 
@@ -84,7 +99,7 @@ if (require("testthat") &&
   })
 
   test_that("linkfun", {
-    expect_null(link_function(m1))
+    expect_equal(link_function(m1)(.5), .5, tolerance = 1e-1)
   })
 
   test_that("find_parameters", {
@@ -95,10 +110,12 @@ if (require("testthat") &&
         random = "FSfamily"
       )
     )
-    expect_equal(nrow(get_parameters(m1)), 2)
-    expect_equal(get_parameters(m1)$Parameter, c("(Intercept)", "plate"))
+    expect_equal(nrow(get_parameters(m1, summary = TRUE)), 2)
+    expect_equal(nrow(get_parameters(m1, summary = FALSE)), 1000)
+    expect_equal(get_parameters(m1, summary = TRUE)$Parameter, c("(Intercept)", "plate"))
+    expect_equal(colnames(get_parameters(m1, summary = FALSE)), c("(Intercept)", "plate"))
     expect_equal(
-      get_parameters(m1, effects = "random")$Parameter,
+      get_parameters(m1, effects = "random", summary = TRUE)$Parameter,
       "FSfamily"
     )
   })

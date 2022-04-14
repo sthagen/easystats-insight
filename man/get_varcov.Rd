@@ -2,63 +2,138 @@
 % Please edit documentation in R/get_varcov.R
 \name{get_varcov}
 \alias{get_varcov}
+\alias{get_varcov.default}
 \alias{get_varcov.betareg}
+\alias{get_varcov.clm2}
 \alias{get_varcov.truncreg}
-\alias{get_varcov.gamlss}
 \alias{get_varcov.hurdle}
-\alias{get_varcov.MixMod}
 \alias{get_varcov.glmmTMB}
+\alias{get_varcov.MixMod}
 \alias{get_varcov.brmsfit}
+\alias{get_varcov.betamfx}
+\alias{get_varcov.aov}
+\alias{get_varcov.mixor}
 \title{Get variance-covariance matrix from models}
 \usage{
 get_varcov(x, ...)
 
-\method{get_varcov}{betareg}(x, component = c("conditional", "precision",
-  "all"), ...)
+\method{get_varcov}{default}(x, verbose = TRUE, vcov = NULL, vcov_args = NULL, ...)
 
-\method{get_varcov}{truncreg}(x, component = c("conditional", "all"),
-  ...)
+\method{get_varcov}{betareg}(
+  x,
+  component = c("conditional", "precision", "all"),
+  verbose = TRUE,
+  ...
+)
 
-\method{get_varcov}{gamlss}(x, component = c("conditional", "all"), ...)
+\method{get_varcov}{clm2}(x, component = c("all", "conditional", "scale"), ...)
 
-\method{get_varcov}{hurdle}(x, component = c("conditional",
-  "zero_inflated", "zi", "all"), ...)
+\method{get_varcov}{truncreg}(x, component = c("conditional", "all"), ...)
 
-\method{get_varcov}{MixMod}(x, component = c("conditional",
-  "zero_inflated", "zi", "all"), ...)
+\method{get_varcov}{hurdle}(
+  x,
+  component = c("conditional", "zero_inflated", "zi", "all"),
+  vcov = NULL,
+  vcov_args = NULL,
+  verbose = TRUE,
+  ...
+)
 
-\method{get_varcov}{glmmTMB}(x, component = c("conditional",
-  "zero_inflated", "zi", "all"), ...)
+\method{get_varcov}{glmmTMB}(
+  x,
+  component = c("conditional", "zero_inflated", "zi", "dispersion", "all"),
+  ...
+)
 
-\method{get_varcov}{brmsfit}(x, component = c("conditional",
-  "zero_inflated", "zi", "all"), ...)
+\method{get_varcov}{MixMod}(
+  x,
+  effects = c("fixed", "random"),
+  component = c("conditional", "zero_inflated", "zi", "dispersion", "auxiliary", "all"),
+  verbose = TRUE,
+  ...
+)
+
+\method{get_varcov}{brmsfit}(x, component = "conditional", ...)
+
+\method{get_varcov}{betamfx}(x, component = c("conditional", "precision", "all"), ...)
+
+\method{get_varcov}{aov}(x, complete = FALSE, ...)
+
+\method{get_varcov}{mixor}(x, effects = c("all", "fixed", "random"), ...)
 }
 \arguments{
 \item{x}{A model.}
 
 \item{...}{Currently not used.}
 
+\item{verbose}{Toggle warnings.}
+
+\item{vcov}{Variance-covariance matrix used to compute uncertainty estimates (e.g., for robust standard errors). This argument accepts a covariance matrix, a function which returns a covariance matrix, or a string which identifies the function to be used to compute the covariance matrix.
+\itemize{
+\item A covariance matrix
+\item A function which returns a covariance matrix (e.g., \code{stats::vcov()})
+\item A string which indicates the kind of uncertainty estimates to return.
+\itemize{
+\item Heteroskedasticity-consistent: \code{"vcovHC"}, \code{"HC"}, \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, \code{"HC3"}, \code{"HC4"}, \code{"HC4m"}, \code{"HC5"}. See \code{?sandwich::vcovHC}
+\item Cluster-robust: \code{"vcovCR"}, \code{"CR0"}, \code{"CR1"}, \code{"CR1p"}, \code{"CR1S"}, \code{"CR2"}, \code{"CR3"}. See \code{?clubSandwich::vcovCR()}
+\item Bootstrap: \code{"vcovBS"}, \code{"xy"}, \code{"residual"}, \code{"wild"}, \code{"mammen"}, \code{"webb"}. See \code{?sandwich::vcovBS}
+\item Other \code{sandwich} package functions: \code{"vcovHAC"}, \code{"vcovPC"}, \code{"vcovCL"}, \code{"vcovPL"}.
+}
+}}
+
+\item{vcov_args}{List of arguments to be passed to the function identified by
+the \code{vcov} argument. This function is typically supplied by the \strong{sandwich}
+or \strong{clubSandwich} packages. Please refer to their documentation (e.g.,
+\code{?sandwich::vcovHAC}) to see the list of available arguments.}
+
 \item{component}{Should the complete variance-covariance matrix of the model
 be returned, or only for specific model components only (like count or
 zero-inflated model parts)? Applies to models with zero-inflated component,
-or models with precision (e.g. \code{betareg}) component. \code{component}
-may be one of \code{"conditional"}, \code{"zi"}, \code{"zero-inflated"},
-\code{"precision"}, or \code{"all"}. May be abbreviated.}
+or models with precision (e.g. \code{betareg}) component. \code{component} may be one
+of \code{"conditional"}, \code{"zi"}, \code{"zero-inflated"}, \code{"dispersion"},
+\code{"precision"}, or \code{"all"}. May be abbreviated. Note that the \emph{conditional}
+component is also called \emph{count} or \emph{mean} component, depending on the
+model.}
+
+\item{effects}{Should the complete variance-covariance matrix of the model
+be returned, or only for specific model parameters only? Currently only
+applies to models of class \code{mixor}.}
+
+\item{complete}{Logical, if \code{TRUE}, for \code{aov}, returns the full
+variance-covariance matrix.}
 }
 \value{
 The variance-covariance matrix, as \code{matrix}-object.
 }
 \description{
-Returns the variance-covariance, as retrieved by
-  \code{stats::vcov()}, but works for more model objects that probably
-  don't provide a \code{vcov()}-method.
+Returns the variance-covariance, as retrieved by \code{stats::vcov()}, but works
+for more model objects that probably don't provide a \code{vcov()}-method.
 }
 \note{
 \code{get_varcov()} tries to return the nearest positive definite matrix
-  in case of a negative variance-covariance matrix.
+in case of a negative variance-covariance matrix.
 }
 \examples{
 data(mtcars)
 m <- lm(mpg ~ wt + cyl + vs, data = mtcars)
 get_varcov(m)
+
+# vcov of zero-inflation component from hurdle-model
+if (require("pscl")) {
+  data("bioChemists", package = "pscl")
+  mod <- hurdle(art ~ phd + fem | ment, data = bioChemists, dist = "negbin")
+  get_varcov(mod, component = "zero_inflated")
+}
+
+# robust vcov of, count component from hurdle-model
+if (require("pscl") && require("sandwich")) {
+  data("bioChemists", package = "pscl")
+  mod <- hurdle(art ~ phd + fem | ment, data = bioChemists, dist = "negbin")
+  get_varcov(
+    mod,
+    component = "conditional",
+    vcov = "BS",
+    vcov_args = list(R = 50)
+  )
+}
 }

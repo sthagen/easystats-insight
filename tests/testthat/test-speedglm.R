@@ -1,9 +1,7 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("speedglm") &&
-  require("glmmTMB")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("speedglm") &&
+  requiet("glmmTMB")) {
   data(Salamanders)
   Salamanders$cover <- abs(Salamanders$cover)
 
@@ -18,6 +16,7 @@ if (require("testthat") &&
     expect_true(model_info(m1)$is_count)
     expect_false(model_info(m1)$is_negbin)
     expect_false(model_info(m1)$is_binomial)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -69,7 +68,8 @@ if (require("testthat") &&
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("count ~ mined + log(cover) + sample"))
+      list(conditional = as.formula("count ~ mined + log(cover) + sample")),
+      ignore_attr = TRUE
     )
   })
 

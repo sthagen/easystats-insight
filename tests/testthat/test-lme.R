@@ -1,9 +1,7 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("nlme") &&
-  require("lme4")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("nlme") &&
+  requiet("lme4")) {
   data("sleepstudy")
   data(Orthodont)
   m1 <- lme(Reaction ~ Days,
@@ -27,8 +25,11 @@ if (require("testthat") &&
     data = sleepstudy
   )
 
+  # from easystats/insight/482
+  cr <- corAR1(form = ~ 1 | Mare)
+  m4 <- lme(follicles ~ Time, Ovary, correlation = cr)
+
   test_that("nested_varCorr", {
-    skip_on_travis()
     skip_on_cran()
 
     expect_equal(
@@ -45,7 +46,7 @@ if (require("testthat") &&
           .Dimnames = list("(Intercept)", "(Intercept)")
         )
       ),
-      tolerance = 1e-4
+      tolerance = 1e-3
     )
   })
 
@@ -84,7 +85,7 @@ if (require("testthat") &&
   })
 
   test_that("get_random", {
-    expect_equal(get_random(m1), data.frame(Subject = sleepstudy$Subject))
+    expect_equal(get_random(m1), data.frame(Subject = sleepstudy$Subject), ignore_attr = TRUE)
     expect_warning(get_random(m2))
   })
 
@@ -105,7 +106,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("Reaction ~ Days"),
         random = as.formula("~1 + Days | Subject")
-      )
+      ),
+      ignore_attr = TRUE
     )
     expect_length(find_formula(m2), 2)
     expect_equal(
@@ -113,7 +115,17 @@ if (require("testthat") &&
       list(
         conditional = as.formula("distance ~ age + Sex"),
         random = as.formula("~1")
-      )
+      ),
+      ignore_attr = TRUE
+    )
+    expect_length(find_formula(m4), 2)
+    expect_equal(
+      find_formula(m4),
+      list(
+        conditional = as.formula("follicles ~ Time"),
+        correlation = as.formula("~1 | Mare")
+      ),
+      ignore_attr = TRUE
     )
   })
 
@@ -186,9 +198,9 @@ if (require("testthat") &&
         var.dispersion = 0,
         var.intercept = c(Subject = 612.07951112963326067984),
         var.slope = c(Subject.Days = 35.07130179308116169068),
-        cor.slope_intercept = 0.06600000000000000311
+        cor.slope_intercept = c(Subject = 0.06600000000000000311)
       ),
-      tolerance = 1e-4
+      tolerance = 1e-3
     )
   })
 

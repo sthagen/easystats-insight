@@ -1,8 +1,9 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("gam")) {
-  context("insight, gam")
+.runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
+if (.runThisTest &&
+  requiet("testthat") &&
+  requiet("insight") &&
+  requiet("gam")) {
   data(kyphosis)
   m1 <- gam::gam(
     Kyphosis ~ s(Age, 4) + Number,
@@ -13,6 +14,7 @@ if (require("testthat") &&
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_binomial)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -38,7 +40,8 @@ if (require("testthat") &&
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("Kyphosis ~ s(Age, 4) + Number"))
+      list(conditional = as.formula("Kyphosis ~ s(Age, 4) + Number")),
+      ignore_attr = TRUE
     )
   })
 

@@ -2,70 +2,64 @@
 #' @name find_parameters
 #'
 #' @description Returns the names of model parameters, like they typically
-#'     appear in the \code{summary()} output. For Bayesian models, the parameter
+#'     appear in the `summary()` output. For Bayesian models, the parameter
 #'     names equal the column names of the posterior samples after coercion
-#'     from \code{as.data.frame()}.
+#'     from `as.data.frame()`. See the documentation for your object's class:
+#'    \itemize{
+#'      \item{[Bayesian models][find_parameters.BGGM] (\pkg{rstanarm}, \pkg{brms}, \pkg{MCMCglmm}, ...)}
+#'      \item{[Generalized additive models][find_parameters.gamlss] (\pkg{mgcv}, \pkg{VGAM}, ...)}
+#'      \item{[Marginal effects models][find_parameters.betamfx] (\pkg{mfx})}
+#'      \item{[Estimated marginal means][find_parameters.emmGrid] (\pkg{emmeans})}
+#'      \item{[Mixed models][find_parameters.glmmTMB] (\pkg{lme4}, \pkg{glmmTMB}, \pkg{GLMMadaptive}, ...)}
+#'      \item{[Zero-inflated and hurdle models][find_parameters.zeroinfl] (\pkg{pscl}, ...)}
+#'      \item{[Models with special components][find_parameters.averaging] (\pkg{betareg}, \pkg{MuMIn}, ...)}
+#'    }
 #'
-#' @param parameters Regular expression pattern that describes the parameters that
-#'   should be returned.
-#' @param effects Should parameters for fixed effects, random effects
-#'    or both be returned? Only applies to mixed models. May be abbreviated.
-#' @param component Should all parameters, parameters for the
-#'    conditional model, the zero-inflated part of the model, the dispersion
-#'    term or the instrumental variables be returned? Applies to models
-#'    with zero-inflated and/or dispersion formula, or to models with instrumental
-#'    variable (so called fixed-effects regressions). May be abbreviated.
+#' @param verbose Toggle messages and warnings.
 #' @param ... Currently not used.
 #' @inheritParams find_predictors
 #'
 #' @return A list of parameter names. For simple models, only one list-element,
-#'    \code{conditional}, is returned. For more complex models, the returned
-#'    list may have following elements:
-#'    \itemize{
-#'      \item \code{conditional}, the "fixed effects" part from the model
-#'      \item \code{random}, the "random effects" part from the model
-#'      \item \code{zero_inflated}, the "fixed effects" part from the zero-inflation component of the model
-#'      \item \code{zero_inflated_random}, the "random effects" part from the zero-inflation component of the model
-#'      \item \code{dispersion}, the dispersion parameters
-#'      \item \code{simplex}, simplex parameters of monotonic effects (\pkg{brms} only)
-#'      \item \code{smooth_terms}, the smooth parameters
-#'    }
-#'
-#' @details In most cases when models either return different "effects" (fixed,
-#' random) or "components" (conditional, zero-inflated, ...), the arguments
-#' \code{effects} and \code{component} can be used. Not all model classes that
-#' support these arguments are listed here in the 'Usage' section.
+#'    `conditional`, is returned.
 #'
 #' @examples
 #' data(mtcars)
 #' m <- lm(mpg ~ wt + cyl + vs, data = mtcars)
 #' find_parameters(m)
-#' @importFrom stats coef
 #' @export
 find_parameters <- function(x, ...) {
   UseMethod("find_parameters")
 }
 
 
+
+# Default methods -------------------------------------------
+
+
+#' @rdname find_parameters
 #' @export
-find_parameters.default <- function(x, flatten = FALSE, ...) {
-  if (inherits(x, "list") && .obj_has_name(x, "gam")) {
+find_parameters.default <- function(x, flatten = FALSE, verbose = TRUE, ...) {
+  if (inherits(x, "list") && object_has_names(x, "gam")) {
     x <- x$gam
     class(x) <- c(class(x), c("glm", "lm"))
     pars <- find_parameters.gam(x)
   } else {
-    pars <- tryCatch({
-      list(conditional = names(stats::coef(x)))
-    },
-    error = function(x) {
-      NULL
-    }
+    pars <- tryCatch(
+      {
+        p <- text_remove_backticks(names(stats::coef(x)))
+        list(conditional = p)
+      },
+      error = function(x) {
+        NULL
+      }
     )
   }
 
 
   if (is.null(pars$conditional) || is.null(pars)) {
-    print_color(sprintf("Parameters can't be retrieved for objects of class '%s'.\n", class(x)[1]), "red")
+    if (isTRUE(verbose)) {
+      warning(format_message(sprintf("Parameters can't be retrieved for objects of class '%s'.", class(x)[1])), call. = FALSE)
+    }
     return(NULL)
   }
 
@@ -78,36 +72,156 @@ find_parameters.default <- function(x, flatten = FALSE, ...) {
 }
 
 
+
+#' @export
+find_parameters.data.frame <- function(x, flatten = FALSE, ...) {
+  stop("A data frame is no valid object for this function.")
+}
+
+
+
+#' @export
+find_parameters.summary.lm <- function(x, flatten = FALSE, ...) {
+  cf <- stats::coef(x)
+  l <- list(conditional = text_remove_backticks(rownames(cf)))
+
+  if (flatten) {
+    unique(unlist(l))
+  } else {
+    l
+  }
+}
+
+
+
+
+# Ordinal -----------------------------------------------
+
+#' @export
+find_parameters.polr <- function(x, flatten = FALSE, ...) {
+  pars <- list(conditional = c(sprintf("Intercept: %s", names(x$zeta)), names(stats::coef(x))))
+  pars$conditional <- text_remove_backticks(pars$conditional)
+
+  if (flatten) {
+    unique(unlist(pars))
+  } else {
+    pars
+  }
+}
+
+
+
+#' @export
+find_parameters.clm2 <- function(x, flatten = FALSE, ...) {
+  cf <- stats::coef(x)
+  n_intercepts <- length(x$xi)
+  n_location <- length(x$beta)
+  n_scale <- length(x$zeta)
+
+  if (n_scale == 0) {
+    pars <- list(conditional = names(cf))
+    pars$conditional <- text_remove_backticks(pars$conditional)
+  } else {
+    pars <- compact_list(list(
+      conditional = names(cf)[1:(n_intercepts + n_location)],
+      scale = names(cf)[(1 + n_intercepts + n_location):(n_scale + n_intercepts + n_location)]
+    ))
+    pars <- rapply(pars, text_remove_backticks, how = "list")
+  }
+
+  if (flatten) {
+    unique(unlist(pars))
+  } else {
+    pars
+  }
+}
+
+#' @export
+find_parameters.clmm2 <- find_parameters.clm2
+
+
+
+#' @export
+find_parameters.bracl <- function(x, flatten = FALSE, ...) {
+  pars <- list(conditional = names(stats::coef(x)))
+  pars$conditional <- text_remove_backticks(pars$conditional)
+
+  if (flatten) {
+    unique(unlist(pars))
+  } else {
+    pars
+  }
+}
+
+
+
+#' @export
+find_parameters.multinom <- function(x, flatten = FALSE, ...) {
+  params <- stats::coef(x)
+
+
+  pars <- if (is.matrix(params)) {
+    list(conditional = colnames(params))
+  } else {
+    list(conditional = names(params))
+  }
+
+  pars$conditional <- text_remove_backticks(pars$conditional)
+
+  if (flatten) {
+    unique(unlist(pars))
+  } else {
+    pars
+  }
+}
+
+
+#' @export
+find_parameters.brmultinom <- find_parameters.multinom
+
+
+# SEM models ------------------------------------------------------
+
 #' @export
 find_parameters.blavaan <- function(x, flatten = FALSE, ...) {
-  if (!requireNamespace("lavaan", quietly = TRUE)) {
-    stop("Package 'lavaan' required for this function to work. Please install it.")
+  # installed?
+  check_if_installed("lavaan")
+
+  param_tab <- lavaan::parameterEstimates(x)
+  params <- paste0(param_tab$lhs, param_tab$op, param_tab$rhs)
+
+  coef_labels <- names(lavaan::coef(x))
+
+  if ("group" %in% colnames(param_tab) && n_unique(param_tab$group) > 1) {
+    params <- paste0(params, " (group ", param_tab$group, ")")
+    groups <- grepl("(.*)\\.g(.*)", coef_labels)
+    coef_labels[!groups] <- paste0(coef_labels[!groups], " (group 1)")
+    coef_labels[groups] <- gsub("(.*)\\.g(.*)", "\\1 \\(group \\2\\)", coef_labels[groups])
+  }
+
+  are_labels <- !coef_labels %in% params
+  if (any(are_labels)) {
+    unique_labels <- unique(coef_labels[are_labels])
+    for (ll in seq_along(unique_labels)) {
+      coef_labels[coef_labels == unique_labels[ll]] <-
+        params[param_tab$label == unique_labels[ll]]
+    }
   }
 
   pars <- data.frame(
-    pars = names(lavaan::coef(x)),
+    pars = coef_labels,
     comp = NA,
     stringsAsFactors = FALSE
   )
 
-  pars$comp[grepl("~", pars$pars, fixed = TRUE)] <- "regression"
   pars$comp[grepl("=~", pars$pars, fixed = TRUE)] <- "latent"
   pars$comp[grepl("~~", pars$pars, fixed = TRUE)] <- "residual"
   pars$comp[grepl("~1", pars$pars, fixed = TRUE)] <- "intercept"
+  pars$comp[is.na(pars$comp)] <- "regression"
 
-  pos_latent <- grep("=~", pars$pars, fixed = TRUE)
-  pos_residual <- grep("~~", pars$pars, fixed = TRUE)
-  pos_intercept <- grep("~1", pars$pars, fixed = TRUE)
-  pos_regression <- setdiff(1:nrow(pars), c(pos_latent, pos_residual, pos_intercept))
-
-  pos <- c(min(pos_latent), min(pos_residual), min(pos_intercept), min(pos_regression))
-
-  comp_levels <- c("latent", "residual", "intercept", "regression")
-  comp_levels <- comp_levels[order(pos)]
-
-  pars$comp <- factor(pars$comp, levels = comp_levels)
+  pars$comp <- factor(pars$comp, levels = unique(pars$comp))
   pars <- split(pars, pars$comp)
-  pars <- lapply(pars, function(i) i$pars)
+  pars <- compact_list(lapply(pars, function(i) i$pars))
 
   if (flatten) {
     unique(unlist(pars))
@@ -119,9 +233,8 @@ find_parameters.blavaan <- function(x, flatten = FALSE, ...) {
 
 #' @export
 find_parameters.lavaan <- function(x, flatten = FALSE, ...) {
-  if (!requireNamespace("lavaan", quietly = TRUE)) {
-    stop("Package 'lavaan' required for this function to work. Please install it.")
-  }
+  # installed?
+  check_if_installed("lavaan")
 
   pars <- get_parameters(x)
   pars$Component <- factor(pars$Component, levels = unique(pars$Component))
@@ -136,9 +249,43 @@ find_parameters.lavaan <- function(x, flatten = FALSE, ...) {
 
 
 
+
+# Panel models ----------------------------------------
+
 #' @export
-find_parameters.flexsurvreg <- function(x, flatten = FALSE, ...) {
-  pars <- list(conditional = names(stats::coef(x)))
+find_parameters.pgmm <- function(x,
+                                 component = c("conditional", "all"),
+                                 flatten = FALSE,
+                                 ...) {
+  component <- match.arg(component)
+  s <- summary(x, robust = FALSE)
+
+  l <- list(
+    conditional = rownames(s$coefficients),
+    time_dummies = x$args$namest
+  )
+
+  .filter_parameters(
+    l,
+    effects = "all",
+    component = component,
+    flatten = flatten,
+    recursive = FALSE
+  )
+}
+
+
+#' @export
+find_parameters.wbm <- function(x, flatten = FALSE, ...) {
+  s <- summary(x)
+
+  pars <- compact_list(list(
+    conditional = rownames(s$within_table),
+    instruments = rownames(s$between_table),
+    random = rownames(s$ints_table)
+  ))
+
+  pars$conditional <- text_remove_backticks(pars$conditional)
 
   if (flatten) {
     unique(unlist(pars))
@@ -149,10 +296,226 @@ find_parameters.flexsurvreg <- function(x, flatten = FALSE, ...) {
 
 
 #' @export
-find_parameters.data.frame <- function(x, flatten = FALSE, ...) {
-  stop("A data frame is no valid object for this function.")
+find_parameters.wbgee <- find_parameters.wbm
+
+
+# Other models -----------------------------------
+
+#' @export
+find_parameters.rms <- find_parameters.default
+
+#' @export
+find_parameters.tobit <- find_parameters.default
+
+
+#' @export
+find_parameters.Rchoice <- function(x, flatten = FALSE, ...) {
+  cf <- names(stats::coef(x))
+  if (cf[1] == "constant") {
+    cf[1] <- "(Intercept)"
+  }
+  out <- list(conditional = cf)
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
 }
 
+
+#' @export
+find_parameters.btergm <- function(x, flatten = FALSE, ...) {
+  cf <- x@coef
+  out <- list(conditional = names(cf))
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+
+#' @export
+find_parameters.crr <- function(x, flatten = FALSE, ...) {
+  cs <- x$coef
+  out <- list(conditional = names(cs))
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+
+#' @export
+find_parameters.riskRegression <- function(x, flatten = FALSE, ...) {
+  junk <- utils::capture.output(cs <- stats::coef(x))
+  out <- list(conditional = as.vector(cs[, 1]))
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+
+#' @export
+find_parameters.lmodel2 <- function(x, flatten = FALSE, ...) {
+  out <- list(conditional = c("Intercept", "Slope"))
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+
+#' @export
+find_parameters.ivFixed <- function(x, flatten = FALSE, ...) {
+  out <- list(conditional = rownames(x$coefficients))
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+
+#' @export
+find_parameters.ivprobit <- function(x, flatten = FALSE, ...) {
+  out <- list(conditional = x$names)
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+
+#' @export
+find_parameters.mediate <- function(x, flatten = FALSE, ...) {
+  info <- model_info(x$model.y)
+  if (info$is_linear && !x$INT) {
+    out <-
+      list(conditional = c("ACME", "ADE", "Total Effect", "Prop. Mediated"))
+  } else {
+    out <- list(
+      conditional = c(
+        "ACME (control)",
+        "ACME (treated)",
+        "ADE (control)",
+        "ADE (treated)",
+        "Total Effect",
+        "Prop. Mediated (control)",
+        "Prop. Mediated (treated)",
+        "ACME (average)",
+        "ADE (average)",
+        "Prop. Mediated (average)"
+      )
+    )
+  }
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+
+#' @export
+find_parameters.ridgelm <- function(x, flatten = FALSE, ...) {
+  out <- list(conditional = names(x$coef))
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+
+#' @export
+find_parameters.survreg <- function(x, flatten = FALSE, ...) {
+  s <- summary(x)
+  out <- list(conditional = rownames(s$table))
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+
+#' @export
+find_parameters.mle2 <- function(x, flatten = FALSE, ...) {
+  # installed?
+  check_if_installed("bbmle")
+
+  s <- bbmle::summary(x)
+  out <- list(conditional = rownames(s@coef))
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+#' @export
+find_parameters.mle <- find_parameters.mle2
+
+
+#' @export
+find_parameters.glht <- function(x, flatten = FALSE, ...) {
+  s <- summary(x)
+  alt <- switch(x$alternative,
+    two.sided = "==",
+    less = ">=",
+    greater = "<="
+  )
+
+  l <- list(conditional = paste(names(s$test$coefficients), alt, x$rhs))
+
+  if (flatten) {
+    unique(unlist(l))
+  } else {
+    l
+  }
+}
+
+
+#' @export
+find_parameters.manova <- function(x, flatten = FALSE, ...) {
+  out <- list(conditional = text_remove_backticks(rownames(stats::na.omit(stats::coef(x)))))
+
+  if (flatten) {
+    unique(unlist(out))
+  } else {
+    out
+  }
+}
+
+#' @export
+find_parameters.maov <- find_parameters.manova
+
+
+
+#' @export
+find_parameters.afex_aov <- function(x, flatten = FALSE, ...) {
+  if (!is.null(x$aov)) {
+    find_parameters(x$aov, flatten = flatten, ...)
+  } else {
+    find_parameters(x$lm, flatten = flatten, ...)
+  }
+}
 
 
 #' @export
@@ -160,7 +523,7 @@ find_parameters.mlm <- function(x, flatten = FALSE, ...) {
   cs <- stats::coef(summary(x))
 
   out <- lapply(cs, function(i) {
-    list(conditional = rownames(i))
+    list(conditional = text_remove_backticks(rownames(i)))
   })
 
   names(out) <- gsub("^Response (.*)", "\\1", names(cs))
@@ -174,66 +537,32 @@ find_parameters.mlm <- function(x, flatten = FALSE, ...) {
 }
 
 
+
 #' @export
-find_parameters.polr <- function(x, flatten = FALSE, ...) {
-  pars <- list(conditional = c(sprintf("Intercept: %s", names(x$zeta)), names(stats::coef(x))))
+find_parameters.mvord <- function(x, flatten = FALSE, ...) {
+  junk <- utils::capture.output(s <- summary(x))
+
+  out <- list(
+    thresholds = text_remove_backticks(rownames(s$thresholds)),
+    conditional = text_remove_backticks(rownames(s$coefficients)),
+    correlation = text_remove_backticks(rownames(s$error.structure))
+  )
+  attr(out, "is_mv") <- TRUE
 
   if (flatten) {
-    unique(unlist(pars))
+    unique(unlist(out))
   } else {
-    pars
+    out
   }
 }
 
-
-
-#' @importFrom stats na.omit coef
-#' @export
-find_parameters.gamlss <- function(x, flatten = FALSE, ...) {
-  pars <- lapply(x$parameters, function(i) {
-    names(stats::na.omit(stats::coef(x, what = i)))
-  })
-
-  names(pars) <- x$parameters
-  if ("mu" %in% names(pars)) names(pars)[1] <- "conditional"
-
-  pars <- .compact_list(pars)
-
-  if (flatten) {
-    unique(unlist(pars))
-  } else {
-    pars
-  }
-}
-
-
-#' @rdname find_parameters
-#' @export
-find_parameters.gam <- function(x, component = c("all", "conditional", "smooth_terms"), flatten = FALSE, ...) {
-  pars <- list(conditional = names(stats::coef(x)))
-  st <- summary(x)$s.table
-
-  pars$conditional <- pars$conditional[.grep_non_smoothers(pars$conditional)]
-  pars$smooth_terms <- row.names(st)
-
-  pars <- .compact_list(pars)
-
-  component <- match.arg(component)
-  elements <- .get_elements(effects = "all", component = component)
-  pars <- .compact_list(pars[elements])
-
-  if (flatten) {
-    unique(unlist(pars))
-  } else {
-    pars
-  }
-}
 
 
 #' @export
 find_parameters.gbm <- function(x, flatten = FALSE, ...) {
   s <- summary(x, plotit = FALSE)
   pars <- list(conditional = as.character(s$var))
+  pars$conditional <- text_remove_backticks(pars$conditional)
 
   if (flatten) {
     unique(unlist(pars))
@@ -242,84 +571,12 @@ find_parameters.gbm <- function(x, flatten = FALSE, ...) {
   }
 }
 
-
-#' @export
-find_parameters.clmm2 <- function(x, flatten = FALSE, ...) {
-  s <- summary(x)
-  pars <- list(conditional = as.character(rownames(s$coefficients)))
-
-  if (flatten) {
-    unique(unlist(pars))
-  } else {
-    pars
-  }
-}
-
-
-#' @export
-find_parameters.multinom <- function(x, flatten = FALSE, ...) {
-  params <- stats::coef(x)
-
-
-  pars <- if (is.matrix(params)) {
-    list(conditional = colnames(params))
-  } else {
-    list(conditional = names(params))
-  }
-
-  if (flatten) {
-    unique(unlist(pars))
-  } else {
-    pars
-  }
-}
-
-
-#' @export
-find_parameters.Gam <- function(x, component = c("all", "conditional", "smooth_terms"), flatten = FALSE, ...) {
-  pars <- names(stats::coef(x))
-
-  l <- .compact_list(list(
-    conditional = pars[.grep_non_smoothers(pars)],
-    smooth_terms = pars[.grep_smoothers(pars)]
-  ))
-
-  component <- match.arg(component)
-  elements <- .get_elements(effects = "all", component = component)
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @export
-find_parameters.vgam <- function(x, component = c("all", "conditional", "smooth_terms"), flatten = FALSE, ...) {
-  pars <- names(stats::coef(x))
-
-  l <- .compact_list(list(
-    conditional = pars[.grep_non_smoothers(pars)],
-    smooth_terms = pars[.grep_smoothers(pars)]
-  ))
-
-  component <- match.arg(component)
-  elements <- .get_elements(effects = "all", component = component)
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
 
 
 #' @export
 find_parameters.BBreg <- function(x, flatten = FALSE, ...) {
   pars <- list(conditional = rownames(stats::coef(x)))
+  pars$conditional <- text_remove_backticks(pars$conditional)
 
   if (flatten) {
     unique(unlist(pars))
@@ -329,76 +586,27 @@ find_parameters.BBreg <- function(x, flatten = FALSE, ...) {
 }
 
 
-#' @export
-find_parameters.BBmm <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...) {
-  l <- .compact_list(list(
-    conditional = rownames(x$fixed.coef),
-    random = x$namesRand
-  ))
-
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, component = "all")
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @export
-find_parameters.glimML <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...) {
-  l <- .compact_list(list(
-    conditional = names(x@fixed.param),
-    random = names(x@random.param)
-  ))
-
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, component = "all")
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
 
 #' @export
 find_parameters.lrm <- function(x, flatten = FALSE, ...) {
-  l <- list(conditional = names(stats::coef(x)))
+  pars <- list(conditional = names(stats::coef(x)))
+  pars$conditional <- text_remove_backticks(pars$conditional)
+
   if (flatten) {
-    unique(unlist(l))
+    unique(unlist(pars))
   } else {
-    l
+    pars
   }
 }
-
 
 #' @export
-find_parameters.gamm <- function(x, component = c("all", "conditional", "smooth_terms"), flatten = FALSE, ...) {
-  x <- x$gam
-  class(x) <- c(class(x), c("glm", "lm"))
-  component <- match.arg(component)
-  l <- find_parameters.gam(x, component = component)
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
+find_parameters.flexsurvreg <- find_parameters.lrm
+
 
 
 #' @export
 find_parameters.aovlist <- function(x, flatten = FALSE, ...) {
-  l <- lapply(stats::coef(x), names)
-  # merge "intercept" and "block" into conditional
-  # while "Within" becomes "random"
-  l <- list(unname(unlist(l[c(1, 2)])), l[[3]])
-  names(l) <- c("conditional", "random")
+  l <- list(conditional = unname(text_remove_backticks(unlist(lapply(stats::coef(x), names)))))
 
   if (flatten) {
     unique(unlist(l))
@@ -408,628 +616,205 @@ find_parameters.aovlist <- function(x, flatten = FALSE, ...) {
 }
 
 
-#' @export
-find_parameters.MixMod <- function(x, effects = c("all", "fixed", "random"), component = c("all", "conditional", "zi", "zero_inflated"), flatten = FALSE, ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("Package 'lme4' required for this function to work. Please install it.")
-  }
-
-  re.names <- dimnames(lme4::ranef(x))[[2]]
-
-  has_zeroinf <- !is.null(find_formula(x)[["zero_inflated"]])
-
-  if (has_zeroinf) {
-    z_inflated <- names(lme4::fixef(x, sub_model = "zero_part"))
-    z_inflated_random <- re.names[grepl("^zi_", re.names, perl = TRUE)]
-  } else {
-    z_inflated <- NULL
-    z_inflated_random <- NULL
-  }
-
-  l <- .compact_list(list(
-    conditional = names(lme4::fixef(x, sub_model = "main")),
-    random = re.names[grepl("^(?!zi_)", re.names, perl = TRUE)],
-    zero_inflated = z_inflated,
-    zero_inflated_random = z_inflated_random
-  ))
-
-  effects <- match.arg(effects)
-  component <- match.arg(component)
-  elements <- .get_elements(effects = effects, component = component)
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
 
 #' @export
-find_parameters.nlmerMod <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("Package 'lme4' required for this function to work. Please install it.")
+find_parameters.rqs <- function(x, flatten = FALSE, ...) {
+  sc <- suppressWarnings(summary(x))
+
+  if (all(unlist(lapply(sc, is.list)))) {
+    pars <- list(conditional = rownames(stats::coef(sc[[1]])))
+  } else {
+    return(find_parameters.default(x, flatten = flatten, ...))
   }
-
-  startvectors <- .get_startvector_from_env(x)
-
-  l <- .compact_list(list(
-    conditional = setdiff(names(lme4::fixef(x)), startvectors),
-    nonlinear = startvectors,
-    random = lapply(lme4::ranef(x), colnames)
-  ))
-
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, component = "all")
-  l <- .compact_list(l[elements])
+  pars$conditional <- text_remove_backticks(pars$conditional)
 
   if (flatten) {
-    unique(unlist(l))
+    unique(unlist(pars))
   } else {
-    l
-  }
-}
-
-
-#' @rdname find_parameters
-#' @export
-find_parameters.merMod <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("Package 'lme4' required for this function to work. Please install it.")
-  }
-
-  l <- .compact_list(list(
-    conditional = names(lme4::fixef(x)),
-    random = lapply(lme4::ranef(x), colnames)
-  ))
-
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, component = "all")
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @export
-find_parameters.rlmerMod <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("Package 'lme4' required for this function to work. Please install it.")
-  }
-
-  l <- .compact_list(list(
-    conditional = names(lme4::fixef(x)),
-    random = lapply(lme4::ranef(x), colnames)
-  ))
-
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, component = "all")
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @export
-find_parameters.mixed <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("Package 'lme4' required for this function to work. Please install it.")
-  }
-
-  l <- .compact_list(list(
-    conditional = names(lme4::fixef(x$full_model)),
-    random = lapply(lme4::ranef(x$full_model), colnames)
-  ))
-
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, component = "all")
-  l <- .compact_list(l[elements])
-
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @export
-find_parameters.coxme <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("Package 'lme4' required for this function to work. Please install it.")
-  }
-
-  l <- .compact_list(list(
-    conditional = names(lme4::fixef(x)),
-    random = names(lme4::ranef(x))
-  ))
-
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, component = "all")
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @export
-find_parameters.lme <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("Package 'lme4' required for this function to work. Please install it.")
-  }
-
-  re <- lme4::ranef(x)
-  if (is.data.frame(re)) {
-    rn <- colnames(re)
-  } else {
-    rn <- lapply(re, colnames)
-  }
-
-  l <- .compact_list(list(
-    conditional = names(lme4::fixef(x)),
-    random = rn
-  ))
-
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, component = "all")
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @export
-find_parameters.MCMCglmm <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...) {
-  sc <- summary(x)
-  l <- .compact_list(list(
-    conditional = rownames(sc$solutions),
-    random = rownames(sc$Gcovariances)
-  ))
-
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, component = "all")
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
+    pars
   }
 }
 
 
 #' @export
 find_parameters.crq <- function(x, flatten = FALSE, ...) {
+  sc <- suppressWarnings(summary(x))
+
+  if (all(unlist(lapply(sc, is.list)))) {
+    pars <- list(conditional = rownames(sc[[1]]$coefficients))
+  } else {
+    pars <- list(conditional = rownames(sc$coefficients))
+  }
+  pars$conditional <- text_remove_backticks(pars$conditional)
+
+  if (flatten) {
+    unique(unlist(pars))
+  } else {
+    pars
+  }
+}
+
+#' @export
+find_parameters.crqs <- find_parameters.crq
+
+
+
+#' @export
+find_parameters.lqmm <- function(x, flatten = FALSE, ...) {
+  cs <- stats::coef(x)
+
+  if (is.matrix(cs)) {
+    pars <- list(conditional = rownames(cs))
+  } else {
+    pars <- list(conditional = names(cs))
+  }
+  pars$conditional <- text_remove_backticks(pars$conditional)
+
+  if (flatten) {
+    unique(unlist(pars))
+  } else {
+    pars
+  }
+}
+
+#' @export
+find_parameters.lqm <- find_parameters.lqmm
+
+
+
+
+#' @export
+find_parameters.aareg <- function(x, flatten = FALSE, ...) {
   sc <- summary(x)
-  l <- list(conditional = rownames(sc$coefficients))
+
+  pars <- list(conditional = rownames(sc$table))
+  pars$conditional <- text_remove_backticks(pars$conditional)
 
   if (flatten) {
-    unique(unlist(l))
+    unique(unlist(pars))
   } else {
-    l
+    pars
   }
 }
 
 
-#' @export
-find_parameters.rqss <- function(x, flatten = FALSE, ...) {
-  sc <- summary(x)
-  l <- list(conditional = rownames(sc$coef))
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
 
 #' @export
-find_parameters.glmmTMB <- function(x, effects = c("all", "fixed", "random"), component = c("all", "conditional", "zi", "zero_inflated", "dispersion"), flatten = FALSE, ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("Package 'lme4' required for this function to work. Please install it.")
-  }
+find_parameters.rma <- function(x, flatten = FALSE, ...) {
+  tryCatch(
+    {
+      cf <- stats::coef(x)
+      pars <- list(conditional = names(cf))
 
-  l <- .compact_list(list(
-    conditional = names(lme4::fixef(x)$cond),
-    random = lapply(lme4::ranef(x)$cond, colnames),
-    zero_inflated = names(lme4::fixef(x)$zi),
-    zero_inflated_random = lapply(lme4::ranef(x)$zi, colnames),
-    dispersion = names(lme4::fixef(x)$disp)
-  ))
+      pars$conditional[grepl("intrcpt", pars$conditional)] <- "(Intercept)"
+      pars$conditional <- text_remove_backticks(pars$conditional)
 
-  effects <- match.arg(effects)
-  component <- match.arg(component)
-  elements <- .get_elements(effects = effects, component = component)
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @rdname find_parameters
-#' @export
-find_parameters.zeroinfl <- function(x, component = c("all", "conditional", "zi", "zero_inflated"), flatten = FALSE, ...) {
-  cf <- names(stats::coef(x))
-  l <- .compact_list(list(
-    conditional = cf[grepl("^count_", cf, perl = TRUE)],
-    zero_inflated = cf[grepl("^zero_", cf, perl = TRUE)]
-  ))
-
-  component <- match.arg(component)
-  elements <- .get_elements(effects = "all", component = component)
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @rdname find_parameters
-#' @export
-find_parameters.hurdle <- function(x, component = c("all", "conditional", "zi", "zero_inflated"), flatten = FALSE, ...) {
-  cf <- names(stats::coef(x))
-  l <- .compact_list(list(
-    conditional = cf[grepl("^count_", cf, perl = TRUE)],
-    zero_inflated = cf[grepl("^zero_", cf, perl = TRUE)]
-  ))
-
-  component <- match.arg(component)
-  elements <- .get_elements(effects = "all", component = component)
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @export
-find_parameters.zerotrunc <- function(x, component = c("all", "conditional", "zi", "zero_inflated"), flatten = FALSE, ...) {
-  cf <- names(stats::coef(x))
-  l <- .compact_list(list(
-    conditional = cf[grepl("^count_", cf, perl = TRUE)],
-    zero_inflated = cf[grepl("^zero_", cf, perl = TRUE)]
-  ))
-
-  component <- match.arg(component)
-  elements <- .get_elements(effects = "all", component = component)
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @rdname find_parameters
-#' @export
-find_parameters.brmsfit <- function(x, effects = c("all", "fixed", "random"), component = c("all", "conditional", "zi", "zero_inflated", "dispersion", "simplex", "sigma", "smooth_terms"), flatten = FALSE, parameters = NULL, ...) {
-  fe <- colnames(as.data.frame(x))
-  is_mv <- NULL
-
-  cond <- fe[grepl(pattern = "(b_|bs_|bsp_|bcs_)(?!zi_)(.*)", fe, perl = TRUE)]
-  zi <- fe[grepl(pattern = "(b_zi_|bs_zi_|bsp_zi_|bcs_zi_)", fe, perl = TRUE)]
-  rand <- fe[grepl(pattern = "(?!.*__zi)(?=.*r_)", fe, perl = TRUE) & !grepl(pattern = "^prior_", fe, perl = TRUE)]
-  randzi <- fe[grepl(pattern = "r_(.*__zi)", fe, perl = TRUE)]
-  simo <- fe[grepl(pattern = "^simo_", fe, perl = TRUE)]
-  smooth_terms <- fe[grepl(pattern = "^sds_", fe, perl = TRUE)]
-  priors <- fe[grepl(pattern = "^prior_", fe, perl = TRUE)]
-  sigma <- fe[grepl(pattern = "^sigma_", fe, perl = TRUE)]
-
-  l <- .compact_list(list(
-    conditional = cond,
-    random = rand,
-    zero_inflated = zi,
-    zero_inflated_random = randzi,
-    simplex = simo,
-    smooth_terms = smooth_terms,
-    sigma = sigma,
-    priors = priors
-  ))
-
-  effects <- match.arg(effects)
-  component <- match.arg(component)
-  elements <- .get_elements(effects = effects, component = component)
-  elements <- c(elements, "priors")
-
-  if (is_multivariate(x)) {
-    rn <- names(find_response(x))
-    l <- lapply(rn, function(i) {
-      if (.obj_has_name(l, "conditional")) {
-        conditional <- l$conditional[grepl(sprintf("^(b_|bs_|bsp_|bcs_)\\Q%s\\E_", i), l$conditional)]
+      if (flatten) {
+        unique(unlist(pars))
       } else {
-        conditional <- NULL
+        pars
       }
-
-      if (.obj_has_name(l, "random")) {
-        random <- l$random[grepl(sprintf("__\\Q%s\\E\\.", i), l$random)]
-      } else {
-        random <- NULL
-      }
-
-      if (.obj_has_name(l, "zero_inflated")) {
-        zero_inflated <- l$zero_inflated[grepl(sprintf("^(b_zi_|bs_zi_|bsp_zi_|bcs_zi_)\\Q%s\\E_", i), l$zero_inflated)]
-      } else {
-        zero_inflated <- NULL
-      }
-
-      if (.obj_has_name(l, "zero_inflated_random")) {
-        zero_inflated_random <- l$zero_inflated_random[grepl(sprintf("__zi_\\Q%s\\E\\.", i), l$zero_inflated_random)]
-      } else {
-        zero_inflated_random <- NULL
-      }
-
-      if (.obj_has_name(l, "simplex")) {
-        simplex <- l$simplex
-      } else {
-        simplex <- NULL
-      }
-
-      if (.obj_has_name(l, "sigma")) {
-        sigma <- l$sigma[grepl(sprintf("^sigma_\\Q%s\\E", i), l$sigma)]
-      } else {
-        sigma <- NULL
-      }
-
-      if (.obj_has_name(l, "smooth_terms")) {
-        smooth_terms <- l$smooth_terms
-      } else {
-        smooth_terms <- NULL
-      }
-
-      if (.obj_has_name(l, "priors")) {
-        priors <- l$priors
-      } else {
-        priors <- NULL
-      }
-
-      pars <- .compact_list(list(
-        conditional = conditional,
-        random = random,
-        zero_inflated = zero_inflated,
-        zero_inflated_random = zero_inflated_random,
-        simplex = simplex,
-        smooth_terms = smooth_terms,
-        sigma = sigma,
-        priors = priors
-      ))
-
-      .compact_list(pars[elements])
-    })
-
-    names(l) <- rn
-    is_mv <- "1"
-  } else {
-    l <- .compact_list(l[elements])
-  }
-
-  l <- .filter_pars(l, parameters, !is.null(is_mv) && is_mv == "1")
-  attr(l, "is_mv") <- is_mv
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-
-#' @importFrom stats coef
-#' @rdname find_parameters
-#' @export
-find_parameters.bayesx <- function(x, component = c("all", "conditional", "smooth_terms"), flatten = FALSE, parameters = NULL, ...) {
-  cond <- rownames(stats::coef(x))
-  smooth_terms <- rownames(x$smooth.hyp)
-
-  l <- .compact_list(list(
-    conditional = cond,
-    smooth_terms = smooth_terms
-  ))
-
-  l <- .filter_pars(l, parameters)
-
-  component <- match.arg(component)
-  elements <- .get_elements(effects = "all", component)
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-
-#' @rdname find_parameters
-#' @export
-find_parameters.stanreg <- function(x, effects = c("all", "fixed", "random"), component = c("all", "conditional", "smooth_terms"), flatten = FALSE, parameters = NULL, ...) {
-  fe <- colnames(as.data.frame(x))
-
-  cond <- fe[grepl(pattern = "^(?!(b\\[|sigma|Sigma))", fe, perl = TRUE) & .grep_non_smoothers(fe)]
-  rand <- fe[grepl(pattern = "^b\\[", fe, perl = TRUE)]
-  smooth_terms <- fe[grepl(pattern = "^smooth_sd", fe, perl = TRUE)]
-
-  l <- .compact_list(list(
-    conditional = cond,
-    random = rand,
-    smooth_terms = smooth_terms
-  ))
-
-  l <- .filter_pars(l, parameters)
-
-  effects <- match.arg(effects)
-  component <- match.arg(component)
-  elements <- .get_elements(effects, component)
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @rdname find_parameters
-#' @export
-find_parameters.sim.merMod <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, parameters = NULL, ...) {
-  fe <- colnames(.get_armsim_fixef_parms(x))
-  re <- colnames(.get_armsim_ranef_parms(x))
-
-  l <- .compact_list(list(
-    conditional = fe,
-    random = re
-  ))
-
-  l <- .filter_pars(l, parameters)
-
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects, component = "all")
-  l <- .compact_list(l[elements])
-
-  if (flatten) {
-    unique(unlist(l))
-  } else {
-    l
-  }
-}
-
-
-#' @export
-find_parameters.sim <- function(x, flatten = FALSE, parameters = NULL, ...) {
-  l <- .filter_pars(
-    list(conditional = colnames(.get_armsim_fixef_parms(x))),
-    parameters
+    },
+    error = function(x) {
+      NULL
+    }
   )
+}
+
+
+
+#' @export
+find_parameters.meta_random <- function(x, flatten = FALSE, ...) {
+  tryCatch(
+    {
+      cf <- x$estimates
+      pars <- list(conditional = rownames(cf))
+      pars$conditional[pars$conditional == "d"] <- "(Intercept)"
+
+      if (flatten) {
+        unique(unlist(pars))
+      } else {
+        pars
+      }
+    },
+    error = function(x) {
+      NULL
+    }
+  )
+}
+
+
+#' @export
+find_parameters.meta_fixed <- find_parameters.meta_random
+
+#' @export
+find_parameters.meta_bma <- find_parameters.meta_random
+
+
+
+#' @export
+find_parameters.metaplus <- function(x, flatten = FALSE, ...) {
+  pars <- list(conditional = rownames(x$results))
+  pars$conditional[grepl("muhat", pars$conditional)] <- "(Intercept)"
+  pars$conditional <- text_remove_backticks(pars$conditional)
 
   if (flatten) {
-    unique(unlist(l))
+    unique(unlist(pars))
   } else {
-    l
+    pars
   }
 }
 
 
 
 #' @export
-find_parameters.stanmvreg <- function(x, effects = c("all", "fixed", "random"), component = c("all", "conditional", "sigma"), flatten = FALSE, parameters = NULL, ...) {
-  fe <- colnames(as.data.frame(x))
-  rn <- names(find_response(x))
-
-  cond <- fe[grepl(pattern = "^(?!(b\\[|sigma|Sigma))", fe, perl = TRUE) & .grep_non_smoothers(fe)]
-  rand <- fe[grepl(pattern = "^b\\[", fe, perl = TRUE)]
-  sigma <- fe[grepl(pattern = "\\|sigma$", fe, perl = TRUE) & .grep_non_smoothers(fe)]
-
-  l <- .compact_list(list(
-    conditional = cond,
-    random = rand,
-    sigma = sigma
-  ))
-
-
-  if (.obj_has_name(l, "conditional")) {
-    x1 <- sub(pattern = "(.*)(\\|)(.*)", "\\1", l$conditional)
-    x2 <- sub(pattern = "(.*)(\\|)(.*)", "\\3", l$conditional)
-
-    l.cond <- lapply(rn, function(i) {
-      list(conditional = x2[which(x1 == i)])
-    })
-    names(l.cond) <- rn
-  } else {
-    l.cond <- NULL
-  }
-
-
-  if (.obj_has_name(l, "random")) {
-    x1 <- sub(pattern = "b\\[(.*)(\\|)(.*)", "\\1", l$random)
-    x2 <- sub(pattern = "(b\\[).*(.*)(\\|)(.*)", "\\1\\4", l$random)
-
-    l.random <- lapply(rn, function(i) {
-      list(random = x2[which(x1 == i)])
-    })
-    names(l.random) <- rn
-  } else {
-    l.random <- NULL
-  }
-
-
-  if (.obj_has_name(l, "sigma")) {
-    l.sigma <- lapply(rn, function(i) {
-      list(sigma = "sigma")
-    })
-    names(l.sigma) <- rn
-  } else {
-    l.sigma <- NULL
-  }
-
-
-  l <- mapply(c, l.cond, l.random, l.sigma, SIMPLIFY = FALSE)
-  l <- .filter_pars(l, parameters, is_mv = TRUE)
-
-  effects <- match.arg(effects)
-  component <- match.arg(component)
-  elements <- .get_elements(effects, component)
-  l <- lapply(l, function(i) .compact_list(i[elements]))
-
-  attr(l, "is_mv") <- "1"
+find_parameters.mipo <- function(x, flatten = FALSE, ...) {
+  pars <- list(conditional = as.vector(summary(x)$term))
+  pars$conditional <- text_remove_backticks(pars$conditional)
 
   if (flatten) {
-    unique(unlist(l))
+    unique(unlist(pars))
   } else {
-    l
+    pars
   }
 }
 
 
-
 #' @export
-find_parameters.wbm <- function(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...) {
-  if (!requireNamespace("lme4", quietly = TRUE)) {
-    stop("Package 'lme4' required for this function to work. Please install it.")
+find_parameters.mira <- function(x, flatten = FALSE, ...) {
+  find_parameters(x$analyses[[1]], flatten = flatten, ...)
+}
+
+## For questions or problems with this ask Fernando Miguez (femiguez@iastate.edu)
+#' @export
+find_parameters.nls <- function(x, flatten = FALSE, ...) {
+  f <- find_formula(x)
+  elements <- .get_elements(effects = "fixed", component = "all")
+  f <- .prepare_predictors(x, f, elements)
+  pars <- .return_vars(f, x)
+
+  if (flatten) {
+    unique(unlist(pars))
+  } else {
+    pars
+  }
+}
+
+# helper ----------------------------
+
+.filter_parameters <- function(l, effects, component = "all", flatten, recursive = TRUE) {
+  if (isTRUE(recursive)) {
+    # recursively remove back-ticks from all list-elements parameters
+    l <- rapply(l, text_remove_backticks, how = "list")
+  } else {
+    l <- lapply(l, text_remove_backticks)
   }
 
-  l <- .compact_list(list(
-    conditional = names(lme4::fixef(x)),
-    random = lapply(lme4::ranef(x), colnames)
-  ))
+  # keep only requested effects
+  elements <- .get_elements(effects, component = component)
 
-  effects <- match.arg(effects)
-  elements <- .get_elements(effects = effects, component = "all")
-  l <- .compact_list(l[elements])
-
-  l <- rapply(l, function(i) gsub("`", "", i, fixed = TRUE), how = "list")
+  # remove empty list-elements
+  l <- compact_list(l[elements])
 
   if (flatten) {
     unique(unlist(l))

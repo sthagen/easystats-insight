@@ -1,8 +1,6 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("stats")) {
-  context("insight, aovlist")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("stats")) {
   data(npk)
   m1 <- aov(yield ~ N * P * K + Error(block), data = npk)
   m2 <- aov(yield ~ N * P * K, data = npk)
@@ -59,19 +57,22 @@ if (require("testthat") &&
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("yield ~ N * P * K + Error(block)"))
+      list(conditional = as.formula("yield ~ N * P * K + Error(block)")),
+      ignore_attr = TRUE
     )
     expect_length(find_formula(m2), 1)
     expect_equal(
       find_formula(m2),
-      list(conditional = as.formula("yield ~ N * P * K"))
+      list(conditional = as.formula("yield ~ N * P * K")),
+      ignore_attr = TRUE
     )
   })
 
   test_that("find_terms", {
     expect_equal(find_terms(m1), list(
       response = "yield",
-      conditional = c("N", "P", "K", "Error(block)")
+      conditional = c("N", "P", "K"),
+      error = "Error(block)"
     ))
     expect_equal(
       find_terms(m1, flatten = TRUE),
@@ -97,27 +98,15 @@ if (require("testthat") &&
   test_that("find_parameters", {
     expect_equal(
       find_parameters(m1),
-      list(
-        conditional = c("(Intercept)", "N1:P1:K1"),
-        random = c("N1", "P1", "K1", "N1:P1", "N1:K1", "P1:K1")
-      )
+      list(conditional = c("(Intercept)", "N1:P1:K1", "N1", "P1", "K1", "N1:P1", "N1:K1", "P1:K1"))
     )
 
-    expect_equal(length(get_parameters(m1)), 2)
+    expect_equal(ncol(get_parameters(m1)), 3)
     expect_equal(nrow(get_parameters(m1, effects = "all")), 8)
 
     expect_equal(
-      get_parameters(m1, effects = "all")$Effects,
-      c(
-        "fixed",
-        "fixed",
-        "random",
-        "random",
-        "random",
-        "random",
-        "random",
-        "random"
-      )
+      get_parameters(m1, effects = "all")$Group,
+      c("(Intercept)", "block", "Within", "Within", "Within", "Within", "Within", "Within")
     )
 
     expect_equal(

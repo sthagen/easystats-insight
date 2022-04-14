@@ -1,9 +1,7 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
-if (.runThisTest || Sys.getenv("USER") == "travis") {
-  if (require("testthat") && require("insight") && require("gbm")) {
-    context("insight, gbm")
-
+if (.runThisTest) {
+  if (requiet("testthat") && requiet("insight") && requiet("gbm")) {
     set.seed(102) # for reproducibility
     m1 <- gbm(
       mpg ~ gear + cyl + wt,
@@ -68,7 +66,8 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
       expect_length(find_formula(m1), 1)
       expect_equal(
         find_formula(m1),
-        list(conditional = as.formula("mpg ~ gear + cyl + wt"))
+        list(conditional = as.formula("mpg ~ gear + cyl + wt")),
+        ignore_attr = TRUE
       )
     })
 
@@ -95,14 +94,12 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
     })
 
     test_that("find_parameters", {
-      skip_on_travis()
-
       expect_equal(
         find_parameters(m1),
-        list(conditional = c("wt", "gear", "cyl"))
+        list(conditional = c("wt", "cyl", "gear"))
       )
       expect_equal(nrow(get_parameters(m1)), 3)
-      expect_equal(get_parameters(m1)$Parameter, c("wt", "gear", "cyl"))
+      expect_equal(get_parameters(m1)$Parameter, c("wt", "cyl", "gear"))
     })
 
     test_that("find_terms", {

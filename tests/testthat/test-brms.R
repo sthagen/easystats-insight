@@ -1,20 +1,50 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
-if (.runThisTest || Sys.getenv("USER") == "travis") {
-  if (suppressWarnings(require("testthat") &&
-    require("insight") &&
-    require("brms"))) {
-    context("insight, brms-find_response")
+if (.runThisTest) {
+  if (suppressWarnings(requiet("testthat") &&
+    requiet("insight") &&
+    requiet("brms"))) {
 
     # Model fitting -----------------------------------------------------------
 
-    m1 <- insight::download_model("brms_mixed_6")
+    m1 <- suppressWarnings(insight::download_model("brms_mixed_6"))
     m2 <- insight::download_model("brms_mv_4")
     m3 <- insight::download_model("brms_2")
     m4 <- insight::download_model("brms_zi_3")
     m5 <- insight::download_model("brms_mv_5")
+    m6 <- insight::download_model("brms_corr_re1")
+    m7 <- suppressWarnings(insight::download_model("brms_mixed_8"))
+    m8 <- insight::download_model("brms_ordinal_1")
 
     # Tests -------------------------------------------------------------------
+    test_that("get_predicted.brmsfit: ordinal dv", {
+      skip_if_not_installed("bayestestR")
+
+      pred1 <- get_predicted(m8)
+      pred2 <- get_predicted(m8, ci_method = "hdi")
+      expect_true(inherits(pred1, "get_predicted"))
+      expect_true(inherits(pred1, "data.frame"))
+      expect_true(all(c("Row", "Response") %in% colnames(pred1)))
+
+      # ci_method changes intervals but not se or predicted
+      pred1 <- data.frame(pred1)
+      pred2 <- data.frame(pred2)
+      expect_equal(pred1$Row, pred2$Row)
+      expect_equal(pred1$Response, pred2$Response)
+      expect_equal(pred1$Predicted, pred2$Predicted)
+      expect_equal(pred1$SE, pred2$SE)
+      expect_false(mean(pred1$CI_low == pred2$CI_low) > 0.1) # most CI bounds are different
+      expect_false(mean(pred1$CI_high == pred2$CI_high) > 0.1) # most CI bounds are different
+
+      # compare to manual predictions
+      pred3 <- get_predicted(m8, centrality_function = stats::median)
+      manual <- rstantools::posterior_epred(m8)
+      manual <- apply(manual[, , 1], 2, median)
+      expect_equal(pred3$Predicted[1:32], manual)
+      manual <- rstantools::posterior_epred(m8)
+      manual <- apply(manual[, , 1], 2, mean)
+      expect_equal(pred1$Predicted[1:32], manual)
+    })
 
     test_that("find_statistic", {
       expect_null(find_statistic(m1))
@@ -22,6 +52,11 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
       expect_null(find_statistic(m3))
       expect_null(find_statistic(m4))
       expect_null(find_statistic(m5))
+    })
+
+    test_that("n_parameters", {
+      expect_equal(n_parameters(m1), 65)
+      expect_equal(n_parameters(m1, effects = "fixed"), 5)
     })
 
     test_that("model_info", {
@@ -172,6 +207,16 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
         )
       )
       expect_identical(
+        find_variables(m6),
+        list(
+          response = "y",
+          conditional = "x",
+          random = "id",
+          sigma = "x",
+          sigma_random = "id"
+        )
+      )
+      expect_identical(
         find_variables(m1, effects = "fixed"),
         list(
           response = "count",
@@ -243,12 +288,20 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
         )
       ))
       expect_equal(find_random(m5, flatten = TRUE), "persons")
+      expect_equal(find_random(m6, flatten = TRUE), "id")
     })
 
 
     test_that("get_random", {
       zinb <- get_data(m4)
       expect_equal(get_random(m4), zinb[, "persons", drop = FALSE])
+    })
+
+
+    test_that("get_data", {
+      d <- get_data(m6)
+      expect_equal(nrow(d), 200)
+      expect_equal(ncol(d), 3)
     })
 
 
@@ -261,9 +314,9 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
             "b_Age",
             "b_Base",
             "b_Trt1",
-            "b_Base.Trt1"
+            "b_Base:Trt1"
           ),
-          random = sprintf("r_patient.%i.Intercept.", 1:59)
+          random = c(sprintf("r_patient[%i,Intercept]", 1:59), "sd_patient__Intercept")
         )
       )
 
@@ -297,20 +350,20 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
         find_parameters(m4),
         list(
           conditional = c("b_Intercept", "b_child", "b_camper"),
-          random = sprintf("r_persons.%i.Intercept.", 1:4),
+          random = c(sprintf("r_persons[%i,Intercept]", 1:4), "sd_persons__Intercept"),
           zero_inflated = c("b_zi_Intercept", "b_zi_child", "b_zi_camper"),
-          zero_inflated_random = sprintf("r_persons__zi.%i.Intercept.", 1:4)
+          zero_inflated_random = c(sprintf("r_persons__zi[%i,Intercept]", 1:4), "sd_persons__zi_Intercept")
         )
       )
 
       expect_equal(
-        find_parameters(m5),
+        find_parameters(m5, effects = "all"),
         structure(list(
           count = list(
             conditional = c("b_count_Intercept", "b_count_child", "b_count_camper"),
-            random = sprintf("r_persons__count.%i.Intercept.", 1:4),
+            random = c(sprintf("r_persons__count[%i,Intercept]", 1:4), "sd_persons__count_Intercept"),
             zero_inflated = c("b_zi_count_Intercept", "b_zi_count_camper"),
-            zero_inflated_random = sprintf("r_persons__zi_count.%i.Intercept.", 1:4)
+            zero_inflated_random = c(sprintf("r_persons__zi_count[%i,Intercept]", 1:4), "sd_persons__zi_count_Intercept")
           ),
           count2 = list(
             conditional = c(
@@ -318,9 +371,9 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "b_count2_child",
               "b_count2_livebait"
             ),
-            random = sprintf("r_persons__count2.%i.Intercept.", 1:4),
+            random = c(sprintf("r_persons__count2[%i,Intercept]", 1:4), "sd_persons__count2_Intercept"),
             zero_inflated = c("b_zi_count2_Intercept", "b_zi_count2_child"),
-            zero_inflated_random = sprintf("r_persons__zi_count2.%i.Intercept.", 1:4)
+            zero_inflated_random = c(sprintf("r_persons__zi_count2[%i,Intercept]", 1:4), "sd_persons__zi_count2_Intercept")
           )
         ),
         "is_mv" = "1"
@@ -347,84 +400,47 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
       expect_equal(
         colnames(get_parameters(m4, effects = "all")),
         c(
-          "b_Intercept",
-          "b_child",
-          "b_camper",
-          "r_persons.1.Intercept.",
-          "r_persons.2.Intercept.",
-          "r_persons.3.Intercept.",
-          "r_persons.4.Intercept.",
-          "b_zi_Intercept",
-          "b_zi_child",
-          "b_zi_camper",
-          "r_persons__zi.1.Intercept.",
-          "r_persons__zi.2.Intercept.",
-          "r_persons__zi.3.Intercept.",
-          "r_persons__zi.4.Intercept."
+          "b_Intercept", "b_child", "b_camper", "r_persons[1,Intercept]",
+          "r_persons[2,Intercept]", "r_persons[3,Intercept]", "r_persons[4,Intercept]",
+          "sd_persons__Intercept", "b_zi_Intercept", "b_zi_child", "b_zi_camper",
+          "r_persons__zi[1,Intercept]", "r_persons__zi[2,Intercept]", "r_persons__zi[3,Intercept]",
+          "r_persons__zi[4,Intercept]", "sd_persons__zi_Intercept"
         )
       )
       expect_equal(
-        colnames(get_parameters(
-          m4,
-          effects = "random", component = "cond"
-        )),
+        colnames(get_parameters(m4, effects = "random", component = "conditional")),
         c(
-          "r_persons.1.Intercept.",
-          "r_persons.2.Intercept.",
-          "r_persons.3.Intercept.",
-          "r_persons.4.Intercept."
+          "r_persons[1,Intercept]", "r_persons[2,Intercept]", "r_persons[3,Intercept]",
+          "r_persons[4,Intercept]", "sd_persons__Intercept"
+        )
+      )
+      expect_equal(
+        colnames(get_parameters(m5, effects = "random", component = "conditional")),
+        c(
+          "r_persons__count[1,Intercept]", "r_persons__count[2,Intercept]",
+          "r_persons__count[3,Intercept]", "r_persons__count[4,Intercept]",
+          "sd_persons__count_Intercept", "r_persons__count2[1,Intercept]",
+          "r_persons__count2[2,Intercept]", "r_persons__count2[3,Intercept]",
+          "r_persons__count2[4,Intercept]", "sd_persons__count2_Intercept"
         )
       )
 
       expect_equal(
-        colnames(get_parameters(
-          m5,
-          effects = "random", component = "cond"
-        )),
+        colnames(get_parameters(m5, effects = "all", component = "all")),
         c(
-          "r_persons__count.1.Intercept.",
-          "r_persons__count.2.Intercept.",
-          "r_persons__count.3.Intercept.",
-          "r_persons__count.4.Intercept.",
-          "r_persons__count2.1.Intercept.",
-          "r_persons__count2.2.Intercept.",
-          "r_persons__count2.3.Intercept.",
-          "r_persons__count2.4.Intercept."
-        )
-      )
-
-      expect_equal(
-        colnames(get_parameters(
-          m5,
-          effects = "all", component = "all"
-        )),
-        c(
-          "b_count_Intercept",
-          "b_count_child",
-          "b_count_camper",
-          "r_persons__count.1.Intercept.",
-          "r_persons__count.2.Intercept.",
-          "r_persons__count.3.Intercept.",
-          "r_persons__count.4.Intercept.",
-          "b_zi_count_Intercept",
-          "b_zi_count_camper",
-          "r_persons__zi_count.1.Intercept.",
-          "r_persons__zi_count.2.Intercept.",
-          "r_persons__zi_count.3.Intercept.",
-          "r_persons__zi_count.4.Intercept.",
-          "b_count2_Intercept",
-          "b_count2_child",
-          "b_count2_livebait",
-          "r_persons__count2.1.Intercept.",
-          "r_persons__count2.2.Intercept.",
-          "r_persons__count2.3.Intercept.",
-          "r_persons__count2.4.Intercept.",
-          "b_zi_count2_Intercept",
-          "b_zi_count2_child",
-          "r_persons__zi_count2.1.Intercept.",
-          "r_persons__zi_count2.2.Intercept.",
-          "r_persons__zi_count2.3.Intercept.",
-          "r_persons__zi_count2.4.Intercept."
+          "b_count_Intercept", "b_count_child", "b_count_camper", "r_persons__count[1,Intercept]",
+          "r_persons__count[2,Intercept]", "r_persons__count[3,Intercept]",
+          "r_persons__count[4,Intercept]", "sd_persons__count_Intercept",
+          "b_zi_count_Intercept", "b_zi_count_camper", "r_persons__zi_count[1,Intercept]",
+          "r_persons__zi_count[2,Intercept]", "r_persons__zi_count[3,Intercept]",
+          "r_persons__zi_count[4,Intercept]", "sd_persons__zi_count_Intercept",
+          "b_count2_Intercept", "b_count2_child", "b_count2_livebait",
+          "r_persons__count2[1,Intercept]", "r_persons__count2[2,Intercept]",
+          "r_persons__count2[3,Intercept]", "r_persons__count2[4,Intercept]",
+          "sd_persons__count2_Intercept", "b_zi_count2_Intercept", "b_zi_count2_child",
+          "r_persons__zi_count2[1,Intercept]", "r_persons__zi_count2[2,Intercept]",
+          "r_persons__zi_count2[3,Intercept]", "r_persons__zi_count2[4,Intercept]",
+          "sd_persons__zi_count2_Intercept"
         )
       )
     })
@@ -484,25 +500,35 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
 
     test_that("get_priors", {
       expect_equal(
-        get_priors(m1),
+        get_priors(m7),
         data.frame(
-          Parameter = c("Age", "Base", "Base:Trt1", "Trt1"),
-          Distribution = c("student_t", "student_t", "student_t", "student_t"),
-          Location = c("5, 0", "5, 0", "5, 0", "5, 0"),
-          Scale = c(10, 10, 10, 10),
+          Parameter = c(
+            "b_Intercept", "b_Age", "b_Base", "b_Trt1", "b_Base:Trt1",
+            "sd_patient__Intercept", "sd_patient__Age",
+            "cor_patient__Intercept__Age"
+          ),
+          Distribution = c(
+            "student_t", "student_t", "student_t",
+            "student_t", "student_t", "cauchy", "cauchy", "lkj"
+          ),
+          Location = c(1.4, 0, 0, 0, 0, NA, NA, 1),
+          Scale = c(2.5, 10, 10, 10, 10, NA, NA, NA),
+          df = c(3, 5, 5, 5, 5, NA, NA, NA),
           stringsAsFactors = FALSE
-        )
+        ),
+        ignore_attr = TRUE
       )
-
       expect_equal(
         get_priors(m3),
         data.frame(
-          Parameter = c("c2", "treat1", "treat1:c2"),
-          Distribution = c("uniform", "uniform", "uniform"),
-          Location = c(0, 0, 0),
-          Scale = c(NA, NA, NA),
+          Parameter = c("b_Intercept", "b_treat1", "b_c2", "b_treat1:c2"),
+          Distribution = c("student_t", "uniform", "uniform", "uniform"),
+          Location = c(0, NA, NA, NA),
+          Scale = c(2.5, NA, NA, NA),
+          df = c(3, NA, NA, NA),
           stringsAsFactors = FALSE
-        )
+        ),
+        ignore_attr = TRUE
       )
     })
 
@@ -516,17 +542,19 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "b_Intercept",
               "b_child",
               "b_camper",
-              "r_persons.1.Intercept.",
-              "r_persons.2.Intercept.",
-              "r_persons.3.Intercept.",
-              "r_persons.4.Intercept.",
+              "r_persons[1,Intercept]",
+              "r_persons[2,Intercept]",
+              "r_persons[3,Intercept]",
+              "r_persons[4,Intercept]",
+              "sd_persons__Intercept",
               "b_zi_Intercept",
               "b_zi_child",
               "b_zi_camper",
-              "r_persons__zi.1.Intercept.",
-              "r_persons__zi.2.Intercept.",
-              "r_persons__zi.3.Intercept.",
-              "r_persons__zi.4.Intercept."
+              "r_persons__zi[1,Intercept]",
+              "r_persons__zi[2,Intercept]",
+              "r_persons__zi[3,Intercept]",
+              "r_persons__zi[4,Intercept]",
+              "sd_persons__zi_Intercept"
             ),
             Effects = c(
               "fixed",
@@ -536,9 +564,11 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "random",
               "random",
               "random",
+              "random",
               "fixed",
               "fixed",
               "fixed",
+              "random",
               "random",
               "random",
               "random",
@@ -552,6 +582,8 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "conditional",
               "conditional",
               "conditional",
+              "conditional",
+              "zero_inflated",
               "zero_inflated",
               "zero_inflated",
               "zero_inflated",
@@ -568,13 +600,15 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "Intercept: persons",
               "Intercept: persons",
               "Intercept: persons",
+              "SD/Cor: persons",
               "",
               "",
               "",
               "Intercept: persons",
               "Intercept: persons",
               "Intercept: persons",
-              "Intercept: persons"
+              "Intercept: persons",
+              "SD/Cor: persons"
             ),
             Cleaned_Parameter = c(
               "(Intercept)",
@@ -585,17 +619,23 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "persons.3",
               "persons.4",
               "(Intercept)",
+              "(Intercept)",
               "child",
               "camper",
               "persons.1",
               "persons.2",
               "persons.3",
-              "persons.4"
+              "persons.4",
+              "(Intercept)"
             )
           ),
           class = c("clean_parameters", "data.frame"),
-          row.names = c(NA, -14L)
-        )
+          row.names = c(
+            NA,
+            -16L
+          )
+        ),
+        ignore_attr = TRUE
       )
 
       expect_equal(
@@ -609,26 +649,30 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "b_count2_Intercept",
               "b_count2_child",
               "b_count2_livebait",
-              "r_persons__count.1.Intercept.",
-              "r_persons__count.2.Intercept.",
-              "r_persons__count.3.Intercept.",
-              "r_persons__count.4.Intercept.",
-              "r_persons__count2.1.Intercept.",
-              "r_persons__count2.2.Intercept.",
-              "r_persons__count2.3.Intercept.",
-              "r_persons__count2.4.Intercept.",
+              "r_persons__count[1,Intercept]",
+              "r_persons__count[2,Intercept]",
+              "r_persons__count[3,Intercept]",
+              "r_persons__count[4,Intercept]",
+              "sd_persons__count_Intercept",
+              "r_persons__count2[1,Intercept]",
+              "r_persons__count2[2,Intercept]",
+              "r_persons__count2[3,Intercept]",
+              "r_persons__count2[4,Intercept]",
+              "sd_persons__count2_Intercept",
               "b_zi_count_Intercept",
               "b_zi_count_camper",
               "b_zi_count2_Intercept",
               "b_zi_count2_child",
-              "r_persons__zi_count.1.Intercept.",
-              "r_persons__zi_count.2.Intercept.",
-              "r_persons__zi_count.3.Intercept.",
-              "r_persons__zi_count.4.Intercept.",
-              "r_persons__zi_count2.1.Intercept.",
-              "r_persons__zi_count2.2.Intercept.",
-              "r_persons__zi_count2.3.Intercept.",
-              "r_persons__zi_count2.4.Intercept."
+              "r_persons__zi_count[1,Intercept]",
+              "r_persons__zi_count[2,Intercept]",
+              "r_persons__zi_count[3,Intercept]",
+              "r_persons__zi_count[4,Intercept]",
+              "sd_persons__zi_count_Intercept",
+              "r_persons__zi_count2[1,Intercept]",
+              "r_persons__zi_count2[2,Intercept]",
+              "r_persons__zi_count2[3,Intercept]",
+              "r_persons__zi_count2[4,Intercept]",
+              "sd_persons__zi_count2_Intercept"
             ),
             Effects = c(
               "fixed",
@@ -645,10 +689,14 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "random",
               "random",
               "random",
+              "random",
+              "random",
               "fixed",
               "fixed",
               "fixed",
               "fixed",
+              "random",
+              "random",
               "random",
               "random",
               "random",
@@ -673,6 +721,10 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "conditional",
               "conditional",
               "conditional",
+              "conditional",
+              "conditional",
+              "zero_inflated",
+              "zero_inflated",
               "zero_inflated",
               "zero_inflated",
               "zero_inflated",
@@ -697,10 +749,12 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "Intercept: persons",
               "Intercept: persons",
               "Intercept: persons",
+              "SD/Cor: persons",
               "Intercept: persons2",
               "Intercept: persons2",
               "Intercept: persons2",
               "Intercept: persons2",
+              "SD/Cor: persons",
               "",
               "",
               "",
@@ -709,10 +763,12 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "Intercept: persons",
               "Intercept: persons",
               "Intercept: persons",
+              "SD/Cor: persons",
               "Intercept: persons2",
               "Intercept: persons2",
               "Intercept: persons2",
-              "Intercept: persons2"
+              "Intercept: persons2",
+              "SD/Cor: persons"
             ),
             Response = c(
               "count",
@@ -725,6 +781,8 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "count",
               "count",
               "count",
+              "count",
+              "count2",
               "count2",
               "count2",
               "count2",
@@ -737,6 +795,8 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "count",
               "count",
               "count",
+              "count",
+              "count2",
               "count2",
               "count2",
               "count2",
@@ -753,10 +813,12 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "persons.2",
               "persons.3",
               "persons.4",
+              "count_Intercept",
               "persons2.1",
               "persons2.2",
               "persons2.3",
               "persons2.4",
+              "count2_Intercept",
               "(Intercept)",
               "camper",
               "(Intercept)",
@@ -765,15 +827,18 @@ if (.runThisTest || Sys.getenv("USER") == "travis") {
               "persons.2",
               "persons.3",
               "persons.4",
+              "zi_count_Intercept",
               "persons2.1",
               "persons2.2",
               "persons2.3",
-              "persons2.4"
+              "persons2.4",
+              "zi_count2_Intercept"
             )
           ),
           class = c("clean_parameters", "data.frame"),
-          row.names = c(NA, -26L)
-        )
+          row.names = c(NA, -30L)
+        ),
+        ignore_attr = TRUE
       )
     })
   }

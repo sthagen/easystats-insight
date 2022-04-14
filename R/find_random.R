@@ -4,7 +4,7 @@
 #' @description Return the name of the grouping factors from mixed effects models.
 #'
 #' @param x A fitted mixed model.
-#' @param split_nested Logical, if \code{TRUE}, terms from nested random
+#' @param split_nested Logical, if `TRUE`, terms from nested random
 #'   effects will be returned as separated elements, not as single string
 #'   with colon. See 'Examples'.
 #'
@@ -15,43 +15,50 @@
 #'    random effects (grouping factors). Depending on the model, the
 #'    returned list has following elements:
 #'    \itemize{
-#'      \item \code{random}, the "random effects" terms from the conditional part of model
-#'      \item \code{zero_inflated_random}, the "random effects" terms from the zero-inflation component of the model
+#'      \item `random`, the "random effects" terms from the conditional part of model
+#'      \item `zero_inflated_random`, the "random effects" terms from the
+#'      zero-inflation component of the model
 #'    }
 #'
 #' @examples
-#' library(lme4)
-#' data(sleepstudy)
-#' sleepstudy$mygrp <- sample(1:5, size = 180, replace = TRUE)
-#' sleepstudy$mysubgrp <- NA
-#' for (i in 1:5) {
-#'   filter_group <- sleepstudy$mygrp == i
-#'   sleepstudy$mysubgrp[filter_group] <-
-#'     sample(1:30, size = sum(filter_group), replace = TRUE)
+#' if (require("lme4")) {
+#'   data(sleepstudy)
+#'   sleepstudy$mygrp <- sample(1:5, size = 180, replace = TRUE)
+#'   sleepstudy$mysubgrp <- NA
+#'   for (i in 1:5) {
+#'     filter_group <- sleepstudy$mygrp == i
+#'     sleepstudy$mysubgrp[filter_group] <-
+#'       sample(1:30, size = sum(filter_group), replace = TRUE)
+#'   }
+#'
+#'   m <- lmer(
+#'     Reaction ~ Days + (1 | mygrp / mysubgrp) + (1 | Subject),
+#'     data = sleepstudy
+#'   )
+#'
+#'   find_random(m)
+#'   find_random(m, split_nested = TRUE)
 #' }
-#'
-#' m <- lmer(
-#'   Reaction ~ Days + (1 | mygrp / mysubgrp) + (1 | Subject),
-#'   data = sleepstudy
-#' )
-#'
-#' find_random(m)
-#' find_random(m, split_nested = TRUE)
 #' @export
 find_random <- function(x, split_nested = FALSE, flatten = FALSE) {
-  f <- find_formula(x)
+  UseMethod("find_random")
+}
+
+#' @export
+find_random.default <- function(x, split_nested = FALSE, flatten = FALSE) {
+  f <- find_formula(x, verbose = FALSE)
 
   if (is_multivariate(x)) {
     rn <- names(find_response(x))
     l <- lapply(rn, function(i) .find_random_effects(x, f[[i]], split_nested))
     names(l) <- rn
-    l <- .compact_list(l)
+    l <- compact_list(l)
   } else {
     l <- .find_random_effects(x, f, split_nested)
   }
 
 
-  if (.is_empty_object(l)) {
+  if (is_empty_object(l)) {
     return(NULL)
   }
 
@@ -62,13 +69,23 @@ find_random <- function(x, split_nested = FALSE, flatten = FALSE) {
   }
 }
 
+#' @export
+find_random.afex_aov <- function(x, split_nested = FALSE, flatten = FALSE) {
+  if (flatten) {
+    attr(x, "id")
+  } else {
+    list(random = attr(x, "id"))
+  }
+}
+
+
 
 .find_random_effects <- function(x, f, split_nested) {
-  if (!.obj_has_name(f, "random") && !.obj_has_name(f, "zero_inflated_random")) {
+  if (!object_has_names(f, "random") && !object_has_names(f, "zero_inflated_random")) {
     return(NULL)
   }
 
-  if (.obj_has_name(f, "random")) {
+  if (object_has_names(f, "random")) {
     if (is.list(f$random)) {
       r1 <- unique(unlist(lapply(f$random, function(.x) .get_model_random(.x, split_nested, x))))
     } else {
@@ -79,7 +96,7 @@ find_random <- function(x, split_nested = FALSE, flatten = FALSE) {
   }
 
 
-  if (.obj_has_name(f, "zero_inflated_random")) {
+  if (object_has_names(f, "zero_inflated_random")) {
     if (is.list(f$zero_inflated_random)) {
       r2 <- unique(unlist(lapply(f$zero_inflated_random, function(.x) .get_model_random(.x, split_nested, x))))
     } else {
@@ -90,5 +107,5 @@ find_random <- function(x, split_nested = FALSE, flatten = FALSE) {
   }
 
 
-  .compact_list(list(random = r1, zero_inflated_random = r2))
+  compact_list(list(random = r1, zero_inflated_random = r2))
 }

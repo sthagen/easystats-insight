@@ -1,32 +1,44 @@
+osx <- tryCatch(
+  {
+    si <- Sys.info()
+    if (!is.null(si["sysname"])) {
+      si["sysname"] == "Darwin" || grepl("^darwin", R.version$os)
+    } else {
+      FALSE
+    }
+  },
+  error = function(e) {
+    FALSE
+  }
+)
+
 unloadNamespace("gam")
 
-if (require("testthat") && require("insight") && require("gamm4")) {
-  context("insight, model_info")
+.runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
+if (.runThisTest && !osx && requiet("testthat") && requiet("insight") && requiet("gamm4")) {
   set.seed(0)
-  dat <-
-    gamSim(1, n = 400, scale = 2) ## simulate 4 term additive truth
+  dat <- gamSim(1, n = 400, scale = 2) ## simulate 4 term additive truth
   dat$fac <- fac <- as.factor(sample(1:20, 400, replace = TRUE))
   dat$y <- dat$y + model.matrix(~ fac - 1) %*% rnorm(20) * .5
 
-  m1 <-
-    gamm4(y ~ s(x0) + x1 + s(x2),
-      data = dat,
-      random = ~ (1 | fac)
-    )
+  m1 <- gamm4(y ~ s(x0) + x1 + s(x2),
+    data = dat,
+    random = ~ (1 | fac)
+  )
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_linear)
   })
 
   test_that("clean_names", {
-    expect_equal(clean_names(m1), c("y", "x0", "x1", "x2"))
+    expect_equal(clean_names(m1), c("y", "x0", "x1", "x2", "fac"))
   })
 
   test_that("find_predictors", {
     expect_identical(find_predictors(m1), list(conditional = c("x0", "x1", "x2")))
     expect_identical(find_predictors(m1, flatten = TRUE), c("x0", "x1", "x2"))
-    expect_null(find_predictors(m1, effects = "random"))
+    expect_identical(find_predictors(m1, effects = "random"), list(random = "fac"))
   })
 
   test_that("find_response", {
@@ -63,30 +75,36 @@ if (require("testthat") && require("insight") && require("gamm4")) {
   })
 
   test_that("find_formula", {
-    expect_length(find_formula(m1), 1)
+    expect_length(find_formula(m1), 2)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("y ~ s(x0) + x1 + s(x2)"))
+      list(
+        conditional = as.formula("y ~ s(x0) + x1 + s(x2)"),
+        random = as.formula("~1 | fac")
+      ),
+      ignore_attr = TRUE
     )
   })
 
   test_that("find_terms", {
     expect_equal(find_terms(m1), list(
       response = "y",
-      conditional = c("s(x0)", "x1", "s(x2)")
+      conditional = c("s(x0)", "x1", "s(x2)"),
+      random = "fac"
     ))
     expect_equal(
       find_terms(m1, flatten = TRUE),
-      c("y", "s(x0)", "x1", "s(x2)")
+      c("y", "s(x0)", "x1", "s(x2)", "fac")
     )
   })
 
   test_that("find_variables", {
     expect_equal(find_variables(m1), list(
       response = "y",
-      conditional = c("x0", "x1", "x2")
+      conditional = c("x0", "x1", "x2"),
+      random = "fac"
     ))
-    expect_equal(find_variables(m1, flatten = TRUE), c("y", "x0", "x1", "x2"))
+    expect_equal(find_variables(m1, flatten = TRUE), c("y", "x0", "x1", "x2", "fac"))
   })
 
   test_that("n_obs", {
@@ -117,6 +135,6 @@ if (require("testthat") && require("insight") && require("gamm4")) {
   })
 
   test_that("find_statistic", {
-    expect_error(find_statistic(m1))
+    expect_null(find_statistic(m1))
   })
 }

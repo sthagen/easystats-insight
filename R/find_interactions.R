@@ -6,12 +6,18 @@
 #' @inheritParams find_predictors
 #'
 #' @return A list of character vectors that represent the interaction terms.
-#'  Depending on \code{component}, the returned list has following
-#'  elements (or \code{NULL}, if model has no interaction term):
+#'  Depending on `component`, the returned list has following
+#'  elements (or `NULL`, if model has no interaction term):
 #'  \itemize{
-#'    \item \code{conditional}, interaction terms that belong to the "fixed effects" terms from the model
-#'    \item \code{zero_inflated}, interaction terms that belong to the "fixed effects" terms from the zero-inflation component of the model
-#'    \item \code{instruments}, for fixed-effects regressions like \code{ivreg}, \code{felm} or \code{plm}, interaction terms that belong to the instrumental variables
+#'    \item `conditional`, interaction terms that belong to the "fixed
+#'    effects" terms from the model
+#'
+#'    \item `zero_inflated`, interaction terms that belong to the "fixed
+#'    effects" terms from the zero-inflation component of the model
+#'
+#'    \item `instruments`, for fixed-effects regressions like `ivreg`,
+#'    `felm` or `plm`, interaction terms that belong to the
+#'    instrumental variables
 #'  }
 #'
 #' @examples
@@ -23,24 +29,36 @@
 #' m <- lm(mpg ~ wt * cyl + vs * hp * gear + carb, data = mtcars)
 #' find_interactions(m)
 #' @export
-find_interactions <- function(x, component = c("all", "conditional", "zi", "zero_inflated", "dispersion", "instruments"), flatten = FALSE) {
+find_interactions <- function(x,
+                              component = c("all", "conditional", "zi", "zero_inflated", "dispersion", "instruments"),
+                              flatten = FALSE) {
   component <- match.arg(component)
-  .find_interactions(x, effects = "fixed", component, flatten, main_effects = FALSE)
+
+  .find_interactions(x,
+    effects = "fixed",
+    component,
+    flatten,
+    main_effects = FALSE
+  )
 }
 
 
-.find_interactions <- function(x, effects = "fixed", component, flatten, main_effects = FALSE) {
+.find_interactions <- function(x,
+                               effects = "fixed",
+                               component,
+                               flatten,
+                               main_effects = FALSE) {
   f <- find_formula(x)
   is_mv <- is_multivariate(f)
   elements <- .get_elements(effects = effects, component = component)
 
   if (is_mv) {
-    l <- lapply(f, function(.x) .compact_list(lapply(.x[elements], function(i) .get_interaction_terms(i, main_effects))))
+    l <- lapply(f, function(.x) compact_list(lapply(.x[elements], function(i) .get_interaction_terms(i, main_effects))))
   } else {
-    l <- .compact_list(lapply(f[elements], function(i) .get_interaction_terms(i, main_effects)))
+    l <- compact_list(lapply(f[elements], function(i) .get_interaction_terms(i, main_effects)))
   }
 
-  if (.is_empty_object(l)) {
+  if (is_empty_object(l)) {
     return(NULL)
   }
 

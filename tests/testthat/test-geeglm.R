@@ -1,8 +1,6 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("geepack")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("geepack")) {
   data(warpbreaks)
   m1 <-
     geeglm(
@@ -44,7 +42,7 @@ if (require("testthat") &&
   })
 
   test_that("get_random", {
-    expect_equal(get_random(m1), warpbreaks[, "wool", drop = FALSE])
+    expect_equal(get_random(m1), warpbreaks[, "wool", drop = FALSE], ignore_attr = TRUE)
   })
 
   test_that("get_predictors", {
@@ -67,7 +65,8 @@ if (require("testthat") &&
       list(
         conditional = as.formula("breaks ~ tension"),
         random = as.formula("~wool")
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 

@@ -1,8 +1,21 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("feisr")) {
-  context("insight, feisr")
+osx <- tryCatch(
+  {
+    si <- Sys.info()
+    if (!is.null(si["sysname"])) {
+      si["sysname"] == "Darwin" || grepl("^darwin", R.version$os)
+    } else {
+      FALSE
+    }
+  },
+  error = function(e) {
+    FALSE
+  }
+)
 
+if (!osx && requiet("testthat") &&
+  requiet("insight") &&
+  requiet("plm") &&
+  requiet("feisr")) {
   data(mwp)
   m1 <- feis(
     lnw ~ marry + enrol + as.factor(yeargr) | exp + I(exp^2),
@@ -70,7 +83,8 @@ if (require("testthat") &&
         conditional = as.formula("lnw ~ marry + enrol + as.factor(yeargr)"),
         slopes = as.formula("~exp + I(exp^2)"),
         random = as.formula("~id")
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 

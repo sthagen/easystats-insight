@@ -1,14 +1,14 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("ordinal") &&
-  require("MASS")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("ordinal") &&
+  requiet("MASS")) {
   data(housing, package = "MASS")
   m1 <- clm2(Sat ~ Infl + Type + Cont, weights = Freq, data = housing)
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_ordinal)
+    expect_false(model_info(m1)$is_multinomial)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -64,7 +64,8 @@ if (require("testthat") &&
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("Sat ~ Infl + Type + Cont"))
+      list(conditional = as.formula("Sat ~ Infl + Type + Cont")),
+      ignore_attr = TRUE
     )
   })
 

@@ -2,23 +2,62 @@
 % Please edit documentation in R/format_value.R
 \name{format_value}
 \alias{format_value}
+\alias{format_value.data.frame}
+\alias{format_value.numeric}
 \title{Numeric Values Formatting}
 \usage{
-format_value(x, digits = 2, protect_integers = FALSE, missing = "",
-  width = NULL, ...)
+format_value(x, ...)
+
+\method{format_value}{data.frame}(
+  x,
+  digits = 2,
+  protect_integers = FALSE,
+  missing = "",
+  width = NULL,
+  as_percent = FALSE,
+  zap_small = FALSE,
+  ...
+)
+
+\method{format_value}{numeric}(
+  x,
+  digits = 2,
+  protect_integers = FALSE,
+  missing = "",
+  width = NULL,
+  as_percent = FALSE,
+  zap_small = FALSE,
+  ...
+)
 }
 \arguments{
 \item{x}{Numeric value.}
 
-\item{digits}{Number of significant digits.}
-
-\item{protect_integers}{Should integers be kept as integers (i.e., without decimals)?}
-
-\item{missing}{Value by which \code{NA} values are replaced. By default, an empty string (i.e. \code{""}) is returned for \code{NA}.}
-
-\item{width}{Minimum width of the returned string. If not \code{NULL} and \code{width} is larger than the string's length, leading whitespaces are added to the string.}
-
 \item{...}{Arguments passed to or from other methods.}
+
+\item{digits}{Number of digits for rounding or significant figures. May also
+be \code{"signif"} to return significant figures or \code{"scientific"}
+to return scientific notation. Control the number of digits by adding the
+value as suffix, e.g. \code{digits = "scientific4"} to have scientific
+notation with 4 decimal places, or \code{digits = "signif5"} for 5
+significant figures (see also \code{\link[=signif]{signif()}}).}
+
+\item{protect_integers}{Should integers be kept as integers (i.e., without
+decimals)?}
+
+\item{missing}{Value by which \code{NA} values are replaced. By default, an
+empty string (i.e. \code{""}) is returned for \code{NA}.}
+
+\item{width}{Minimum width of the returned string. If not \code{NULL} and
+\code{width} is larger than the string's length, leading whitespaces are
+added to the string.}
+
+\item{as_percent}{Logical, if \code{TRUE}, value is formatted as percentage
+value.}
+
+\item{zap_small}{Logical, if \code{TRUE}, small values are rounded after
+\code{digits} decimal places. If \code{FALSE}, values with more decimal
+places than \code{digits} are printed in scientific notation.}
 }
 \value{
 A formatted string.
@@ -31,6 +70,15 @@ format_value(1.20)
 format_value(1.2)
 format_value(1.2012313)
 format_value(c(0.0045, 234, -23))
+format_value(c(0.0045, .12, .34))
+format_value(c(0.0045, .12, .34), as_percent = TRUE)
+format_value(c(0.0045, .12, .34), digits = "scientific")
+format_value(c(0.0045, .12, .34), digits = "scientific2")
+
+# default
+format_value(c(0.0045, .123, .345))
+# significant figures
+format_value(c(0.0045, .123, .345), digits = "signif")
 
 format_value(as.factor(c("A", "B", "A")))
 format_value(iris$Species)
@@ -38,5 +86,5 @@ format_value(iris$Species)
 format_value(3)
 format_value(3, protect_integers = TRUE)
 
-format_value(iris)
+format_value(head(iris))
 }

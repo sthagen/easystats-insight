@@ -1,13 +1,13 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("ordinal")) {
-  context("insight, model_info")
-
+if (requiet("testthat") &&
+  requiet("insight") &&
+  requiet("ordinal")) {
   data(wine, package = "ordinal")
   m1 <- clm(rating ~ temp * contact, data = wine)
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_ordinal)
+    expect_false(model_info(m1)$is_multinomial)
+    expect_false(model_info(m1)$is_linear)
   })
 
   test_that("find_predictors", {
@@ -49,7 +49,8 @@ if (require("testthat") &&
     expect_length(find_formula(m1), 1)
     expect_equal(
       find_formula(m1),
-      list(conditional = as.formula("rating ~ temp * contact"))
+      list(conditional = as.formula("rating ~ temp * contact")),
+      ignore_attr = TRUE
     )
   })
 
@@ -108,5 +109,30 @@ if (require("testthat") &&
 
   test_that("find_statistic", {
     expect_identical(find_statistic(m1), "z-statistic")
+  })
+
+  test_that("get_predicted", {
+    nd <- wine
+    nd$rating <- NULL
+    x <- as.data.frame(get_predicted(m1))
+    y <- as.data.frame(get_predicted(m1, predict = NULL, type = "prob"))
+    z <- predict(m1, type = "prob", newdata = nd, se.fit = TRUE)
+    expect_true(all(c("Row", "Response", "Predicted", "SE") %in% colnames(x)))
+    expect_equal(x, y)
+    for (i in 1:5) {
+      expect_equal(x$Predicted[x$Response == i], unname(z$fit[, i]), ignore_attr = FALSE)
+      expect_equal(x$SE[x$Response == i], unname(z$se.fit[, i]), ignore_attr = FALSE)
+    }
+    x <- as.data.frame(get_predicted(m1, predict = "classification"))
+    y <- as.data.frame(get_predicted(m1, predict = NULL, type = "class"))
+    z <- predict(m1, type = "class", newdata = nd)
+    expect_equal(x, y)
+    expect_equal(as.character(x$Predicted), as.character(z$fit), ignore_attr = FALSE)
+
+    # we use a hack to handle in-formula factors
+    tmp <- wine
+    tmp$rating <- as.numeric(tmp$rating)
+    tmp <- clm(factor(rating) ~ temp * contact, data = tmp)
+    expect_s3_class(get_predicted(tmp), "get_predicted")
   })
 }

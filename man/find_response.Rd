@@ -4,7 +4,7 @@
 \alias{find_response}
 \title{Find name of the response variable}
 \usage{
-find_response(x, combine = TRUE)
+find_response(x, combine = TRUE, ...)
 }
 \arguments{
 \item{x}{A fitted model.}
@@ -13,19 +13,23 @@ find_response(x, combine = TRUE)
 the name of the response matches the notation in formula, and would for
 instance also contain patterns like \code{"cbind(...)"}. Else, the original
 variable names from the matrix-column are returned. See 'Examples'.}
+
+\item{...}{Currently not used.}
 }
 \value{
-The name(s) of the response variable(s) from \code{x} as character vector.
+The name(s) of the response variable(s) from \code{x} as character
+vector, or \code{NULL} if response variable could not be found.
 }
 \description{
 Returns the name(s) of the response variable(s) from a model object.
 }
 \examples{
-library(lme4)
-data(cbpp)
-cbpp$trials <- cbpp$size - cbpp$incidence
-m <- glm(cbind(incidence, trials) ~ period, data = cbpp, family = binomial)
+if (require("lme4")) {
+  data(cbpp)
+  cbpp$trials <- cbpp$size - cbpp$incidence
+  m <- glm(cbind(incidence, trials) ~ period, data = cbpp, family = binomial)
 
-find_response(m, combine = TRUE)
-find_response(m, combine = FALSE)
+  find_response(m, combine = TRUE)
+  find_response(m, combine = FALSE)
+}
 }

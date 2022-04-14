@@ -1,8 +1,4 @@
-if (require("testthat") &&
-  require("insight") &&
-  require("AER")) {
-  context("insight, AER")
-
+if (requiet("testthat") && requiet("insight") && requiet("AER")) {
   data("Affairs", package = "AER")
   m1 <-
     AER::tobit(affairs ~ age + yearsmarried + religiousness + occupation + rating,
@@ -93,7 +89,8 @@ if (require("testthat") &&
         conditional = as.formula(
           "affairs ~ age + yearsmarried + religiousness + occupation + rating"
         )
-      )
+      ),
+      ignore_attr = TRUE
     )
   })
 

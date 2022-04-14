@@ -1,12 +1,13 @@
 #' @title Find names of model weights
 #' @name find_weights
 #'
-#' @description Returns the name of the variable that describes the weights of a model.
+#' @description Returns the name of the variable that describes the weights of a
+#'   model.
 #'
 #' @param x A fitted model.
 #' @param ... Currently not used.
 #'
-#' @return The name of the weighting variable as character vector, or \code{NULL}
+#' @return The name of the weighting variable as character vector, or `NULL`
 #'   if no weights were specified.
 #'
 #' @examples
@@ -22,29 +23,41 @@ find_weights <- function(x, ...) {
 
 #' @export
 find_weights.default <- function(x, ...) {
-  tryCatch({
-    w <- as.character(parse(text = .safe_deparse(x$call))[[1]]$weights)
-    if (.is_empty_object(w)) w <- NULL
-    w
-  },
-  error = function(e) {
-    NULL
-  }
+  tryCatch(
+    {
+      call_string <- safe_deparse(x$call)
+      if (!is.null(call_string)) {
+        w <- safe_deparse(parse(text = call_string)[[1]]$weights)
+
+        # edge case, users use "eval(parse())" to parse weight variables
+        if (grepl("eval(parse(", w, fixed = TRUE)) {
+          w <- eval(parse(text = trim_ws(gsub("eval\\(parse\\((.*)=(.*)\\)\\)", "\\2", w))))
+        }
+
+        if (is_empty_object(w) || w == "NULL") w <- NULL
+      } else {
+        w <- NULL
+      }
+      w
+    },
+    error = function(e) {
+      NULL
+    }
   )
 }
 
 
 #' @export
 find_weights.brmsfit <- function(x, ...) {
-  f <- find_formula(x)
+  f <- find_formula(x, verbose = FALSE)
 
   if (is_multivariate(f)) {
-    resp <- unlist(lapply(f, function(i) .safe_deparse(i$conditional[[2L]])))
+    resp <- unlist(lapply(f, function(i) safe_deparse(i$conditional[[2L]])))
   } else {
-    resp <- .safe_deparse(f$conditional[[2L]])
+    resp <- safe_deparse(f$conditional[[2L]])
   }
 
-  resp <- .compact_character(unname(sapply(resp, function(i) {
+  resp <- compact_character(unname(sapply(resp, function(i) {
     if (grepl("(.*)\\|(\\s+)weights\\((.*)\\)", i)) {
       i
     } else {
@@ -52,7 +65,34 @@ find_weights.brmsfit <- function(x, ...) {
     }
   })))
 
-  w <- .trim(sub("(.*)\\|(\\s+)weights\\((.*)\\)", "\\3", resp))
-  if (.is_empty_object(w)) w <- NULL
+  w <- trim_ws(sub("(.*)\\|(\\s+)weights\\((.*)\\)", "\\3", resp))
+  if (is_empty_object(w)) w <- NULL
   w
+}
+
+
+#' @export
+find_weights.model_fit <- function(x, ...) {
+  find_weights(x$fit, ...)
+}
+
+
+#' @export
+find_weights.merMod <- function(x, ...) {
+  tryCatch(
+    {
+      w <- safe_deparse(parse(text = safe_deparse(x@call))[[1]]$weights)
+
+      # edge case, users use "eval(parse())" to parse weight variables
+      if (grepl("eval(parse(", w, fixed = TRUE)) {
+        w <- eval(parse(text = trim_ws(gsub("eval\\(parse\\((.*)=(.*)\\)\\)", "\\2", w))))
+      }
+
+      if (is_empty_object(w) || w == "NULL") w <- NULL
+      w
+    },
+    error = function(e) {
+      NULL
+    }
+  )
 }
