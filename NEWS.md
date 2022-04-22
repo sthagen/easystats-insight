@@ -1,5 +1,10 @@
 # insight 0.17.1
 
+## New supported model classes
+
+* `deltaMethod` (*car*), `marginaleffects`, `marginaleffects.summary`
+  (*marginaleffects*)
+
 ## General
 
 * `get_predicted()` now supports models of class `iv_robust` and `ivreg`.
@@ -14,13 +19,17 @@
 
 * `get_loglikehood()` improved handling of models from package *estimator*.
 
-* Support for `car::deltaMethod()` objects.
-
 ## Bug fixes
 
 * Fixed bug in `get_data()` for model objects whose data needs to be recovered
   from the environment, and where the data name was a reserved word (e.g., named
   like an R function).
+
+* The matrix returned by `get_varcov()` for models of class *bife* now returns 
+  row and column names.
+  
+* `find_offset()` did not find offset-terms for `merMod` objects when the 
+  offset was specified as `offset` argument in the function call.
 
 # insight 0.17.0
 

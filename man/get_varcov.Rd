@@ -28,7 +28,7 @@ get_varcov(x, ...)
 
 \method{get_varcov}{clm2}(x, component = c("all", "conditional", "scale"), ...)
 
-\method{get_varcov}{truncreg}(x, component = c("conditional", "all"), ...)
+\method{get_varcov}{truncreg}(x, component = c("conditional", "all"), verbose = TRUE, ...)
 
 \method{get_varcov}{hurdle}(
   x,
@@ -42,6 +42,7 @@ get_varcov(x, ...)
 \method{get_varcov}{glmmTMB}(
   x,
   component = c("conditional", "zero_inflated", "zi", "dispersion", "all"),
+  verbose = TRUE,
   ...
 )
 
@@ -53,13 +54,18 @@ get_varcov(x, ...)
   ...
 )
 
-\method{get_varcov}{brmsfit}(x, component = "conditional", ...)
+\method{get_varcov}{brmsfit}(x, component = "conditional", verbose = TRUE, ...)
 
-\method{get_varcov}{betamfx}(x, component = c("conditional", "precision", "all"), ...)
+\method{get_varcov}{betamfx}(
+  x,
+  component = c("conditional", "precision", "all"),
+  verbose = TRUE,
+  ...
+)
 
-\method{get_varcov}{aov}(x, complete = FALSE, ...)
+\method{get_varcov}{aov}(x, complete = FALSE, verbose = TRUE, ...)
 
-\method{get_varcov}{mixor}(x, effects = c("all", "fixed", "random"), ...)
+\method{get_varcov}{mixor}(x, effects = c("all", "fixed", "random"), verbose = TRUE, ...)
 }
 \arguments{
 \item{x}{A model.}
@@ -111,7 +117,10 @@ for more model objects that probably don't provide a \code{vcov()}-method.
 }
 \note{
 \code{get_varcov()} tries to return the nearest positive definite matrix
-in case of a negative variance-covariance matrix.
+in case of negative eigenvalues of the variance-covariance matrix. This
+ensures that it is still possible, for instance, to calculate standard
+errors of model parameters. A message is shown when the matrix is negative
+definite and a corrected matrix is returned.
 }
 \examples{
 data(mtcars)
