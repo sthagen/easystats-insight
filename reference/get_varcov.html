@@ -12,7 +12,7 @@ for more model objects that probably don't provide a vcov()-method."><meta prope
     
     <a class="navbar-brand me-2" href="../index.html">insight</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.17.0.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.17.0.6</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -87,7 +87,7 @@ for more model objects that probably don't provide a <code><a href="https://rdrr
 <span class="fu">get_varcov</span><span class="op">(</span><span class="va">x</span>, component <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"conditional"</span>, <span class="st">"scale"</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span>
 
 <span class="co"># S3 method for truncreg</span>
-<span class="fu">get_varcov</span><span class="op">(</span><span class="va">x</span>, component <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"conditional"</span>, <span class="st">"all"</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span>
+<span class="fu">get_varcov</span><span class="op">(</span><span class="va">x</span>, component <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"conditional"</span>, <span class="st">"all"</span><span class="op">)</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span>
 
 <span class="co"># S3 method for hurdle</span>
 <span class="fu">get_varcov</span><span class="op">(</span>
@@ -103,6 +103,7 @@ for more model objects that probably don't provide a <code><a href="https://rdrr
 <span class="fu">get_varcov</span><span class="op">(</span>
   <span class="va">x</span>,
   component <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"conditional"</span>, <span class="st">"zero_inflated"</span>, <span class="st">"zi"</span>, <span class="st">"dispersion"</span>, <span class="st">"all"</span><span class="op">)</span>,
+  verbose <span class="op">=</span> <span class="cn">TRUE</span>,
   <span class="va">...</span>
 <span class="op">)</span>
 
@@ -116,16 +117,21 @@ for more model objects that probably don't provide a <code><a href="https://rdrr
 <span class="op">)</span>
 
 <span class="co"># S3 method for brmsfit</span>
-<span class="fu">get_varcov</span><span class="op">(</span><span class="va">x</span>, component <span class="op">=</span> <span class="st">"conditional"</span>, <span class="va">...</span><span class="op">)</span>
+<span class="fu">get_varcov</span><span class="op">(</span><span class="va">x</span>, component <span class="op">=</span> <span class="st">"conditional"</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span>
 
 <span class="co"># S3 method for betamfx</span>
-<span class="fu">get_varcov</span><span class="op">(</span><span class="va">x</span>, component <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"conditional"</span>, <span class="st">"precision"</span>, <span class="st">"all"</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span>
+<span class="fu">get_varcov</span><span class="op">(</span>
+  <span class="va">x</span>,
+  component <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"conditional"</span>, <span class="st">"precision"</span>, <span class="st">"all"</span><span class="op">)</span>,
+  verbose <span class="op">=</span> <span class="cn">TRUE</span>,
+  <span class="va">...</span>
+<span class="op">)</span>
 
 <span class="co"># S3 method for aov</span>
-<span class="fu">get_varcov</span><span class="op">(</span><span class="va">x</span>, complete <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span>
+<span class="fu">get_varcov</span><span class="op">(</span><span class="va">x</span>, complete <span class="op">=</span> <span class="cn">FALSE</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span>
 
 <span class="co"># S3 method for mixor</span>
-<span class="fu">get_varcov</span><span class="op">(</span><span class="va">x</span>, effects <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"fixed"</span>, <span class="st">"random"</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span></code></pre></div>
+<span class="fu">get_varcov</span><span class="op">(</span><span class="va">x</span>, effects <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"fixed"</span>, <span class="st">"random"</span><span class="op">)</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -174,7 +180,10 @@ variance-covariance matrix.</p></dd>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
     <p><code>get_varcov()</code> tries to return the nearest positive definite matrix
-in case of a negative variance-covariance matrix.</p>
+in case of negative eigenvalues of the variance-covariance matrix. This
+ensures that it is still possible, for instance, to calculate standard
+errors of model parameters. A message is shown when the matrix is negative
+definite and a corrected matrix is returned.</p>
     </div>
 
     <div class="section level2">
@@ -221,7 +230,7 @@ in case of a negative variance-covariance matrix.</p>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p></p><p>Developed by <a href="https://github.com/strengejacke/" class="external-link">Daniel Lüdecke</a>, <a href="https://dominiquemakowski.github.io/" class="external-link">Dominique Makowski</a>, <a href="https://sites.google.com/site/indrajeetspatilmorality/" class="external-link">Indrajeet Patil</a>, Philip Waggoner, <a href="https://sites.google.com/view/mattansb/" class="external-link">Mattan S. Ben-Shachar</a>, <a href="https://wiernik.org/" class="external-link">Brenton M. Wiernik</a>.</p>
+  <p></p><p>Developed by <a href="https://github.com/strengejacke/" class="external-link">Daniel Lüdecke</a>, <a href="https://dominiquemakowski.github.io/" class="external-link">Dominique Makowski</a>, <a href="https://sites.google.com/site/indrajeetspatilmorality/" class="external-link">Indrajeet Patil</a>, Philip Waggoner, <a href="https://sites.google.com/view/mattansb/" class="external-link">Mattan S. Ben-Shachar</a>, <a href="https://wiernik.org/" class="external-link">Brenton M. Wiernik</a>, Vincent Arel-Bundock.</p>
 </div>
 
 <div class="pkgdown-footer-right">

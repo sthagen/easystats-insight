@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">insight</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.17.0.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.17.0.6</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,23 +63,29 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.17.1" id="insight-0171">insight 0.17.1<a class="anchor" aria-label="anchor" href="#insight-0171"></a></h2>
 <div class="section level3">
+<h3 id="new-supported-model-classes-0-17-1">New supported model classes<a class="anchor" aria-label="anchor" href="#new-supported-model-classes-0-17-1"></a></h3>
+<ul><li>
+<code>deltaMethod</code> (<em>car</em>), <code>marginaleffects</code>, <code>marginaleffects.summary</code> (<em>marginaleffects</em>)</li>
+</ul></div>
+<div class="section level3">
 <h3 id="general-0-17-1">General<a class="anchor" aria-label="anchor" href="#general-0-17-1"></a></h3>
 <ul><li><p><code><a href="../reference/get_predicted.html">get_predicted()</a></code> now supports models of class <code>iv_robust</code> and <code>ivreg</code>.</p></li>
 <li><p>For <code><a href="../reference/get_predicted.html">get_predicted()</a></code>, when both <code>type</code> and <code>predict</code> are given, <code>type</code> will overwrite <code>predict</code>. Note that this will print a message, because <code>predict</code> is the preferred argument.</p></li>
 <li><p><code><a href="../reference/get_varcov.html">get_varcov()</a></code> gains <code>vcov</code> and <code>vcov_args</code> arguments, to specify the variance-covariance matrix used to compute uncertainty estimates (e.g., for robust standard errors).</p></li>
 <li><p><code>get_loglikehood()</code> improved handling of models from package <em>estimator</em>.</p></li>
-<li><p>Support for <code><a href="https://rdrr.io/pkg/car/man/deltaMethod.html" class="external-link">car::deltaMethod()</a></code> objects.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-17-1">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-17-1"></a></h3>
-<ul><li>Fixed bug in <code><a href="../reference/get_data.html">get_data()</a></code> for model objects whose data needs to be recovered from the environment, and where the data name was a reserved word (e.g., named like an R function).</li>
+<ul><li><p>Fixed bug in <code><a href="../reference/get_data.html">get_data()</a></code> for model objects whose data needs to be recovered from the environment, and where the data name was a reserved word (e.g., named like an R function).</p></li>
+<li><p>The matrix returned by <code><a href="../reference/get_varcov.html">get_varcov()</a></code> for models of class <em>bife</em> now returns row and column names.</p></li>
+<li><p><code><a href="../reference/find_offset.html">find_offset()</a></code> did not find offset-terms for <code>merMod</code> objects when the offset was specified as <code>offset</code> argument in the function call.</p></li>
 </ul></div>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.17.0" id="insight-0170">insight 0.17.0<a class="anchor" aria-label="anchor" href="#insight-0170"></a></h2><p class="text-muted">CRAN release: 2022-03-29</p>
 <div class="section level3">
 <h3 id="breaking-changes-0-17-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-17-0"></a></h3>
-<ul><li>Arguments <code>vcov_estimation</code> and <code>vcov_type</code> in <code><a href="../reference/get_predicted.html">get_predicted()</a></code>, <code>get_predicted_se()</code> and <code><a href="../reference/get_predicted.html">get_predicted_ci()</a></code> are replaced by <code>vcov</code> and <code>vcov_args</code>, to have a more simplified and common interface to control robust covariance matrix estimation.</li>
+<ul><li>Arguments <code>vcov_estimation</code> and <code>vcov_type</code> in <code><a href="../reference/get_predicted.html">get_predicted()</a></code>, <code>get_predicted_se()</code> and <code><a href="../reference/get_predicted_ci.html">get_predicted_ci()</a></code> are replaced by <code>vcov</code> and <code>vcov_args</code>, to have a more simplified and common interface to control robust covariance matrix estimation.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="general-0-17-0">General<a class="anchor" aria-label="anchor" href="#general-0-17-0"></a></h3>
@@ -324,7 +330,7 @@
 <li><p>Fixed issue with <code><a href="../reference/get_parameters.html">get_parameters()</a></code> and <code><a href="../reference/find_parameters.html">find_parameters()</a></code> for multi-group <em>blavaan</em> models.</p></li>
 <li><p>Fixed issue in <code><a href="../reference/ellipsis_info.html">ellipsis_info()</a></code> when detecting nested models with poly-terms.</p></li>
 <li><p>Fixed issue in <code><a href="../reference/find_response.html">find_response()</a></code> for <em>brmsfit</em> models that used the <code><a href="https://rdrr.io/pkg/brms/man/addition-terms.html" class="external-link">resp_thres()</a></code> function in the model formula.</p></li>
-<li><p>Fixed issue in <code><a href="../reference/get_predicted.html">get_predicted_ci()</a></code> for models with rank-deficient model matrix.</p></li>
+<li><p>Fixed issue in <code><a href="../reference/get_predicted_ci.html">get_predicted_ci()</a></code> for models with rank-deficient model matrix.</p></li>
 <li><p>Argument <code>zap_small</code> in <code><a href="../reference/format_value.html">format_value()</a></code> did not work properly over vectorized vectors.</p></li>
 </ul></div>
 </div>
@@ -332,7 +338,7 @@
 <h2 class="pkg-version" data-toc-text="0.13.2" id="insight-0132">insight 0.13.2<a class="anchor" aria-label="anchor" href="#insight-0132"></a></h2><p class="text-muted">CRAN release: 2021-04-01</p>
 <div class="section level3">
 <h3 id="general-0-13-2">General<a class="anchor" aria-label="anchor" href="#general-0-13-2"></a></h3>
-<ul><li><p><code><a href="../reference/get_predicted.html">get_predicted()</a></code> has be revamped with a new API and a stable output form (a vector). In the course of this revision, a new function <code><a href="../reference/get_predicted.html">get_predicted_ci()</a></code> to calculate uncertainty intervals for model predictions.</p></li>
+<ul><li><p><code><a href="../reference/get_predicted.html">get_predicted()</a></code> has be revamped with a new API and a stable output form (a vector). In the course of this revision, a new function <code><a href="../reference/get_predicted_ci.html">get_predicted_ci()</a></code> to calculate uncertainty intervals for model predictions.</p></li>
 <li><p>Improved support for <code>orm</code> (<em>rms</em>).</p></li>
 </ul></div>
 <div class="section level3">
@@ -635,7 +641,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p></p><p>Developed by <a href="https://github.com/strengejacke/" class="external-link">Daniel Lüdecke</a>, <a href="https://dominiquemakowski.github.io/" class="external-link">Dominique Makowski</a>, <a href="https://sites.google.com/site/indrajeetspatilmorality/" class="external-link">Indrajeet Patil</a>, Philip Waggoner, <a href="https://sites.google.com/view/mattansb/" class="external-link">Mattan S. Ben-Shachar</a>, <a href="https://wiernik.org/" class="external-link">Brenton M. Wiernik</a>.</p>
+  <p></p><p>Developed by <a href="https://github.com/strengejacke/" class="external-link">Daniel Lüdecke</a>, <a href="https://dominiquemakowski.github.io/" class="external-link">Dominique Makowski</a>, <a href="https://sites.google.com/site/indrajeetspatilmorality/" class="external-link">Indrajeet Patil</a>, Philip Waggoner, <a href="https://sites.google.com/view/mattansb/" class="external-link">Mattan S. Ben-Shachar</a>, <a href="https://wiernik.org/" class="external-link">Brenton M. Wiernik</a>, Vincent Arel-Bundock.</p>
 </div>
 
 <div class="pkgdown-footer-right">
