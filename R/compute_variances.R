@@ -986,7 +986,7 @@
   } else {
     corrs <- lapply(vals$vc, attr, "correlation")
     rho01 <- sapply(corrs, function(i) {
-      if (!is.null(i)) {
+      if (!is.null(i) && colnames(i)[1] == "(Intercept)") {
         i[-1, 1]
       } else {
         NULL
@@ -1006,13 +1006,25 @@
   corrs <- lapply(vals$vc, attr, "correlation")
   rnd_slopes <- unlist(find_random_slopes(x))
 
-  if (length(rnd_slopes) < 2) {
+  # check if any categorical random slopes. we then have
+  # correlation among factor levels
+  cat_random_slopes <- tryCatch(
+    {
+      d <- get_data(x)[rnd_slopes]
+      any(sapply(d, is.factor))
+    },
+    error = function(e) {
+      NULL
+    }
+  )
+
+  if (length(rnd_slopes) < 2 && !isTRUE(cat_random_slopes)) {
     return(NULL)
   }
 
   rho01 <- tryCatch(
     {
-      lapply(corrs, function(d) {
+      compact_list(lapply(corrs, function(d) {
         d[upper.tri(d, diag = TRUE)] <- NA
         d <- as.data.frame(d)
 
@@ -1020,10 +1032,14 @@
         d <- d[stats::complete.cases(d), ]
         d <- d[!d$Parameter1 %in% c("Intercept", "(Intercept)"), ]
 
+        if (nrow(d) == 0) {
+          return(NULL)
+        }
+
         d$Parameter <- paste0(d$Parameter1, "-", d$Parameter2)
         d$Parameter1 <- d$Parameter2 <- NULL
         stats::setNames(d$Value, d$Parameter)
-      })
+      }))
     },
     error = function(e) {
       NULL
