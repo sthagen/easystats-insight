@@ -146,7 +146,7 @@ find_formula.anova <- function(x, verbose = TRUE, ...) {
 #' @export
 find_formula.SemiParBIV <- function(x, verbose = TRUE, ...) {
   f <- stats::formula(x, ...)
-  names(f) <- c("Equation 1", "Equation 2", "Equation 3")[1:length(f)]
+  names(f) <- c("Equation 1", "Equation 2", "Equation 3")[seq_along(f)]
   f <- list(conditional = f)
   .find_formula_return(f, verbose = verbose)
 }
@@ -319,11 +319,13 @@ find_formula.selection <- function(x, verbose = TRUE, ...) {
   # 1st pass: formulas directly in the call
   # 2nd pass: formulas as symbols (assigned to an object, which is then used in the call)
   f_selection <- tryCatch(
-        stats::as.formula(model_call$selection),
-        error = function(e) stats::as.formula(eval(model_call$selection)))
+    stats::as.formula(model_call$selection),
+    error = function(e) stats::as.formula(eval(model_call$selection))
+  )
   f_outcome <- tryCatch(
-        stats::as.formula(model_call$outcome),
-        error = function(e) stats::as.formula(eval(model_call$outcome)))
+    stats::as.formula(model_call$outcome),
+    error = function(e) stats::as.formula(eval(model_call$outcome))
+  )
   f <- list(conditional = list(
     selection = f_selection,
     outcome = f_outcome
@@ -347,14 +349,14 @@ find_formula.mjoint <- function(x, verbose = TRUE, ...) {
   if (length(s$formLongFixed) == 1) {
     names(f.cond) <- "conditional"
   } else {
-    names(f.cond) <- paste0("conditional", 1:length(f.cond))
+    names(f.cond) <- paste0("conditional", seq_along(f.cond))
   }
 
   f.rand <- s$formLongRandom
   if (length(s$formLongRandom) == 1) {
     names(f.rand) <- "random"
   } else {
-    names(f.rand) <- paste0("random", 1:length(f.rand))
+    names(f.rand) <- paste0("random", seq_along(f.rand))
   }
 
   f <- c(f.cond, f.rand, list(survival = s$formSurv))

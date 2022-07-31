@@ -342,6 +342,15 @@ get_predicted.lrm <- get_predicted.default
 
 
 
+# MASS: rlm -----------------------------------------------------
+# =======================================================================
+
+# these objects inherit from `lm`, but `get_predicted.lm` do not return
+# confidence intervals.
+
+#' @export
+get_predicted.rlm <- get_predicted.default
+
 
 # survival: survreg -----------------------------------------------------
 # =======================================================================
@@ -561,7 +570,8 @@ get_predicted.afex_aov <- function(x, data = NULL, ...) {
           sapply(
             attributes(predictions)$iterations,
             .get_predict_transform_response,
-            response = response)
+            response = response
+          )
         )
       }
     }
@@ -589,7 +599,7 @@ get_predicted.afex_aov <- function(x, data = NULL, ...) {
   if (is.matrix(predictions) && ncol(predictions) > 1) {
     predictions <- as.data.frame(predictions)
     vary <- colnames(predictions)
-    predictions$Row <- sqe_len(nrow(predictions))
+    predictions$Row <- seq_len(nrow(predictions))
     # if we have any focal predictors, add those as well, so we have
     # the associated levels/values for "Row"
     if (!is.null(args$data)) {

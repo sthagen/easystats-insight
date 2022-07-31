@@ -1,9 +1,19 @@
-
 # insight 0.18.0.9990
 
 ## New functions
 
 * `format_percent()` as short-cut for `format_value(as_percent = TRUE)`.
+
+## Changes to functions
+
+* `format_table()` gains an `exact` argument, to either report exact or rounded
+  Bayes factors.
+
+* `get_predicted()` gets a method for models of class `gamlss` (and thereby,
+  `get_loglikelihood()` now also works for those model classes).
+
+* `get_predicted()` now better handles models of class `polr`, `multinom` and 
+  `rlm`.
 
 ## Bug fixes
 
