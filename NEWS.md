@@ -1,4 +1,21 @@
-# insight 0.18.1
+# insight 0.18.3
+
+## Changes to functions
+
+* `format_message()` gets some additional formatting features. See 'Details'
+  in `?format_message` for more information and some current limitations.
+
+* `format_message()` gets a `indention` argument, to specify indention string
+  for subsequent lines.
+
+* `print_color()` and `color_text()` now support bright variants of colors and
+  background colors.
+
+## Bug fixes
+
+* Fixed issues with wrong attribute `adjusted_for` in `insight::get_datagrid()`.
+
+# insight 0.18.2
 
 ## New functions
 
