@@ -6,30 +6,75 @@
 #' for a tutorial on how to create a visualisation matrix using this function.
 #'
 #' @param x An object from which to construct the reference grid.
-#' @param at Can be `"all"`, a character vector or list of named elements, indicating
-#'   the predictors of interest (focal predictors). Can also contain assignments
-#'   (as named list, e.g. `at = list(c(Sepal.Length = c(2, 4), Species = "setosa"))`,
-#'   or as string, e.g. `at = "Sepal.Length = 2"` or
+#' @param at Indicate at which values _focal predictors_ (variables) should be
+#'   represented. If not specified otherwise, representative values for numeric
+#'   variables or predictors are evenly distributed from the minimum to the maximum,
+#'   with a total number of `length` values covering that range (see 'Examples').
+#'   Possible options for `at` are:
+#'   - `"all"`, which will include all variables or predictors.
+#'   - a character vector of one or more variable or predictor names, like
+#'   `c("Species", "Sepal.Width")`, which will create a grid of all combinations
+#'   of unique values. For factors, will use all levels, for numeric variables,
+#'   will use a range of length `length` (evenly spread from minimum to maximum)
+#'   and for character vectors, will use all values.
+#'   - a list of named elements, indicating focal predictors and their representative
+#'   values, e.g. `at = list(c(Sepal.Length = c(2, 4), Species = "setosa"))`.
+#'   - a string with assignments, e.g. `at = "Sepal.Length = 2"` or
 #'   `at = c("Sepal.Length = 2", "Species = 'setosa'")` - note the usage of single
-#'   and double quotes to assign strings within strings). The remaining variables
-#'   will be fixed.
+#'   and double quotes to assign strings within strings.
+#'
+#'   There is a special handling of assignments with _brackets_, i.e. values
+#'   defined inside `[` and `]`.For **numeric** variables, the value(s) inside
+#'   the brackets should either be
+#'   - two values, indicating minum and maximung (e.g. `at = "Sepal.Length = [0, 5]`),
+#'   for which a range of length `length` (evenly spread from given minimum to
+#'   maximum) is created.
+#'   - more than two numeric values `at = "Sepal.Length = [2,3,4,5]"`, in which
+#'   case these values are used as representative values.
+#'   - a "token" that creates pre-defined representative values:
+#'     - for mean and -/+ 1 SD around the mean: `"x = [sd]"`
+#'     - for median and -/+ 1 MAD around the median: `"x = [mad]"`
+#'     - for Tukey's five number summary (minimum, lower-hinge, median, upper-hinge, maximum): `"x = [fivenum]"`
+#'     - for terciles, including minimum and maximum: `"x = [terciles]"`
+#'     - for terciles, excluding minimum and maximum: `"x = [terciles2]"`
+#'     - for quartiles, including minimum and maximum: `"x = [quartiles]"`
+#'     - for quartiles, excluding minimum and maximum: `"x = [quartiles2]"`
+#'     - for minimum and maximum value: `"x = [minmax]"`
+#'     - for 0 and the maximum value: `"x = [zeromax]"`
+#'
+#'   For **factors** variables, the value(s) inside the brackets should indicate
+#'   one or more factor levels, like `at = "Species = [setosa, versicolor]"`.
+#'   **Note**: the `length` argument will be ignored when using brackets-tokens.
+#'
+#'   The remaining variables not specified in `at` will be fixed (see also arguments
+#'   `factors` and `numerics`).
 #' @param length Length of numeric target variables selected in `"at"`. This arguments
 #'   controls the number of (equally spread) values that will be taken to represent the
 #'   continuous variables. A longer length will increase precision, but can also
 #'   substantially increase the size of the datagrid (especially in case of interactions).
 #'   If `NA`, will return all the unique values. In case of multiple continuous target
 #'   variables, `length` can also be a vector of different values (see examples).
-#' @param range If `"range"` (default), will use the minimum and maximum of the
-#'   original data vector as end-points (min and max). If an interval type is specified,
-#'   such as [`"iqr"`][IQR()], [`"ci"`][bayestestR::ci()], [`"hdi"`][bayestestR::hdi()] or
+#' @param range Option to control the representative values given in `at`, if
+#'   no specific values were provided. `range` can be one of the following:
+#'   - `"range"` (default), will use the minimum and maximum of the original data
+#'   vector as end-points (min and max).
+#'   - if an interval type is specified, such as [`"iqr"`][IQR()],
+#'   [`"ci"`][bayestestR::ci()], [`"hdi"`][bayestestR::hdi()] or
 #'   [`"eti"`][bayestestR::eti()], it will spread the values within that range
 #'   (the default CI width is `95%` but this can be changed by adding for instance
-#'   `ci = 0.90`. See [IQR()] and [bayestestR::ci()]. This can be useful to have
-#'   more robust change and skipping extreme values. If [`"sd"`][sd()] or [`"mad"`][mad()],
-#'   it will spread by this dispersion index around the mean or the median, respectively.
-#'   If the `length` argument is an even number (e.g., `4`), it will have one more
-#'   step on the positive side (i.e., `-1, 0, +1, +2`). The result is a named vector.
-#'   See examples.
+#'   `ci = 0.90`.) See [IQR()] and [bayestestR::ci()]. This can be useful to have
+#'   more robust change and skipping extreme values.
+#'   - if [`"sd"`][sd()] or [`"mad"`][mad()], it will spread by this dispersion
+#'   index around the mean or the median, respectively. If the `length` argument
+#'   is an even number (e.g., `4`), it will have one more step on the positive
+#'   side (i.e., `-1, 0, +1, +2`). The result is a named vector. See 'Examples.'
+#'   - `"grid"` will create a reference grid that is useful when plotting
+#'   predictions, by choosing representative values for numeric variables based
+#'   on their position in the reference grid. If a numeric variable is the first
+#'   predictor in `at`, values from minimum to maximum of the same length as
+#'   indicated in `length` are generated. For numeric predictors not specified at
+#'   first in `at`, mean and -1/+1 SD around the mean are returned. For factors,
+#'   all levels are returned.
 #' @param factors Type of summary for factors. Can be `"reference"` (set at the
 #'   reference level), `"mode"` (set at the most common level) or `"all"` to
 #'   keep all levels.
@@ -81,6 +126,14 @@
 #'   ) # change non-targets fixing
 #'   get_datagrid(iris, at = "Sepal.Length", range = "ci", ci = 0.90) # change min/max of target
 #'   get_datagrid(iris, at = "Sepal.Length = [0, 1]") # Manually change min/max
+#'   get_datagrid(iris, at = "Sepal.Length = [sd]") # -1 SD, mean and +1 SD
+#'   get_datagrid(iris, at = "Sepal.Length = [quartiles]") # quartiles
+#'
+#'   # Numeric and categorical variables, generating a grid for plots
+#'   # default spread length = 10
+#'   get_datagrid(iris, at = c("Sepal.Length", "Species"), range = "grid")
+#'   # default spread length = 3 (-1 SD, mean and +1 SD)
+#'   get_datagrid(iris, at = c("Species", "Sepal.Length"), range = "grid")
 #'
 #'
 #'   # Standardization and unstandardization
@@ -110,6 +163,7 @@
 #' model <- lm(Sepal.Length ~ Sepal.Width * Petal.Length, data = iris)
 #' # Get datagrid of predictors
 #' data <- get_datagrid(model, length = c(20, 3), range = c("range", "sd"))
+#' # same as: get_datagrid(model, range = "grid", length = 20)
 #' # Add predictions
 #' data$Sepal.Length <- get_predicted(model, data = data)
 #' # Visualize relationships (each color is at -1 SD, Mean, and + 1 SD of Petal.Length)
@@ -192,7 +246,10 @@ get_datagrid.data.frame <- function(x,
       # Create target list of factors -----------------------------------------
       facs <- list()
       for (fac in specs[specs$is_factor == TRUE, "varname"]) {
-        facs[[fac]] <- get_datagrid(x[[fac]], at = specs[specs$varname == fac, "expression"])
+        facs[[fac]] <- get_datagrid(
+          x[[fac]],
+          at = specs[specs$varname == fac, "expression"]
+        )
       }
 
       # Create target list of numerics ----------------------------------------
@@ -203,14 +260,19 @@ get_datagrid.data.frame <- function(x,
         if (length(length) == 1) {
           length <- rep(length, length(numvars))
         } else if (length(length) != length(numvars)) {
-          stop(format_message("The number of elements in `length` must match the number of numeric target variables (n = ", length(numvars), ")."), call. = FALSE)
+          stop(format_message(
+            "The number of elements in `length` must match the number of numeric target variables (n = ", length(numvars), ")."
+          ), call. = FALSE)
         }
         # Sanitize 'range' argument
         if (length(range) == 1) {
           range <- rep(range, length(numvars))
         } else if (length(range) != length(numvars)) {
-          stop(format_message("The number of elements in `range` must match the number of numeric target variables (n = ", length(numvars), ")."), call. = FALSE)
+          stop(format_message(
+            "The number of elements in `range` must match the number of numeric target variables (n = ", length(numvars), ")."
+          ), call. = FALSE)
         }
+
         # Get datagrids
         for (i in seq_along(numvars)) {
           num <- numvars[i]
@@ -219,6 +281,7 @@ get_datagrid.data.frame <- function(x,
             reference = reference[[num]],
             length = length[i],
             range = range[i],
+            is_first_predictor = specs$varname[1] == num,
             ...
           )
         }
@@ -233,6 +296,9 @@ get_datagrid.data.frame <- function(x,
     # names are the names of the list-elements: one list contains elements of
     # numeric variables, the other one factors.
     targets <- expand.grid(c(nums, facs))
+
+    # sort targets data frame according to order specified in "at"
+    targets <- tryCatch(targets[specs$varname], error = function(e) targets)
 
     # Preserve range ---------------------------------------------------------
     if (preserve_range == TRUE && length(facs) > 0 && length(nums) > 0) {
@@ -386,7 +452,8 @@ get_datagrid.numeric <- function(x, length = 10, range = "range", ...) {
   # Check and clean the target argument
   specs <- .get_datagrid_clean_target(x, ...)
 
-  # If an expression is detected, run it and return it
+  # If an expression is detected, run it and return it - we don't need
+  # to create any spread of values to cover the range; spread is user-defined
   if (!is.na(specs$expression)) {
     return(eval(parse(text = specs$expression)))
   }
@@ -398,7 +465,7 @@ get_datagrid.numeric <- function(x, length = 10, range = "range", ...) {
 
   # Sanity check
   if (!is.numeric(length)) {
-    stop("`length` argument should be an number.")
+    stop("`length` argument should be an number.", call. = FALSE)
   }
 
   # Create a spread
@@ -412,17 +479,26 @@ get_datagrid.double <- get_datagrid.numeric
 
 #' @keywords internal
 .create_spread <- function(x, length = 10, range = "range", ci = 0.95, ...) {
-  range <- match.arg(tolower(range), c("range", "iqr", "ci", "hdi", "eti", "sd", "mad"))
+  range <- match.arg(tolower(range), c("range", "iqr", "ci", "hdi", "eti", "sd", "mad", "grid"))
 
   # bayestestR only for some options
   if (range %in% c("ci", "hdi", "eti")) {
     check_if_installed("bayestestR")
   }
 
+  # check if range = "grid" - then use mean/sd for every numeric that
+  # is not first predictor...
+  if (range == "grid") {
+    range <- "sd"
+    if (isFALSE(list(...)$is_first_predictor)) {
+      length <- 3
+    }
+  }
+
   # If Range is a dispersion (e.g., SD or MAD)
   if (range %in% c("sd", "mad")) {
     spread <- -floor((length - 1) / 2):ceiling((length - 1) / 2)
-    if (range %in% c("sd")) {
+    if (range == "sd") {
       disp <- stats::sd(x, na.rm = TRUE)
       center <- mean(x, na.rm = TRUE)
       labs <- ifelse(sign(spread) == -1, paste(spread, "SD"),
@@ -523,7 +599,9 @@ get_datagrid.logical <- get_datagrid.character
       if (!is.na(varname)) {
         x <- x[[varname]]
       } else {
-        stop(format_message("Couldn't find which variable were selected in `at`. Check spelling and specification."), call. = FALSE)
+        stop(format_message(
+          "Couldn't find which variable were selected in `at`. Check spelling and specification."
+        ), call. = FALSE)
       }
     }
 
@@ -549,15 +627,47 @@ get_datagrid.logical <- get_datagrid.character
         expression <- paste0("as.factor(c(", paste0(parts, collapse = ", "), "))")
       } else {
         # Numeric
-        # If only two, it's probably the range
-        if (length(parts) == 2) {
+        # If one, might be a shortcut
+        if (length(parts) == 1) {
+          shortcuts <- c("meansd", "sd", "mad", "quartiles", "quartiles2", "zeromax", "minmax", "terciles", "terciles2", "fivenum")
+          if (parts %in% shortcuts) {
+            if (parts %in% c("meansd", "sd")) {
+              center <- mean(x, na.rm = TRUE)
+              spread <- stats::sd(x, na.rm = TRUE)
+              expression <- paste0("c(", center - spread, ",", center, ",", center + spread, ")")
+            } else if (parts == "mad") {
+              center <- stats::median(x, na.rm = TRUE)
+              spread <- stats::mad(x, na.rm = TRUE)
+              expression <- paste0("c(", center - spread, ",", center, ",", center + spread, ")")
+            } else if (parts == "quartiles") {
+              expression <- paste0("c(", paste0(as.vector(stats::quantile(x, na.rm = TRUE)), collapse = ","), ")")
+            } else if (parts == "quartiles2") {
+              expression <- paste0("c(", paste0(as.vector(stats::quantile(x, na.rm = TRUE))[2:4], collapse = ","), ")")
+            } else if (parts == "terciles") {
+              expression <- paste0("c(", paste0(as.vector(stats::quantile(x, probs = (1:2) / 3, na.rm = TRUE)), collapse = ","), ")")
+            } else if (parts == "terciles2") {
+              expression <- paste0("c(", paste0(as.vector(stats::quantile(x, probs = (0:3) / 3, na.rm = TRUE)), collapse = ","), ")")
+            } else if (parts == "fivenum") {
+              expression <- paste0("c(", paste0(as.vector(stats::fivenum(x, na.rm = TRUE)), collapse = ","), ")")
+            } else if (parts == "zeromax") {
+              expression <- paste0("c(0,", max(x, na.rm = TRUE), ")")
+            } else if (parts == "minmax") {
+              expression <- paste0("c(", min(x, na.rm = TRUE), ",", max(x, na.rm = TRUE), ")")
+            }
+          } else if (is.numeric(parts)) {
+            expression <- parts
+          } else {
+            stop(format_message(
+              paste0("The `at` argument (", at, ") should either indicate the minimum and the maximum, or one of the following options: ", paste0(shortcuts, collapse = ", ", "."))
+            ), call. = FALSE)
+          }
+          # If only two, it's probably the range
+        } else if (length(parts) == 2) {
           expression <- paste0("seq(", parts[1], ", ", parts[2], ", length.out = length)")
           # If more, it's probably the vector
         } else if (length(parts) > 2) {
           parts <- as.numeric(parts)
           expression <- paste0("c(", paste0(parts, collapse = ", "), ")")
-        } else {
-          stop(format_message(paste0("The `at` argument (", at, ") should indicate the minimum and the maximum.")), call. = FALSE)
         }
       }
       # Else, try to directly eval the content
@@ -572,7 +682,9 @@ get_datagrid.logical <- get_datagrid.character
           eval(parse(text = at))
         },
         error = function(r) {
-          stop(format_message(paste0("The `at` argument (`", original_target, "`) cannot be read and could be mispecified.")), call. = FALSE)
+          stop(format_message(
+            paste0("The `at` argument (`", original_target, "`) cannot be read and could be mispecified.")
+          ), call. = FALSE)
         }
       )
     }
@@ -783,7 +895,7 @@ get_datagrid.datagrid <- get_datagrid.visualisation_matrix
     stop(format_message(
       "Can't access data that was used to fit the model in order to create the reference grid.",
       "Please use the `data` argument."
-    ))
+    ), call. = FALSE)
   }
 
   data
@@ -792,7 +904,8 @@ get_datagrid.datagrid <- get_datagrid.visualisation_matrix
 
 
 .extract_at_interactions <- function(at) {
-  interaction_terms <- grepl("(:|\\*)", at)
+  # get interaction terms, but only if these are not inside brackets (like "[4:8]")
+  interaction_terms <- grepl("(:|\\*)(?![^\\[]*\\])", at, perl = TRUE)
   if (any(interaction_terms)) {
     at <- unique(clean_names(trim_ws(compact_character(c(
       at[!interaction_terms],
