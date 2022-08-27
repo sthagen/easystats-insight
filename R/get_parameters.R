@@ -78,7 +78,7 @@ get_parameters.default <- function(x, verbose = TRUE, ...) {
     },
     error = function(x) {
       if (isTRUE(verbose)) {
-        warning(sprintf("Parameters can't be retrieved for objects of class '%s'.", class(x)[1]), call. = FALSE)
+        warning(sprintf("Parameters can't be retrieved for objects of class `%s`.", class(x)[1]), call. = FALSE)
       }
       return(NULL)
     }
@@ -399,7 +399,7 @@ get_parameters.multinom <- function(x, ...) {
 
   if (is.matrix(params)) {
     out <- data.frame()
-    for (i in 1:nrow(params)) {
+    for (i in seq_len(nrow(params))) {
       out <- rbind(out, data.frame(
         Parameter = colnames(params),
         Estimate = unname(params[i, ]),
