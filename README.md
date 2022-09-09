@@ -5,6 +5,7 @@
 [![downloads](https://cranlogs.r-pkg.org/badges/insight)](https://cranlogs.r-pkg.org/)
 [![total](https://cranlogs.r-pkg.org/badges/grand-total/insight)](https://cranlogs.r-pkg.org/)
 [![status](https://tinyverse.netlify.com/badge/insight)](https://CRAN.R-project.org/package=insight)
+[![lifecycle](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://lifecycle.r-lib.org/articles/stages.html)
 
 **Gain insight into your models!**
 
@@ -29,16 +30,16 @@ to every aspect of many model objects via consistent syntax and output.
 [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/insight)](https://cran.r-project.org/package=insight)
 [![insight status
 badge](https://easystats.r-universe.dev/badges/insight)](https://easystats.r-universe.dev)
-[![R
-check](https://github.com/easystats/insight/workflows/R-check/badge.svg?branch=master)](https://github.com/easystats/insight/actions)
+[![R-CMD-check](https://github.com/easystats/insight/workflows/R-CMD-check/badge.svg?branch=main)](https://github.com/easystats/insight/actions)
 
 The *insight* package is available on CRAN, while its latest development
-version is available on R-universe (from *rOpenSci*).
+version is available on R-universe (from *rOpenSci*) or GitHub.
 
 | Type        | Source     | Command                                                                   |
 |-------------|------------|---------------------------------------------------------------------------|
 | Release     | CRAN       | `install.packages("insight")`                                             |
-| Development | R-universe | `install.packages("insight", repos = "https://easystats.r-universe.dev")` |
+| Development | r-universe | `install.packages("insight", repos = "https://easystats.r-universe.dev")` |
+| Development | GitHub     | `remotes::install_github("easystats/insight")`                            |
 
 Once you have downloaded the package, you can then load it using:
 
@@ -83,15 +84,15 @@ as *coefficients*.
 
 #### Response and Predictors
 
--   **response**: the outcome or response variable (dependent variable)
-    of a regression model.
--   **predictor**: independent variables of (the *fixed* part of) a
-    regression model. For mixed models, variables that are only in the
-    *random effects* part (i.e. grouping factors) of the model are not
-    returned as predictors by default. However, these can be included
-    using additional arguments in the function call, treating predictors
-    are “unique”. As such, if a variable appears as a fixed effect and a
-    random slope, it is treated as one (the same) predictor.
+- **response**: the outcome or response variable (dependent variable) of
+  a regression model.
+- **predictor**: independent variables of (the *fixed* part of) a
+  regression model. For mixed models, variables that are only in the
+  *random effects* part (i.e. grouping factors) of the model are not
+  returned as predictors by default. However, these can be included
+  using additional arguments in the function call, treating predictors
+  are “unique”. As such, if a variable appears as a fixed effect and a
+  random slope, it is treated as one (the same) predictor.
 
 #### Variables
 
@@ -109,10 +110,10 @@ and `poly(x, 2)`.
 
 #### Random Effects
 
--   **random slopes**: variables that are specified as random slopes in
-    a mixed effects model.
--   **random or grouping factors**: variables that are specified as
-    grouping variables in a mixed effects model.
+- **random slopes**: variables that are specified as random slopes in a
+  mixed effects model.
+- **random or grouping factors**: variables that are specified as
+  grouping variables in a mixed effects model.
 
 *Aren’t the predictors, terms and parameters the same thing?*
 
@@ -387,11 +388,11 @@ supported_models()
 #> [211] "zerotrunc"
 ```
 
--   **Didn’t find a model?** [File an
-    issue](https://github.com/easystats/insight/issues) and request
-    additional model-support in *insight*!
+- **Didn’t find a model?** [File an
+  issue](https://github.com/easystats/insight/issues) and request
+  additional model-support in *insight*!
 
-## Credits
+## Citation
 
 If this package helped you, please consider citing as follows:
 

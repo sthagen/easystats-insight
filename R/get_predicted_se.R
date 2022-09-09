@@ -48,7 +48,7 @@ get_predicted_se <- function(x,
     vcovmat <- vcovmat[keep, keep, drop = FALSE]
     mm <- mm[, keep, drop = FALSE]
   } else if (inherits(x, c("multinom", "brmultinom", "bracl", "mixor", "fixest"))) {
-    ## TODO this currently doesn't work...
+    ## BUG this currently doesn't work...
 
     # models like multinom have "level:termname" as column name
     # remove response level to match column names of model matrix
@@ -123,14 +123,14 @@ get_predicted_se <- function(x,
 # Get Model matrix ------------------------------------------------------------
 
 .get_predicted_ci_modelmatrix <- function(x, data = NULL, vcovmat = NULL, verbose = TRUE, ...) {
-  resp <- find_response(x)
+  resp <- find_response(x, combine = FALSE)
   if (is.null(vcovmat)) vcovmat <- get_varcov(x, ...)
 
 
   if (is.null(data)) {
     mm <- get_modelmatrix(x)
   } else {
-    if (!all(resp %in% colnames(data))) data[[resp]] <- 0 # fake response
+    if (!all(resp %in% colnames(data))) data[resp] <- 0 # fake response
     # else, model.matrix below fails, e.g. for log-terms
     attr(data, "terms") <- NULL
 

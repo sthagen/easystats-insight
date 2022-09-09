@@ -570,7 +570,8 @@ get_statistic.coxph <- function(x, ...) {
     Parameter = row.names(cs),
     Statistic = cs[, column_index, drop = TRUE],
     stringsAsFactors = FALSE,
-    row.names = NULL)
+    row.names = NULL
+  )
   out <- text_remove_backticks(out)
   attr(out, "statistic") <- find_statistic(x)
   out
@@ -2370,4 +2371,14 @@ get_statistic.bfsl <- function(x, ...) {
   out <- text_remove_backticks(out)
   attr(out, "statistic") <- find_statistic(x)
   out
+}
+
+
+#' @export
+get_statistic.lm_robust <- function(x, ...) {
+  if (is_multivariate(x)) {
+    get_statistic.mlm(x, ...)
+  } else {
+    get_statistic.default(x, ...)
+  }
 }

@@ -22,12 +22,26 @@
 * `get_datagrid()` gets more options for `at` and `range`, to provide more
   control how to generate the reference grid.
 
+* `get_data()` for models of class `geeglm` and `fixest`now more reliably
+  retrieves the model data.
+
+## New supported models
+
+* Support for models of class `mblogit` and `mclogit`.
+
 ## Bug fixes
 
 * Fixed issues with wrong attribute `adjusted_for` in `insight::get_datagrid()`.
 
+* Fixed issue (resp. implemented workaround) in `get_data.iv_robust()`, which
+  failed due to a bug in the _estimatr_ package.
+
 * Fixed issue where `get_predicted()` failed when data contains factors with 
   only one or incomplete levels.
+
+* Fixed issue where `get_predicted()` failed to compute confidence intervals
+  of predictions when model contained matrix-alike response columns, e.g. a 
+  response variable created with `cbind()`.
 
 # insight 0.18.2
 
