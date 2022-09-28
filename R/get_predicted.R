@@ -85,10 +85,12 @@
 #' @param ci_method The method for computing p values and confidence intervals.
 #'   Possible values depend on model type.
 #'   + `NULL` uses the default method, which varies based on the model type.
-#'   + Most frequentist models: `"normal"` (default).
+#'   + Most frequentist models: `"wald"` (default), `"residual"` or `"normal"`.
 #'   + Bayesian models:  `"quantile"`  (default), `"hdi"`, `"eti"`, and `"spi"`.
-#'   + Mixed effects **lme4** models: `"normal"` (default), `"satterthwaite"`, and
-#'     `"kenward"`.
+#'   + Mixed effects **lme4** models: `"wald"` (default), `"residual"`, `"normal"`,
+#'   `"satterthwaite"`, and `"kenward-roger"`.
+#'
+#'   See [`get_df()`] for details.
 #' @param dispersion_method Bootstrap dispersion and Bayesian posterior summary:
 #'   `"sd"` or `"mad"`.
 #' @param ... Other argument to be passed, for instance to `get_predicted_ci()`.
@@ -246,6 +248,13 @@ get_predicted.default <- function(x,
   # still fails? try fitted()
   if (is.null(predictions)) {
     predictions <- tryCatch(do.call("fitted", predict_args), error = function(e) NULL)
+  }
+
+  # stop here if we have no predictions
+  if (is.null(predictions) && isTRUE(verbose)) {
+    format_warning(
+      paste0("Could not compute predictions for model of class `", class(x)[1], "`.")
+    )
   }
 
   # 2. step: confidence intervals

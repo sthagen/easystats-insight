@@ -128,6 +128,15 @@ test_that("get_data", {
   expect_true(is.numeric(tmp) && length(tmp) == nrow(iris))
 })
 
+if (requiet("parameters")) {
+  test_that("get_df", {
+    expect_equal(get_df(m1, type = "residual"), 38290, ignore_attr = TRUE)
+    expect_equal(get_df(m1, type = "normal"), Inf, ignore_attr = TRUE)
+    ## TODO: check if statistic is z or t for this model
+    expect_equal(get_df(m1, type = "wald"), 14, ignore_attr = TRUE)
+  })
+}
+
 test_that("find_formula", {
   expect_length(find_formula(m1), 2)
   expect_equal(
@@ -295,4 +304,19 @@ test_that("find_variables with interaction", {
   # used to produce a warning
   mod <- feols(mpg ~ 0 | carb | vs:cyl ~ am:cyl, data = mtcars)
   expect_warning(find_variables(mod), NA)
+})
+
+
+test_that("find_predictors with i(f1, i.f2) interaction", {
+  aq <- airquality
+  aq$week <- aq$Day %/% 7 + 1
+
+  mod <- feols(Ozone ~ i(Month, i.week), aq, notes = FALSE)
+  expect_equal(
+    find_predictors(mod),
+    list(
+      conditional = c("Month", "week")
+    ),
+    ignore_attr = TRUE
+  )
 })

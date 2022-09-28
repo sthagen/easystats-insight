@@ -1,3 +1,37 @@
+# insight 0.18.5
+
+## Changes to functions
+
+* `format_table()` gets a `use_symbols` argument. If `TRUE`, column names that
+  refer to particular effectsizes (like Phi, Omega or Epsilon) include the related unicode-character instead of the written name. This only works on Windows for
+  R >= 4.2, and on OS X or Linux for R >= 4.0.
+
+* `get_df()` gets more `type` options to return different type of degrees of
+  freedom (namely, `"wald"` and `"normal"`, and for mixed models, `"ml1"`,
+  `"betwithin"`, `"satterthwaite"` and `"kenward-roger"`).
+
+## Bug fixes
+
+* Fixed issue with column alignment in `export_table()` when the data frame 
+  to print contained unicode-characters longer than 1 byte.
+
+* Correctly extract predictors for `fixest::i(f1, i.f2)` interactions (#649 by 
+  @grantmcdermott).
+
+# insight 0.18.4
+
+## Changes to functions
+
+* `model_info()` now includes information for `htest` objects from
+  `shapiro.test()` and `bartlett.test()` (will return `$is_variancetest = TRUE`).
+
+## Bug fixes
+
+* Fixed issue in `get_data()` which did not correctly backtransform to original
+  data when terms had log-transformations such as `log(1 + x)` or `log(x + 1)`.
+
+* Fixed CRAN check issues.
+
 # insight 0.18.3
 
 ## New functions
