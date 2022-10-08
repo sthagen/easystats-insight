@@ -12,11 +12,20 @@
   refer to particular effectsizes (like Phi, Omega or Epsilon) include the related unicode-character instead of the written name. This only works on Windows for
   R >= 4.2, and on OS X or Linux for R >= 4.0.
 
+* The `stars` argument in `format_table()` can now also be a character vector,
+  naming the columns that should include stars for significant values. This is
+  especially useful for Bayesian models, where we might have multiple columns
+  with significant values, e.g. `"BF"` for the Bayes factor or `"pd"` for the
+  probability of direction.
+
+
 * `get_df()` gets more `type` options to return different type of degrees of
   freedom (namely, `"wald"` and `"normal"`, and for mixed models, `"ml1"`,
   `"betwithin"`, `"satterthwaite"` and `"kenward-roger"`).
 
 * `standardize_names()` now recognized more classes from package _marginaleffects_.
+
+* Minor improvements to `find_parameters()` for models with nonlinear formula.
 
 ## Bug fixes
 
