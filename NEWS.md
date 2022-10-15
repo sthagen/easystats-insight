@@ -6,6 +6,12 @@
   freedom per parameter, and no longer per observation. Use `df_per_obs TRUE`
   to return degrees of freedom per observation.
 
+## New functions
+
+* `safe_deparse_symbol()` to only deparses a substituted expressions when
+  possible,which increases performance in case many calls to
+  `deparse(substitute())`.
+
 ## Changes to functions
 
 * `format_table()` gets a `use_symbols` argument. If `TRUE`, column names that
@@ -18,7 +24,6 @@
   with significant values, e.g. `"BF"` for the Bayes factor or `"pd"` for the
   probability of direction.
 
-
 * `get_df()` gets more `type` options to return different type of degrees of
   freedom (namely, `"wald"` and `"normal"`, and for mixed models, `"ml1"`,
   `"betwithin"`, `"satterthwaite"` and `"kenward-roger"`).
@@ -27,7 +32,12 @@
 
 * Minor improvements to `find_parameters()` for models with nonlinear formula.
 
+* Minor speed improvements.
+
 ## Bug fixes
+
+* Fixed issue in `get_data()` for models of class `plm`, which accidentally
+  converted factors into character vectors.
 
 * Fixed issue with column alignment in `export_table()` when the data frame 
   to print contained unicode-characters longer than 1 byte.

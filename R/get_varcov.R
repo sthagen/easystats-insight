@@ -148,10 +148,7 @@ get_varcov.mlm <- function(x,
   .check_get_varcov_dots(x, ...)
   if (!is.null(x$weights)) {
     if (!is.null(vcov)) {
-      stop(format_message(
-        "The `vcov` argument is not supported with",
-        "weights in a `mlm` model."
-      ), call. = FALSE)
+      format_error("The `vcov` argument is not supported with weights in a `mlm` model.")
     }
     s <- summary(x)[[1L]]
     .get_weighted_varcov(x, s$cov.unscaled)
@@ -199,7 +196,7 @@ get_varcov.DirichletRegModel <- function(x,
       vc <- vc[keep, keep, drop = FALSE]
     } else if (component == "precision") {
       vc <- stats::vcov(x)
-      keep <- grepl("^\\(phi\\)", rownames(vc), perl = TRUE)
+      keep <- startsWith(rownames(vc), "(phi)")
       vc <- vc[keep, keep, drop = FALSE]
     } else {
       vc <- stats::vcov(x)
@@ -415,9 +412,9 @@ get_varcov.hurdle <- function(x,
       ...
     )
     keep <- switch(component,
-      "conditional" = grepl("^count_", colnames(vc)),
+      "conditional" = startsWith(colnames(vc), "count_"),
       "zi" = ,
-      "zero_inflated" = grepl("^zero_", colnames(vc)),
+      "zero_inflated" = startsWith(colnames(vc), "zero_"),
       seq_len(ncol(vc))
     )
     vc <- vc[keep, keep, drop = FALSE]
@@ -444,8 +441,8 @@ get_varcov.zcpglm <- function(x,
   check_if_installed("cplm")
 
   vc <- cplm::vcov(x)
-  tweedie <- which(grepl("^tw_", rownames(vc)))
-  zero <- which(grepl("^zero_", rownames(vc)))
+  tweedie <- which(startsWith(rownames(vc), "tw_"))
+  zero <- which(startsWith(rownames(vc), "zero_"))
 
   vc <- switch(component,
     "conditional" = vc[tweedie, tweedie, drop = FALSE],
@@ -1046,12 +1043,12 @@ get_varcov.LORgee <- get_varcov.gee
   } else {
     if (is.vector(w)) {
       if (length(w) != nrow(x)) {
-        stop("'w' is the wrong length.", call. = FALSE)
+        stop("`w` is the wrong length.", call. = FALSE)
       }
       return(crossprod(x, w * x))
     } else {
       if (nrow(w) != ncol(w) || nrow(w) != nrow(x)) {
-        stop("'w' is the wrong dimension.", call. = FALSE)
+        stop("`w` is the wrong dimension.", call. = FALSE)
       }
       return(crossprod(x, w %*% x))
     }

@@ -1422,11 +1422,14 @@ find_formula.BFBayesFactor <- function(x, verbose = TRUE, ...) {
       for (i in frand) {
         fcond <- sub(i, "", fcond, fixed = TRUE)
       }
-      while (grepl("\\+$", trim_ws(fcond))) {
+      while (grepl("(\\+)\\s+\\1", trim_ws(fcond))) {
+        fcond <- gsub("(\\+)\\s+\\1", "\\1", trim_ws(fcond))
+      }
+      while (endsWith(trim_ws(fcond), "+")) {
         fcond <- gsub("(.*)\\+$", "\\1", trim_ws(fcond))
       }
       # random effects only?
-      if (grepl("~$", trim_ws(fcond))) {
+      if (endsWith(trim_ws(fcond), "~")) {
         fcond <- paste(fcond, "1")
       }
       f.cond <- stats::as.formula(trim_ws(fcond))
@@ -1721,12 +1724,9 @@ find_formula.model_fit <- function(x, verbose = TRUE, ...) {
 
   if (grepl("(.*)poly\\((.*),\\s*raw\\s*=\\s*T\\)", f)) {
     if (verbose) {
-      warning(
-        format_message(
-          "Looks like you are using 'poly()' with 'raw = T'. This results in unexpected behaviour, because 'all.vars()' considers 'T' as variable.",
-          "Please use 'raw = TRUE'."
-        ),
-        call. = FALSE
+      format_warning(
+        "Looks like you are using `poly()` with \"raw = T\". This results in unexpected behaviour, because `all.vars()` considers `T` as variable.",
+        "Please use \"raw = TRUE\"."
       )
     }
     return(FALSE)
@@ -1744,7 +1744,7 @@ find_formula.model_fit <- function(x, verbose = TRUE, ...) {
     return(TRUE)
   }
 
-  if (any(grepl("\\$", safe_deparse(f[[1]])))) {
+  if (any(grepl("$", safe_deparse(f[[1]]), fixed = TRUE))) {
     fc <- try(.formula_clean(f[[1]]), silent = TRUE)
     if (inherits(fc, "try-error")) {
       format_error(attributes(fc)$condition$message)
