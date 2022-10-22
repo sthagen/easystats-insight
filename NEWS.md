@@ -1,3 +1,17 @@
+# insight 0.18.6
+
+## Bug fixes
+
+* Better dectection of unicode-support, to avoid failures when building
+  vignettes.
+
+* `get_predicted()` now correctly handles variables of class numeric matrix
+  created by `scale()`, which fixes a bug in `performance::check_model()`
+  (easystats/performance#432).
+
+* Fixed issue with `iterations` argument in `get_predicted()` with _brms_
+  models.
+
 # insight 0.18.5
 
 ## Breaking
@@ -44,7 +58,7 @@
 
 * Correctly extract predictors for `fixest::i(f1, i.f2)` interactions (#649 by 
   @grantmcdermott).
-
+  
 # insight 0.18.4
 
 ## Changes to functions
