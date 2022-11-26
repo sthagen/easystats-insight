@@ -1,9 +1,28 @@
+# insight 0.18.8.1
+
+## Bug fixes
+
+* Fixed minor issues for HTML tables in `export_table()` when model parameters
+  were grouped.
+
+* Fixed issue with incorrect back-transforming in `get_data()` for models with
+  log-transformed variables.
+
+# insight 0.18.8
+
+## Bug fixes
+
+* Fixed test due to changes in the _performance_ package.
+
 # insight 0.18.7
 
 ## General
 
 * Minor revisions to `get_predicted.glmmTMB()` due to changes in behaviour
   of `predict.glmmTMB()` for truncated-family models since _glmmTMB_ 1.1.5.
+  
+* New function `has_single_value()` that is equivalent to `length(unique()) == 1`
+  (or `n_unique() == 1`) but faster.
 
 ## Changes to functions
 
