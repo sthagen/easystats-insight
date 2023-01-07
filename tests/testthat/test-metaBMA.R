@@ -1,9 +1,14 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
-if (.runThisTest &&  requiet("insight") && requiet("metaBMA")) {
+if (.runThisTest && requiet("metaBMA")) {
   data(towels)
   set.seed(123)
-  mf <- meta_fixed(logOR, SE, study, data = towels, d = prior("norm", c(mean = 0, sd = .3), lower = 0))
+  mf <- meta_fixed(logOR,
+    SE,
+    study,
+    data = towels,
+    d = prior("norm", c(mean = 0, sd = 0.3), lower = 0)
+  )
 
   test_that("get_priors-metaBMA", {
     priors <- get_priors(mf)

@@ -737,9 +737,9 @@
 # ----------------------------------------------
 .variance_family_tweedie <- function(x, mu, phi) {
   if ("psi" %in% names(x$fit$par)) {
-     psi <- x$fit$par["psi"] # glmmmTMB >= 1.1.5
+    psi <- x$fit$par["psi"] # glmmmTMB >= 1.1.5
   } else {
-     psi <- x$fit$par["thetaf"]
+    psi <- x$fit$par["thetaf"]
   }
   p <- unname(stats::plogis(psi) + 1)
   phi * mu^p
@@ -953,7 +953,7 @@
           # we here check if random slopes from correlated and uncorrelated
           # are duplicated (i.e. their difference is 0 - including a tolerance)
           # and then remove duplicated elements
-          the_same <- which(abs(outer(out[j], rndslopes, `-`)) < .0001)
+          the_same <- which(abs(outer(out[j], rndslopes, `-`)) < 0.0001)
           if (length(the_same) && grepl(dn[the_same], names(out[j]), fixed = TRUE)) {
             to_remove <- c(to_remove, j)
           }
@@ -1017,7 +1017,7 @@
   # correlation among factor levels
   cat_random_slopes <- tryCatch(
     {
-      d <- get_data(x)[rnd_slopes]
+      d <- get_data(x, verbose = FALSE)[rnd_slopes]
       any(sapply(d, is.factor))
     },
     error = function(e) {

@@ -1,7 +1,7 @@
 if (
-  requiet("insight") &&
+
   requiet("nlme") &&
-  requiet("lme4")) {
+    requiet("lme4")) {
   data("sleepstudy")
   data(Orthodont)
   m1 <- lme(Reaction ~ Days,
@@ -84,7 +84,7 @@ if (
   })
 
   test_that("link_inverse", {
-    expect_equal(link_inverse(m1)(.2), .2, tolerance = 1e-5)
+    expect_equal(link_inverse(m1)(0.2), 0.2, tolerance = 1e-5)
   })
 
   test_that("get_data", {

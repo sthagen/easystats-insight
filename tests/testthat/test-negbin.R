@@ -1,7 +1,7 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
 if (.runThisTest && Sys.getenv("USER") != "travis") {
-  if ( requiet("insight") && requiet("aod")) {
+  if (requiet("aod")) {
     data(dja)
     m1 <-
       suppressWarnings(aod::negbin(y ~ group + offset(log(trisk)),
@@ -71,16 +71,16 @@ if (.runThisTest && Sys.getenv("USER") != "travis") {
     })
 
     test_that("link_inverse", {
-      expect_equal(link_inverse(m1)(.2), exp(.2), tolerance = 1e-5)
+      expect_equal(link_inverse(m1)(0.2), exp(0.2), tolerance = 1e-5)
     })
 
     test_that("link_function", {
-      expect_equal(link_function(m1)(.2), log(.2), tolerance = 1e-5)
+      expect_equal(link_function(m1)(0.2), log(0.2), tolerance = 1e-5)
     })
 
     test_that("get_data", {
-      expect_equal(nrow(get_data(m1)), 75)
-      expect_equal(colnames(get_data(m1)), c("y", "group", "trisk", "village"))
+      expect_equal(nrow(get_data(m1, verbose = FALSE)), 75)
+      expect_equal(colnames(get_data(m1, verbose = FALSE)), c("y", "group", "trisk", "village"))
     })
 
     test_that("find_formula", {
