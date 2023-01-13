@@ -15,9 +15,11 @@ if (.runThisTest && requiet("lme4")) {
     data = sleepstudy
   )
 
-  m2 <- suppressMessages(lme4::lmer(Reaction ~ Days + (1 | mygrp / mysubgrp) + (1 | Subject),
-    data = sleepstudy
-  ))
+  m2 <- suppressMessages(
+    lme4::lmer(Reaction ~ Days + (1 | mygrp / mysubgrp) + (1 | Subject),
+      data = sleepstudy
+    )
+  )
 
   test_that("model_info", {
     expect_true(model_info(m1)$is_linear)
@@ -433,8 +435,7 @@ if (.runThisTest && requiet("lme4")) {
   )
 
   m6 <- lme4::lmer(
-    Reaction ~ 1 + (1 |
-      mygrp / mysubgrp) + (1 | Subject),
+    Reaction ~ 1 + (1 | mygrp / mysubgrp) + (1 | Subject),
     data = sleepstudy
   )
 
@@ -528,6 +529,7 @@ if (.runThisTest && requiet("lme4")) {
   })
 
   test_that("get_predicted_ci: warning when model matrix and varcovmat do not match", {
+    skip_if(getRversion() < "4.1.0")
     mod <- suppressMessages(lmer(
       weight ~ 1 + Time + I(Time^2) + Diet + Time:Diet + I(Time^2):Diet + (1 + Time + I(Time^2) | Chick),
       data = ChickWeight

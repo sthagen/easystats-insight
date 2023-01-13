@@ -1,12 +1,7 @@
 .runThisTest <- Sys.getenv("RunAllinsightTests") == "yes"
 
-## TODO enable once it's clear what the problem is...
-
-if (
-
-  requiet("lme4") &&
-    suppressPackageStartupMessages(requiet("afex")) &&
-    FALSE) {
+# TODO: check why this is failing
+if (requiet("lme4") && suppressPackageStartupMessages(requiet("afex")) && FALSE) {
   data(sleepstudy)
 
   set.seed(123)
