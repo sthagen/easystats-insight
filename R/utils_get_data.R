@@ -67,7 +67,7 @@
   # detect matrix columns ----------------------------------------------------
 
   # check if we have any matrix columns, e.g. from splines
-  mc <- sapply(mf, is.matrix)
+  mc <- vapply(mf, is.matrix, TRUE)
 
   # save original response value and the respective single variable names of
   # the response for later. we don't want to change the response value,
@@ -130,7 +130,10 @@
       md <- tryCatch(
         {
           md <- .recover_data_from_environment(x)
-          md <- stats::na.omit(md[intersect(colnames(md), find_variables(x, effects = "all", component = "all", flatten = TRUE))])
+          md <- stats::na.omit(md[intersect(
+            colnames(md),
+            find_variables(x, effects = "all", component = "all", flatten = TRUE)
+          )])
         },
         error = function(e) {
           NULL
@@ -147,7 +150,7 @@
       mf_nonmatrix <- mf[, -which(mc), drop = FALSE]
 
       # fix for rms::rcs() functions
-      if (any(class(mf_matrix[[1]]) == "rms")) {
+      if (any(inherits(mf_matrix[[1]], "rms"))) {
         class(mf_matrix[[1]]) <- "matrix"
       }
 
@@ -223,15 +226,15 @@
           mf <- stats::na.omit(mf)
 
           # then set back attributes
-          mf <- as.data.frame(mapply(function(.d, .l) {
+          mf <- as.data.frame(Map(function(.d, .l) {
             attr(.d, "labels") <- .l
             .d
-          }, mf, value_labels, SIMPLIFY = FALSE), stringsAsFactors = FALSE)
+          }, mf, value_labels), stringsAsFactors = FALSE)
 
-          mf <- as.data.frame(mapply(function(.d, .l) {
+          mf <- as.data.frame(Map(function(.d, .l) {
             attr(.d, "label") <- .l
             .d
-          }, mf, variable_labels, SIMPLIFY = FALSE), stringsAsFactors = FALSE)
+          }, mf, variable_labels), stringsAsFactors = FALSE)
         }
       }
 
@@ -458,8 +461,16 @@
     } else {
       for (i in seq_along(interactions)) {
         int <- interactions[i]
-        mf[[names(int)]] <- as.factor(substr(as.character(mf[[int]]), regexpr("\\.[^\\.]*$", as.character(mf[[int]])) + 1, nchar(as.character(mf[[int]]))))
-        mf[[int]] <- as.factor(substr(as.character(mf[[int]]), 0, regexpr("\\.[^\\.]*$", as.character(mf[[int]])) - 1))
+        mf[[names(int)]] <- as.factor(substr(
+          as.character(mf[[int]]),
+          regexpr("\\.[^\\.]*$", as.character(mf[[int]])) + 1,
+          nchar(as.character(mf[[int]]))
+        ))
+        mf[[int]] <- as.factor(substr(
+          as.character(mf[[int]]),
+          0,
+          regexpr("\\.[^\\.]*$", as.character(mf[[int]])) - 1
+        ))
       }
       if (isTRUE(verbose)) {
         format_warning(
@@ -600,7 +611,7 @@
 
   if (length(still_missing) && isTRUE(verbose)) {
     format_warning(
-      sprintf("Following potential variables could not be found in the data: %s", paste0(still_missing, collapse = " ,"))
+      sprintf("Following potential variables could not be found in the data: %s", toString(still_missing))
     )
   }
 
