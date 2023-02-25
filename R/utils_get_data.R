@@ -892,25 +892,94 @@
         data_call <- lapply(data_name, .str2lang)
         columns <- lapply(data_call, eval)
 
-        # preserve table data for McNemar
+        # detect which kind of tests we have -----------------
+
+        # McNemar ============================================================
+
         if (!grepl(" (and|by) ", x$data.name) &&
-          (startsWith(x$method, "McNemar") || (length(columns) == 1 && is.matrix(columns[[1]])))) {
+              !grepl(x$method, "Paired t-test", fixed = TRUE) &&
+              !startsWith(x$method, "Wilcoxon") &&
+              (startsWith(x$method, "McNemar") || (length(columns) == 1 && is.matrix(columns[[1]])))) {
+          # McNemar: preserve table data for McNemar ----
           return(as.table(columns[[1]]))
-          # check if data is a list for kruskal-wallis
+
+          # Kruskal Wallis ====================================================
+
         } else if (startsWith(x$method, "Kruskal-Wallis") && length(columns) == 1 && is.list(columns[[1]])) {
+          # Kruskal-Wallis: check if data is a list for kruskal-wallis ----
           l <- columns[[1]]
           names(l) <- paste0("x", seq_along(l))
           return(l)
-        } else {
-          max_len <- max(lengths(columns))
-          for (i in seq_along(columns)) {
-            if (length(columns[[i]]) < max_len) {
-              columns[[i]] <- c(columns[[i]], rep(NA, max_len - length(columns[[i]])))
+
+          # t-tests ===========================================================
+
+        } else if (grepl("t-test", x$method, fixed = TRUE)) {
+
+          # t-Test: (Welch) Two Sample t-test ----
+          if (grepl("Two", x$method, fixed = TRUE)) {
+            if (grepl(" and ", x$data.name, fixed = TRUE)) {
+              return(.htest_reshape_long(columns))
+
+            } else if (grepl(" by ", x$data.name, fixed = TRUE)) {
+              return(.htest_no_reshape(columns))
             }
+
+            # t-Test: Paired t-test
+          } else if (startsWith(x$method, "Paired")) {
+            if (grepl(" and ", x$data.name, fixed = TRUE)) {
+              # t-Test: Paired t-test, two vectors ----
+              return(.htest_reshape_long(columns))
+
+            } else if (grepl(" by ", x$data.name, fixed = TRUE)) {
+              # t-Test: Paired t-test, formula (no reshape required) ----
+              return(.htest_no_reshape(columns))
+
+            } else if (startsWith(x$data.name, "Pair(")) {
+              # t-Test: Paired t-test ----
+              return(.htest_reshape_matrix(columns))
+            }
+
+            # t-Test: One Sample
+          } else {
+            d <- .htest_other_format(columns)
           }
-          d <- as.data.frame(columns)
+
+          # Wilcoxon ========================================================
+
+        } else if (startsWith(x$method, "Wilcoxon rank sum")) {
+          if (grepl(" by ", x$data.name, fixed = TRUE)) {
+            # Wilcoxon: Paired Wilcoxon, formula (no reshape required) ----
+            return(.htest_no_reshape(columns))
+
+          } else {
+            return(.htest_reshape_long(columns))
+          }
+
+        } else if (startsWith(x$method, "Wilcoxon signed rank")) {
+          if (startsWith(x$data.name, "Pair(")) {
+            return(.htest_reshape_matrix(columns))
+
+          } else if (grepl(" and ", x$data.name, fixed = TRUE)) {
+            # Wilcoxon: Paired Wilcoxon, two vectors ----
+            return(.htest_reshape_long(columns))
+
+          } else if (grepl(" by ", x$data.name, fixed = TRUE)) {
+            # Wilcoxon: Paired Wilcoxon, formula (no reshape required) ----
+            return(.htest_no_reshape(columns))
+
+          } else {
+            # Wilcoxon: One sample ----
+            d <- .htest_other_format(columns)
+          }
+
+        } else {
+
+          # Other htests ======================================================
+
+          d <- .htest_other_format(columns)
         }
 
+        # fix column names
         if (all(grepl("(.*)\\$(.*)", data_name)) && length(data_name) == length(colnames(d))) {
           colnames(d) <- gsub("(.*)\\$(.*)", "\\2", data_name)
         } else if (ncol(d) > 2) {
@@ -946,4 +1015,48 @@
   }
 
   out
+}
+
+
+# reshape helpers -------------------
+
+.htest_reshape_long <- function(columns) {
+  data.frame(
+    x = unlist(columns),
+    y = c(
+      rep("1", length(columns[[1]])),
+      rep("2", length(columns[[2]]))
+    ),
+    stringsAsFactors = TRUE
+  )
+}
+
+.htest_no_reshape <- function(columns) {
+  data.frame(
+    x = columns[[1]],
+    y = as.factor(columns[[2]])
+  )
+}
+
+
+.htest_reshape_matrix <- function(columns) {
+  data.frame(
+    x = c(columns[[1]][, 1, drop = TRUE], columns[[1]][, 2, drop = TRUE]),
+    y = c(
+      rep("1", nrow(columns[[1]])),
+      rep("2", nrow(columns[[1]]))
+    ),
+    stringsAsFactors = TRUE
+  )
+}
+
+
+.htest_other_format <- function(columns) {
+  max_len <- max(lengths(columns))
+  for (i in seq_along(columns)) {
+    if (length(columns[[i]]) < max_len) {
+      columns[[i]] <- c(columns[[i]], rep(NA, max_len - length(columns[[i]])))
+    }
+  }
+  as.data.frame(columns)
 }
