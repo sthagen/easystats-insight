@@ -246,7 +246,7 @@ get_parameters.HLfit <- function(x, effects = c("fixed", "random"), ...) {
   if (effects == "fixed") {
     l <- list(conditional = lme4::fixef(x))
   } else {
-    utils::capture.output(s <- summary(x))
+    utils::capture.output(s <- summary(x)) # nolint
     l <- compact_list(list(
       conditional = lme4::fixef(x),
       random = lme4::ranef(x)
@@ -518,6 +518,65 @@ get_parameters.glmmTMB <- function(x,
       zi = ,
       zero_inflated = l$zero_inflated_random
     )
+  }
+}
+
+
+
+#' @export
+get_parameters.hglm <- function(x,
+                                effects = c("fixed", "random", "all"),
+                                component = c("all", "conditional", "dispersion"),
+                                ...) {
+  effects <- match.arg(effects)
+  component <- match.arg(component)
+
+  fe <- x$fixef
+  re <- x$ranef
+
+  f <- find_formula(x)
+  if (!is.null(f$dispersion)) {
+    disp <- summary(x)$SummVC1
+    dispersion <- data.frame(
+      Parameter = rownames(disp),
+      Estimate = as.vector(disp[, 1]),
+      Component = "dispersion",
+      stringsAsFactors = FALSE
+    )
+  } else {
+    dispersion <- NULL
+  }
+
+  fixed <- data.frame(
+    Parameter = names(fe),
+    Estimate = unname(fe),
+    Component = "conditional",
+    stringsAsFactors = FALSE
+  )
+
+  random <- data.frame(
+    Parameter = names(re),
+    Estimate = unname(re),
+    Component = "conditional",
+    stringsAsFactors = FALSE
+  )
+
+  if (effects == "fixed") {
+    out <- switch(component,
+      "conditional" = fixed,
+      "dispersion" = dispersion,
+      rbind(fixed, dispersion)
+    )
+    text_remove_backticks(out)
+  } else if (effects == "random") {
+    text_remove_backticks(random)
+  } else if (effects == "all") {
+    out <- switch(component,
+      "conditional" = rbind(fixed, random),
+      "dispersion" = dispersion,
+      rbind(fixed, random, dispersion)
+    )
+    text_remove_backticks(out)
   }
 }
 

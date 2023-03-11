@@ -90,7 +90,7 @@ model_info <- function(x, ...) {
 
 #' @export
 model_info.data.frame <- function(x, ...) {
-  stop("A data frame is no valid object for this function.", call. = FALSE)
+  format_error("A data frame is no valid object for this function.")
 }
 
 
@@ -102,16 +102,13 @@ model_info.default <- function(x, verbose = TRUE, ...) {
     class(x) <- c(class(x), c("glm", "lm"))
   }
 
-  faminfo <- tryCatch(
+  faminfo <- .safe(
     {
       if (inherits(x, "Zelig-relogit")) {
         stats::binomial(link = "logit")
       } else {
         stats::family(x)
       }
-    },
-    error = function(x) {
-      NULL
     }
   )
 
@@ -126,7 +123,7 @@ model_info.default <- function(x, verbose = TRUE, ...) {
     )
   } else {
     if (isTRUE(verbose)) {
-      warning("Could not access model information.", call. = FALSE)
+      format_warning("Could not access model information.")
     }
     NULL
   }
@@ -829,7 +826,7 @@ model_info.summary.lm <- model_info.Arima
 #' @export
 model_info.averaging <- function(x, ...) {
   if (is.null(attributes(x)$modelList)) {
-    warning("Can't calculate covariance matrix. Please use 'fit = TRUE' in 'model.avg()'.", call. = FALSE)
+    format_warning("Can't calculate covariance matrix. Please use 'fit = TRUE' in 'model.avg()'.")
     return(NULL)
   }
   model_info.default(x = attributes(x)$modelList[[1]])
@@ -1171,6 +1168,30 @@ model_info.polr <- function(x, ...) {
 
 
 #' @export
+model_info.hglm <- function(x, ...) {  
+  faminfo <- .safe(
+    {
+      mc <- get_call(x)$family
+      eval(mc)
+    }
+  )
+
+  if (is.null(faminfo)) {
+    return(NULL)
+  }
+
+  .make_family(
+    x = x,
+    fitfam = faminfo$family,
+    logit.link = faminfo$link == "logit",
+    link.fun = faminfo$link,
+    ...
+  )
+}
+
+
+
+#' @export
 model_info.orm <- function(x, ...) {
   faminfo <- stats::binomial(link = "logit")
   .make_family(
@@ -1217,13 +1238,10 @@ model_info.gamlss <- function(x, ...) {
 
 #' @export
 model_info.mipo <- function(x, verbose = TRUE, ...) {
-  tryCatch(
+  .safe(
     {
       models <- eval(x$call$object)
       model_info(models$analyses[[1]], verbose = verbose, ...)
-    },
-    error = function(e) {
-      NULL
     }
   )
 }

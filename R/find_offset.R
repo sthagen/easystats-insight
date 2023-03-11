@@ -27,9 +27,9 @@
 #' }
 #' @export
 find_offset <- function(x) {
-  terms <- tryCatch(
+  terms <- .safe(
     as.character(attributes(stats::terms(find_formula(x)[[1]]))$variables),
-    error = function(e) find_terms(x)
+    find_terms(x)
   )
   offset <- NULL
 
@@ -41,6 +41,16 @@ find_offset <- function(x) {
   model_call <- get_call(x)
   if (is.null(offset) && object_has_names(model_call, "offset")) {
     offset <- clean_names(safe_deparse(model_call$offset))
+  }
+
+  # fixest sometimes returns a weird macro syntax instead of the real offset
+  # if we have to implement too many model-specific workarounds, it may eventually be worth it to do S3
+  # VAB: no test because I can only replicate in a weird {etwfe} example
+  if (inherits(x, "fixest")) {
+    if (is.null(offset) || startsWith(offset, "..")) {
+      offset <- clean_names(x[["model_info"]][["offset"]])
+    }
+    offset <- sub("^~", "", offset)
   }
 
   offset

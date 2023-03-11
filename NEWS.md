@@ -1,5 +1,9 @@
 # insight 0.19.1
 
+## New supported models
+
+* `hglm` (package *hglm*).
+
 ## Changes to functions
 
 * Minor improvements to `get_data()` for `t.test()`.
@@ -10,6 +14,10 @@
 
 * `format_table()` now also formats columns named `SGPV` (second generation
   p-values) as p-values.
+
+## Bug fixes
+
+* Fixed issue in `get_data()` for results from `kruskal.test()`.
 
 # insight 0.19.0
 

@@ -262,20 +262,30 @@ find_formula.gamm <- function(x, verbose = TRUE, ...) {
 
 #' @export
 find_formula.rma <- function(x, verbose = TRUE, ...) {
-  NULL
+  formula.yi <- `attributes<-`(stats::formula(x, type = "yi"), NULL)
+  formula.mods <- `attributes<-`(stats::formula(x, type = "mods"), NULL)
+  formula.scale <- `attributes<-`(.safe(stats::formula(x, type = "scale")), NULL)
+
+  model_call <- get_call(x)
+  if (is.null(formula.yi)) {
+    if (is.null(formula.mods)) {
+      formula.yi <- stats::as.formula(paste(model_call$yi, "~ 1"))
+    } else {
+      formula.mods[3] <- formula.mods[2]
+      formula.mods[2] <- model_call$yi
+      formula.yi <- formula.mods
+    }
+  }
+  f <- compact_list(list(
+    conditional = formula.yi,
+    dispersion = formula.mods
+  ))
+  .find_formula_return(f, verbose = verbose)
 }
 
 #' @export
+# TODO: Check these
 find_formula.metaplus <- find_formula.rma
-
-#' @export
-find_formula.meta_random <- find_formula.rma
-
-#' @export
-find_formula.meta_fixed <- find_formula.rma
-
-#' @export
-find_formula.meta_bma <- find_formula.rma
 
 #' @export
 find_formula.deltaMethod <- find_formula.rma
@@ -1138,6 +1148,17 @@ find_formula.nlmerMod <- function(x, verbose = TRUE, ...) {
 }
 
 
+#' @export
+find_formula.hglm <- function(x, verbose = TRUE, ...) {
+  mc <- get_call(x)
+  f.cond <- mc$fixed
+  f.random <- mc$random
+  f.disp <- mc$disp
+
+  f <- compact_list(list(conditional = f.cond, random = f.random, dispersion = f.disp))
+  .find_formula_return(f, verbose = verbose)
+}
+
 
 #' @export
 find_formula.merMod <- function(x, verbose = TRUE, ...) {
@@ -1462,9 +1483,7 @@ find_formula.BFBayesFactor <- function(x, verbose = TRUE, ...) {
       f.cond <- stats::as.formula(fcond)
     }
   } else if (.classify_BFBayesFactor(x) %in% c("ttest1", "ttest2")) {
-    f.cond <- tryCatch(stats::as.formula(x@numerator[[1]]@identifier$formula),
-      error = function(e) NULL
-    )
+    f.cond <- .safe(stats::as.formula(x@numerator[[1]]@identifier$formula))
     f.random <- NULL
   } else {
     return(NULL)

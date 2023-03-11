@@ -53,7 +53,7 @@ get_statistic.default <- function(x, column_index = 3, verbose = TRUE, ...) {
 
   if (column_index > ncol(cs)) {
     if (isTRUE(verbose)) {
-      warning("Could not access test statistic of model parameters.", call. = FALSE)
+      format_warning("Could not access test statistic of model parameters.")
     }
     return(NULL)
   }
@@ -1513,7 +1513,6 @@ get_statistic.emm_list <- function(x, ci = 0.95, adjust = "none", ...) {
 }
 
 
-
 #' @export
 get_statistic.robmixglm <- function(x, ...) {
   cs <- stats::coef(summary(x))
@@ -1521,6 +1520,24 @@ get_statistic.robmixglm <- function(x, ...) {
   out <- data.frame(
     Parameter = rownames(cs),
     Statistic = as.vector(cs[, 3]),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+
+  out <- out[!is.na(out$Statistic), ]
+  out <- text_remove_backticks(out)
+  attr(out, "statistic") <- find_statistic(x)
+  out
+}
+
+
+#' @export
+get_statistic.hglm <- function(x, ...) {
+  s <- summary(x)$FixCoefMat
+
+  out <- data.frame(
+    Parameter = rownames(s),
+    Statistic = as.vector(s[, 3]),
     stringsAsFactors = FALSE,
     row.names = NULL
   )
@@ -1655,7 +1672,7 @@ get_statistic.sem <- function(x, ...) {
   params <- get_parameters(x, effects = "fixed")
 
   if (is.null(x$se)) {
-    warning(format_message("Model has no standard errors. Please fit model again with bootstrapped standard errors."), call. = FALSE)
+    format_warning("Model has no standard errors. Please fit model again with bootstrapped standard errors.")
     return(NULL)
   }
 
@@ -1815,14 +1832,11 @@ get_statistic.rq <- function(x, ...) {
 
 #' @export
 get_statistic.rqs <- function(x, ...) {
-  stat <- tryCatch(
+  stat <- .safe(
     {
       s <- suppressWarnings(summary(x, covariance = TRUE))
       cs <- do.call(rbind, lapply(s, stats::coef))
       cs[, "t value"]
-    },
-    error = function(e) {
-      NULL
     }
   )
 

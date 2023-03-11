@@ -55,73 +55,48 @@ get_residuals.default <- function(x, weighted = FALSE, verbose = TRUE, ...) {
     return(.pearson_residuals(x))
   }
 
-  res <- tryCatch(
-    {
-      stats::residuals(x, ...)
-    },
-    error = function(e) {
-      NULL
-    }
-  )
+  res <- .safe(stats::residuals(x, ...))
 
   if (is.null(res)) {
-    res <- tryCatch(
-      {
-        x$residuals
-      },
-      error = function(e) {
-        NULL
-      }
-    )
+    res <- .safe(x$residuals)
   }
 
   # For gamm4 objects
   if (is.null(res)) {
-    res <- tryCatch(
-      {
-        x$gam$residuals
-      },
-      error = function(e) {
-        NULL
-      }
-    )
+    res <- .safe(x$gam$residuals)
   }
 
   if (is.null(res)) {
-    res <- tryCatch(
+    res <- .safe(
       {
         yield_warning <- no_response_resid && verbose
         pred <- stats::predict(x, type = "response")
         observed <- .factor_to_numeric(get_response(x, verbose = FALSE))
         observed - pred
-      },
-      error = function(e) {
-        NULL
       }
     )
   }
 
   if (is.null(res)) {
-    res <- tryCatch(
+    res <- .safe(
       {
         yield_warning <- no_response_resid && verbose
         pred <- stats::fitted(x)
         observed <- .factor_to_numeric(get_response(x, verbose = FALSE))
         observed - pred
-      },
-      error = function(e) {
-        NULL
       }
     )
   }
 
   if (is.null(res) || all(is.na(res))) {
-    if (verbose) warning("Can't extract residuals from model.", call. = FALSE)
+    if (verbose) {
+      format_warning("Can't extract residuals from model.")
+    }
     res <- NULL
   } else if (yield_warning) {
-    warning(format_message(paste0(
+    format_warning(paste0(
       "Can't extract '", res_type, "' residuals. Returning response residuals."
-    )), call. = FALSE)
+    ))
   }
 
   res
@@ -148,6 +123,11 @@ get_residuals.model_fit <- function(x, weighted = FALSE, verbose = TRUE, ...) {
 }
 
 
+#' @export
+get_residuals.hglm <- function(x, verbose = TRUE, ...) {
+  x$resid
+}
+
 
 #' @export
 get_residuals.coxph <- function(x, weighted = FALSE, verbose = TRUE, ...) {
@@ -158,11 +138,10 @@ get_residuals.coxph <- function(x, weighted = FALSE, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 get_residuals.crr <- function(x, weighted = FALSE, verbose = TRUE, ...) {
   if (isTRUE(weighted) && isTRUE(verbose)) {
-    warning("Weighted residuals are not supported for `crr` models.", call. = FALSE)
+    format_warning("Weighted residuals are not supported for `crr` models.")
   }
   x$res
 }
@@ -175,19 +154,18 @@ get_residuals.slm <- function(x, weighted = FALSE, verbose = TRUE, ...) {
     return(.weighted_residuals(x, verbose))
   }
 
-  res <- tryCatch(
+  res <- .safe(
     {
-      junk <- utils::capture.output(pred <- stats::predict(x, type = "response"))
+      junk <- utils::capture.output(pred <- stats::predict(x, type = "response")) # nolint
       observed <- .factor_to_numeric(get_response(x))
       observed - pred
-    },
-    error = function(e) {
-      NULL
     }
   )
 
   if (is.null(res) || all(is.na(res))) {
-    if (verbose) warning("Can't extract residuals from model.", call. = FALSE)
+    if (verbose) {
+      format_warning("Can't extract residuals from model.")
+    }
     res <- NULL
   }
 
@@ -257,16 +235,16 @@ print.insight_residuals <- function(x, ...) {
         res_dev <- res_dev[!is.na(w) & w != 0]
       } else if (verbose) {
         if (is.null(w)) {
-          warning(format_message("Can't calculate weighted residuals from model. Model doesn't seem to have weights."), call. = FALSE)
+          format_warning("Can't calculate weighted residuals from model. Model doesn't seem to have weights.")
         } else if (is.null(res_dev)) {
-          warning(format_message("Can't calculate weighted residuals from model. Could not extract deviance-residuals."), call. = FALSE)
+          format_warning("Can't calculate weighted residuals from model. Could not extract deviance-residuals.")
         }
       }
       res_dev
     },
     error = function(e) {
       if (verbose) {
-        warning("Can't calculate weighted residuals from model.", call. = FALSE)
+        format_warning("Can't calculate weighted residuals from model.")
       }
       NULL
     }

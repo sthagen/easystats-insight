@@ -98,6 +98,23 @@ get_loglikelihood.glmerMod <- function(x, check_response = FALSE, verbose = TRUE
 get_loglikelihood.glmmTMB <- get_loglikelihood.lmerMod
 
 #' @export
+get_loglikelihood.hglm <- function(x,
+                                   check_response = FALSE,
+                                   verbose = TRUE,
+                                   ...) {
+  lls <- x$likelihood
+  .loglikelihood_prep_output(
+    x,
+    lls,
+    check_response = check_response,
+    verbose = verbose,
+    REML = FALSE,
+    lls2 = .per_observation_ll(x),
+    ...
+  )
+}
+
+#' @export
 get_loglikelihood.mblogit <- function(x, verbose = TRUE, ...) {
   .loglikelihood_prep_output(
     x,
@@ -524,14 +541,11 @@ get_loglikelihood.cpglm <- get_loglikelihood.plm
 
 .per_observation_ll <- function(x) {
   # per observation lls
-  tryCatch(
+  .safe(
     {
       w <- get_weights(x, null_as_ones = TRUE)
       s2 <- (get_sigma(x) * sqrt(get_df(x, type = "residual") / n_obs(x)))^2
       0.5 * (log(w) - (log(2 * pi) + log(s2) + (w * get_residuals(x, verbose = FALSE)^2) / s2))
-    },
-    error = function(e) {
-      NULL
     }
   )
 }

@@ -235,19 +235,18 @@ get_predicted.default <- function(x,
 
   # 1. step: predictions
   predict_args <- compact_list(list(x, newdata = args$data, type = args$type, dot_args))
-  predictions <- tryCatch(do.call("predict", predict_args), error = function(e) NULL)
+  predictions <- .safe(do.call("predict", predict_args))
 
   # may fail due to invalid "dot_args", so try shorter argument list
   if (is.null(predictions)) {
-    predictions <- tryCatch(
-      do.call("predict", compact_list(list(x, newdata = args$data, type = args$type))),
-      error = function(e) NULL
+    predictions <- .safe(
+      do.call("predict", compact_list(list(x, newdata = args$data, type = args$type)))
     )
   }
 
   # still fails? try fitted()
   if (is.null(predictions)) {
-    predictions <- tryCatch(do.call("fitted", predict_args), error = function(e) NULL)
+    predictions <- .safe(do.call("fitted", predict_args))
   }
 
   # stop here if we have no predictions
@@ -258,7 +257,7 @@ get_predicted.default <- function(x,
   }
 
   # 2. step: confidence intervals
-  ci_data <- tryCatch(
+  ci_data <- .safe(
     {
       get_predicted_ci(
         x,
@@ -270,9 +269,6 @@ get_predicted.default <- function(x,
         vcov_args = vcov_args,
         ...
       )
-    },
-    error = function(e) {
-      NULL
     }
   )
 
@@ -295,7 +291,7 @@ get_predicted.default <- function(x,
 get_predicted.data.frame <- function(x, data = NULL, verbose = TRUE, ...) {
   # This makes it pipe friendly; data %>% get_predicted(model)
   if (is.null(data)) {
-    stop("Please provide a model to base the estimations on.", call. = FALSE)
+    format_error("Please provide a model to base the estimations on.")
   } else {
     get_predicted(data, x, verbose = verbose, ...)
   }
@@ -483,9 +479,83 @@ get_predicted.bife <- function(x,
     ...
   )
 
-  out <- tryCatch(stats::predict(x, type = args$scale, X_new = args$data), error = function(e) NULL)
+  out <- .safe(stats::predict(x, type = args$scale, X_new = args$data))
 
   if (!is.null(out)) {
+    out <- .get_predicted_out(out, args = list("data" = data))
+  }
+
+  out
+}
+
+
+# rma -------------------------------------------------------------------
+# =======================================================================
+#' @export
+get_predicted.rma <- function(x,
+                              predict = "expectation",
+                              data = NULL,
+                              verbose = TRUE,
+                              transf = NULL,
+                              transf_args = NULL,
+                              ...) {
+  args <- .get_predicted_args(x,
+    data = data,
+    predict = predict,
+    verbose = TRUE,
+    ...
+  )
+
+  has_scale_model <- inherits(x, "rma.ls")
+  # TODO: Handle tau2.levels and gamma2.levels arguments for rma.mv()
+
+  # metafor requires data for predict to be a model matrix (with no intercept)
+  if (!is.null(data)) {
+    newmods <- .create_newmods_rma(x, data)
+    if (has_scale_model) {
+      newscale <- .create_newscale_rma(x, data)
+    }
+  }
+
+  if (predict %in% c("link", "expectation", "prediction")) {
+    if (!is.null(data)) {
+      out <- .safe(stats::predict(x, transf = transf, targs = transf_args))
+    } else if (has_scale_model) {
+      out <- .safe(stats::predict(x, newmods = newmods, newscale = newscale, transf = transf, targs = transf_args))
+    } else {
+      out <- .safe(stats::predict(x, newmods = newmods, transf = transf, targs = transf_args))
+    }
+    if (predict == "prediction") {
+      out <- setNames(
+        as.data.frame(out)[, c("pred", "se", "pi.lb", "pi.ub")],
+        c("Predicted", "SE", "CI_low", "CI_high")
+      )
+    } else {
+      out <- setNames(
+        as.data.frame(out)[, c("pred", "se", "ci.lb", "ci.ub")],
+        c("Predicted", "SE", "CI_low", "CI_high")
+      )
+    }
+  } else if (predict == "blup") {
+    if (!is.null(data)) {
+      out <- .safe(metafor::blup(x, transf = transf, targs = transf_args))
+    } else if (has_scale_model) {
+      # TODO: Remove this helper function if metafor adds support for newmods/newscale in metafor::blup()
+      out <- .safe(.get_blup_rma(x, newmods = newmods, newscale = newscale, transf = transf, targs = transf_args))
+    } else {
+      # TODO: Remove this helper function if metafor adds support for newmods in metafor::blup()
+      out <- .safe(.get_blup_rma(x, newmods = newmods, transf = transf, targs = transf_args))
+    }
+    out <- setNames(as.data.frame(out), c("Predicted", "SE", "CI_low", "CI_high"))
+  } else {
+    format_error("`predict` must be one of 'link', 'expectation', 'prediction', or 'blup'.")
+  }
+
+  if (!is.null(out)) {
+    # Handle single-row output from intercept-only models
+    if (nrow(out) == 1) {
+      out <- do.call(rbind, lapply(seq_along(x$slab), function(i) out))
+    }
     out <- .get_predicted_out(out, args = list("data" = data))
   }
 
@@ -506,10 +576,10 @@ get_predicted.afex_aov <- function(x, data = NULL, ...) {
     args <- c(list(x, "newdata" = data), list(...))
   }
 
-  out <- tryCatch(do.call("predict", args), error = function(e) NULL)
+  out <- .safe(do.call("predict", args))
 
   if (is.null(out)) {
-    out <- tryCatch(do.call("fitted", args), error = function(e) NULL)
+    out <- .safe(do.call("fitted", args))
   }
 
   if (!is.null(out)) {
@@ -586,15 +656,15 @@ get_predicted.afex_aov <- function(x, data = NULL, ...) {
 
       # Transform SE (https://github.com/SurajGupta/r-source/blob/master/src/library/stats/R/predict.glm.R#L60)
       # Delta method; SE * deriv( inverse_link(x) wrt lin_pred(x) )
-      mu_eta <- tryCatch(abs(get_family(x)$mu.eta(predictions)), error = function(e) NULL)
+      mu_eta <- .safe(abs(get_family(x)$mu.eta(predictions)))
       if (is.null(mu_eta)) {
         ci_data[se_col] <- NULL
         if (isTRUE(verbose)) {
-          warning(format_message(
+          format_warning(
             "Could not apply Delta method to transform standard errors.",
             "You may be able to obtain standard errors by using the ",
             "`predict=\"link\"` argument value."
-          ), call. = FALSE)
+          )
         }
       } else {
         ci_data[se_col] <- ci_data[se_col] * mu_eta
@@ -652,9 +722,7 @@ get_predicted.afex_aov <- function(x, data = NULL, ...) {
     # if we have any focal predictors, add those as well, so we have
     # the associated levels/values for "Row"
     if (!is.null(args$data)) {
-      focal_predictors <- tryCatch(names(which(n_unique(args$data) > 1)),
-        error = function(e) NULL
-      )
+      focal_predictors <- .safe(names(which(n_unique(args$data) > 1)))
       if (!is.null(focal_predictors)) {
         predictions <- cbind(predictions, args$data[focal_predictors])
       }
@@ -755,4 +823,24 @@ get_predicted.afex_aov <- function(x, data = NULL, ...) {
   # Store as attribute
   attr(predictions, "iterations") <- iter
   predictions
+}
+
+
+
+# -------------------------------------------------------------------------
+
+.create_newmods_rma <- function(x, data, ...) {
+
+}
+
+.create_newscale_rma <- function(x, data, ...) {
+
+}
+
+.get_blup_rma <- function(x, data, ...) {
+  if (is.element(x$test, c("knha", "adhoc", "t"))) {
+    crit <- qt(level / 2, df = x$ddf, lower.tail = FALSE)
+  } else {
+    crit <- qnorm(level / 2, lower.tail = FALSE)
+  }
 }

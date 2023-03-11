@@ -372,7 +372,7 @@
   }
 
   if (!is.null(find_formula(x)[["dispersion"]]) && verbose) {
-    warning(sprintf("%s ignores effects of dispersion model.", name_fun), call. = FALSE)
+    format_warning(sprintf("%s ignores effects of dispersion model.", name_fun))
   }
 
   vals
@@ -858,7 +858,7 @@
     },
     error = function(x) {
       if (verbose) {
-        warning("Can't calculate model's distribution-specific variance. Results are not reliable.", call. = FALSE)
+        format_warning("Can't calculate model's distribution-specific variance. Results are not reliable.")
       }
       0
     }
