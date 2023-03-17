@@ -50,7 +50,8 @@ get_data <- function(x, ...) {
 # main workhorse, we try to recover data from environment as good as possible.
 # the dataset is subset if needed, and weights are added. only those columns
 # are returned that we actually find in the model...
-# data_name is useful when we have the name of the data frame object stored as a string (e.g., in brmsfit attr(x$data, "data_frame"))
+# data_name is useful when we have the name of the data frame object stored as
+# a string (e.g., in brmsfit attr(x$data, "data_frame"))
 .get_data_from_environment <- function(x,
                                        effects = "all",
                                        component = "all",
@@ -701,15 +702,13 @@ get_data.merMod <- function(x,
   # fall back to extract data from model frame
   effects <- match.arg(effects, choices = c("all", "fixed", "random"))
 
-  mf <- .safe(
-    {
-      switch(effects,
-        fixed = stats::model.frame(x, fixed.only = TRUE),
-        all = stats::model.frame(x, fixed.only = FALSE),
-        random = stats::model.frame(x, fixed.only = FALSE)[, find_random(x, split_nested = TRUE, flatten = TRUE), drop = FALSE]
-      )
-    }
-  )
+  mf <- .safe({
+    switch(effects,
+      fixed = stats::model.frame(x, fixed.only = TRUE),
+      all = stats::model.frame(x, fixed.only = FALSE),
+      random = stats::model.frame(x, fixed.only = FALSE)[, find_random(x, split_nested = TRUE, flatten = TRUE), drop = FALSE]
+    )
+  })
   .prepare_get_data(x, mf, effects, verbose = verbose)
 }
 
@@ -770,15 +769,13 @@ get_data.MANOVA <- function(x,
   # fall back to extract data from model frame
   effects <- match.arg(effects, choices = c("all", "fixed", "random"))
 
-  mf <- .safe(
-    {
-      switch(effects,
-        fixed = .remove_column(x$input$data, x$input$subject),
-        all = x$input$data,
-        random = x$input$data[, x$input$subject, drop = FALSE]
-      )
-    }
-  )
+  mf <- .safe({
+    switch(effects,
+      fixed = .remove_column(x$input$data, x$input$subject),
+      all = x$input$data,
+      random = x$input$data[, x$input$subject, drop = FALSE]
+    )
+  })
   .prepare_get_data(x, mf, effects, verbose = verbose)
 }
 
@@ -844,20 +841,18 @@ get_data.glmm <- function(x,
   effects <- match.arg(effects, choices = c("all", "fixed", "random"))
   dat <- get_data.default(x, verbose = verbose)
 
-  mf <- .safe(
-    {
-      switch(effects,
-        fixed = dat[, find_predictors(
-          x,
-          effects = "fixed",
-          flatten = TRUE,
-          verbose = FALSE
-        ), drop = FALSE],
-        all = dat,
-        random = dat[, find_random(x, split_nested = TRUE, flatten = TRUE), drop = FALSE]
-      )
-    }
-  )
+  mf <- .safe({
+    switch(effects,
+      fixed = dat[, find_predictors(
+        x,
+        effects = "fixed",
+        flatten = TRUE,
+        verbose = FALSE
+      ), drop = FALSE],
+      all = dat,
+      random = dat[, find_random(x, split_nested = TRUE, flatten = TRUE), drop = FALSE]
+    )
+  })
   .prepare_get_data(x, mf, effects, verbose = verbose)
 }
 
@@ -927,15 +922,13 @@ get_data.glmmadmb <- function(x,
   fixed_data <- x$frame
   random_data <- .recover_data_from_environment(x)[, find_random(x, split_nested = TRUE, flatten = TRUE), drop = FALSE]
 
-  mf <- .safe(
-    {
-      switch(effects,
-        fixed = fixed_data,
-        all = cbind(fixed_data, random_data),
-        random = random_data
-      )
-    }
-  )
+  mf <- .safe({
+    switch(effects,
+      fixed = fixed_data,
+      all = cbind(fixed_data, random_data),
+      random = random_data
+    )
+  })
   .prepare_get_data(x, mf, effects, verbose = verbose)
 }
 
@@ -1479,20 +1472,16 @@ get_data.ivreg <- function(x, source = "environment", verbose = TRUE, ...) {
     if (is_empty_object(remain)) {
       final_mf <- mf
     } else {
-      final_mf <- .safe(
-        {
-          dat <- .recover_data_from_environment(x)
-          cbind(mf, dat[, remain, drop = FALSE])
-        }
-      )
+      final_mf <- .safe({
+        dat <- .recover_data_from_environment(x)
+        cbind(mf, dat[, remain, drop = FALSE])
+      })
     }
   } else {
-    final_mf <- .safe(
-      {
-        dat <- .recover_data_from_environment(x)
-        dat[, ft, drop = FALSE]
-      }
-    )
+    final_mf <- .safe({
+      dat <- .recover_data_from_environment(x)
+      dat[, ft, drop = FALSE]
+    })
   }
 
   .prepare_get_data(x, stats::na.omit(final_mf), verbose = verbose)
@@ -2173,8 +2162,21 @@ get_data.rma <- function(x,
 
 
 #' @export
-# TODO: Check these
-get_data.metaplus <- get_data.rma
+get_data.metaplus <- function(x, source = "environment", verbose = TRUE, ...) {
+  # try to recover data from environment
+  model_data <- .get_data_from_environment(x, source = source, verbose = verbose, ...)
+
+  if (!is.null(model_data)) {
+    return(model_data)
+  }
+
+  # fall back to extract data from model frame
+  mf <- .safe(.recover_data_from_environment(x))
+  .prepare_get_data(x, stats::na.omit(mf), verbose = verbose)
+}
+
+#' @export
+get_data.ivFixed <- get_data.metaplus
 
 
 #' @export
@@ -2187,9 +2189,12 @@ get_data.meta_random <- function(x, source = "environment", verbose = TRUE, ...)
   }
 
   # fall back to extract data from model frame
-  mf <- tryCatch(x$data$data, error = function(x) NULL)
+  mf <- .safe(x$data$data)
   .prepare_get_data(x, stats::na.omit(mf), verbose = verbose)
 }
+
+#' @export
+get_data.meta_fixed <- get_data.meta_random
 
 
 #' @export
@@ -2208,16 +2213,6 @@ get_data.meta_bma <- function(x, source = "environment", verbose = TRUE, ...) {
 
 
 #' @export
-# TODO: Check these
-get_data.meta_fixed <- get_data.meta_random
-
-
-#' @export
-# TODO: Check these
-get_data.ivFixed <- get_data.rma
-
-
-#' @export
 get_data.bfsl <- function(x, ...) {
   as.data.frame(x$data[c("x", "y", "sd_x", "sd_y")])
 }
@@ -2225,12 +2220,10 @@ get_data.bfsl <- function(x, ...) {
 
 #' @export
 get_data.mipo <- function(x, ...) {
-  .safe(
-    {
-      models <- eval(x$call$object)
-      get_data(models$analyses[[1]], ...)
-    }
-  )
+  .safe({
+    models <- eval(x$call$object)
+    get_data(models$analyses[[1]], ...)
+  })
 }
 
 

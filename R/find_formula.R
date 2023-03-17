@@ -272,8 +272,10 @@ find_formula.rma <- function(x, verbose = TRUE, ...) {
       formula.yi <- stats::as.formula(paste(model_call$yi, "~ 1"))
     } else {
       formula.mods[3] <- formula.mods[2]
-      formula.mods[2] <- model_call$yi
+      formula.mods[[2]] <- model_call$yi
       formula.yi <- formula.mods
+      # TODO: this code line should be identcal to the three lines above, but maybe safer
+      # formula.yi <- formula.mods <- stats::as.formula(paste(all.vars(model_call$yi), "~", all.vars(formula.mods)))
     }
   }
   f <- compact_list(list(
@@ -283,12 +285,24 @@ find_formula.rma <- function(x, verbose = TRUE, ...) {
   .find_formula_return(f, verbose = verbose)
 }
 
-#' @export
 # TODO: Check these
-find_formula.metaplus <- find_formula.rma
 
 #' @export
-find_formula.deltaMethod <- find_formula.rma
+find_formula.meta_random <- function(x, verbose = TRUE, ...) {
+  NULL
+}
+
+#' @export
+find_formula.metaplus <- find_formula.meta_random
+
+#' @export
+find_formula.meta_fixed <- find_formula.meta_random
+
+#' @export
+find_formula.meta_bma <- find_formula.meta_random
+
+#' @export
+find_formula.deltaMethod <- find_formula.meta_random
 
 
 
@@ -1038,6 +1052,17 @@ find_formula.clm2 <- function(x, verbose = TRUE, ...) {
 
 
 #' @export
+find_formula.clm <- function(x, verbose = TRUE, ...) {
+  f <- compact_list(list(
+    conditional = stats::formula(x),
+    scale = x$formulas$scale,
+    nominal = x$formulas$nominal
+  ))
+  .find_formula_return(f, verbose = verbose)
+}
+
+
+#' @export
 find_formula.DirichletRegModel <- function(x, verbose = TRUE, ...) {
   f <- safe_deparse(stats::formula(x))
   f_parts <- unlist(strsplit(f, "(?<!\\()\\|(?![\\w\\s\\+\\(~]*[\\)])", perl = TRUE), use.names = FALSE)
@@ -1243,6 +1268,10 @@ find_formula.sem <- function(x, verbose = TRUE, ...) {
 find_formula.lme <- function(x, verbose = TRUE, ...) {
   fm <- stats::formula(x$terms)
   fmr <- eval(x$call$random)
+  if (!is.null(fmr) && safe_deparse(fmr)[1] == "~1") {
+    check_if_installed("nlme")
+    fmr <- stats::as.formula(paste("~1 |", all.vars(nlme::getGroupsFormula(x))))
+  }
   ## TODO this is an intermediate fix to return the correlation variables from lme-objects
   fcorr <- x$call$correlation
   if (!is.null(fcorr)) {

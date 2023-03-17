@@ -37,9 +37,12 @@ get_weights <- function(x, ...) {
 }
 
 
+## TODO: probably need own method for nlme, see #727
+
 #' @rdname get_weights
 #' @export
 get_weights.default <- function(x, na_rm = FALSE, null_as_ones = FALSE, ...) {
+  weight_vars <- find_weights(x)
   w <- tryCatch(
     stats::weights(x, ...),
     error = function(e) NULL,
@@ -56,7 +59,13 @@ get_weights.default <- function(x, na_rm = FALSE, null_as_ones = FALSE, ...) {
 
   if (is.null(w)) {
     w <- tryCatch(
-      .recover_data_from_environment(x)[[find_weights(x)]],
+      {
+        if (length(weight_vars) > 1) {
+          .recover_data_from_environment(x)[weight_vars]
+        } else {
+          .recover_data_from_environment(x)[[weight_vars]]
+        }
+      },
       error = function(e) NULL,
       warning = function(w) NULL
     )
@@ -69,7 +78,7 @@ get_weights.default <- function(x, na_rm = FALSE, null_as_ones = FALSE, ...) {
 
   # if all weights are 1, set return value to NULL,
   # unless the weights were explicitly set in the model call
-  if (!is.null(w) && all(w == 1L) && is.null(find_weights(x))) {
+  if (!is.null(w) && all(w == 1L) && is.null(weight_vars)) {
     w <- NULL
   }
 
