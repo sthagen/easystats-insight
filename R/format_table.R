@@ -92,7 +92,7 @@ format_table <- function(x,
   # sanity check
   if (is.null(x) || (is.data.frame(x) && nrow(x) == 0)) {
     if (isTRUE(verbose)) {
-      message("Can't format table, data frame is empty.")
+      format_alert("Can't format table, data frame is empty.")
     }
     return(NULL)
   }
@@ -109,6 +109,14 @@ format_table <- function(x,
 
 
   # Format parameters names ----
+
+  ## TODO: check if this simplification works
+  # I'm not sure, but I think the following three code lines should work, too
+  #
+  # shared <- intersect(x$Parameter, names(att$pretty_names))
+  # index <- match(shared, x$Parameter)
+  # x$Parameter[index] <- as.vector(att$pretty_names[x$Parameter[index]])
+
   if (pretty_names && !is.null(att$pretty_names)) {
     # remove strings with NA names
     att$pretty_names <- att$pretty_names[!is.na(names(att$pretty_names))]
