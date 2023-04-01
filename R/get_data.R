@@ -2078,6 +2078,20 @@ get_data.mlogit <- function(x, source = "environment", verbose = TRUE, ...) {
 
 
 #' @export
+get_data.phylolm <- function(x, source = "environment", verbose = TRUE, ...) {
+  # DO NOT TOUCH THE SOURCE ARGUMENT!
+  # phylo models have no model.frame() method, so we can only recover from
+  # environment. We still need the "source" argument, even if it's not used here,
+  #  to avoid the "multiple argument match" error for those instances, where
+  # `get_data()` is called # with `source = "frame"`.
+  .get_data_from_environment(x, source = "environment", verbose = verbose, ...)
+}
+
+#' @export
+get_data.phyloglm <- get_data.phylolm
+
+
+#' @export
 #' @rdname get_data
 #' @param include_interval For meta-analysis models, should normal-approximation
 #'   confidence intervals be added for each response effect size?
