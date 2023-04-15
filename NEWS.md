@@ -13,11 +13,17 @@
 
 ## General
 
-* Improved support for `mclogit` models (package *mclogit*).
+* Improved support for `mclogit` models (package *mclogit*) and `mipo` objects
+  (package *mice*) for models with ordinal or categorical response.
 
 ## New supported models
 
 * `phylolm` and `phyloglm` (package *phylolm*).
+
+## Bug fixes
+
+* Fixed issues in `get_weights()` for `glm` models without weights and `na.action`
+  not set to default in the model call.
 
 # insight 0.19.1
 
