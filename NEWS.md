@@ -25,6 +25,10 @@
 * Fixed issues in `get_weights()` for `glm` models without weights and `na.action`
   not set to default in the model call.
 
+* `clean_names()` now also removes the `relevel()` pattern.
+
+* Fixed issue in `model_info()` for models of class `gamlss`.
+
 # insight 0.19.1
 
 ## New supported models
