@@ -1,7 +1,7 @@
 Type: Package
 Package: insight
 Title: Easy Access to Model Information for Various Model Objects
-Version: 0.19.1.8
+Version: 0.19.1.10
 Authors@R: 
     c(person(given = "Daniel",
              family = "Lüdecke",
@@ -57,7 +57,12 @@ Authors@R:
              family = "Thériault",
              role = "ctb",
              email = "remi.theriault@mail.mcgill.ca",
-             comment = c(ORCID = "0000-0003-4315-6788", Twitter = "@rempsyc")))
+             comment = c(ORCID = "0000-0003-4315-6788", Twitter = "@rempsyc")),
+      person(given = "Alex",
+             family = "Reinhart",
+             role = "ctb",
+             email = "areinhar@stat.cmu.edu",
+             comment = c(ORCID = "0000-0002-6658-514X")))
 Maintainer: Daniel Lüdecke <d.luedecke@uke.de>
 Description: A tool to provide an easy, intuitive and consistent
     access to information contained in various R models, like model
