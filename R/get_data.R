@@ -209,16 +209,27 @@ get_data <- function(x, ...) {
     model_call[["data"]] <- as.name(data_name)
   }
 
-  # first, try environment of formula, see #666. set enclos = NULL so eval()
-  # does not fall back to parent frame when the environment is NULL, since we
-  # want to try that after checking the formula
-  dat <- .safe(eval(model_call$data, envir = environment(model_call$formula),
-                    enclos = NULL))
+  # special handling for fixest, see #767
+  if (inherits(x, "fixest")) {
+    # when called from inside function, fixest seems to have a different
+    # environment that requires recovering from parent-environment
+    dat <- .safe(eval(model_call$data, envir = parent.env(x$call_env)))
+  } else {
+    # first, try environment of formula, see #666. set enclos = NULL so eval()
+    # does not fall back to parent frame when the environment is NULL, since we
+    # want to try that after checking the formula
+    dat <- .safe(eval(model_call$data,
+      envir = environment(model_call$formula),
+      enclos = NULL
+    ))
+  }
 
   # second, try to extract formula directly
   if (is.null(dat)) {
-    dat <- .safe(eval(model_call$data, envir = environment(find_formula(x)$conditional),
-                      enclos = NULL))
+    dat <- .safe(eval(model_call$data,
+      envir = environment(find_formula(x)$conditional),
+      enclos = NULL
+    ))
   }
 
   # sanity check- if data frame is named like a function, e.g.
