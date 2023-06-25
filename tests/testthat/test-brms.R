@@ -13,11 +13,18 @@ m5 <- insight::download_model("brms_mv_5")
 m6 <- insight::download_model("brms_corr_re1")
 m7 <- suppressWarnings(insight::download_model("brms_mixed_8"))
 m8 <- insight::download_model("brms_ordinal_1")
+brms_trunc_1 <- suppressWarnings(download_model("brms_trunc_1"))
 
-all_loaded <- !vapply(list(m1, m2, m3, m4, m5, m6, m7, m8), is.null, TRUE)
+all_loaded <- !vapply(list(m1, m2, m3, m4, m5, m6, m7, m8, brms_trunc_1), is.null, TRUE)
 skip_if(!all(all_loaded))
 
 # Tests -------------------------------------------------------------------
+test_that("get_response.brmsfit: trunc", {
+  expect_identical(find_response(brms_trunc_1), "count")
+  expect_length(get_response(brms_trunc_1, source = "env"), 236)
+  expect_length(get_response(brms_trunc_1, source = "mf"), 236)
+})
+
 test_that("get_predicted.brmsfit: ordinal dv", {
   skip_if_not_installed("bayestestR")
   skip_if_not_installed("rstantools")
@@ -44,7 +51,7 @@ test_that("get_predicted.brmsfit: ordinal dv", {
   manual <- apply(manual[, , 1], 2, median)
   expect_equal(pred3$Predicted[1:32], manual, ignore_attr = TRUE)
   manual <- rstantools::posterior_epred(m8)
-  manual <- apply(manual[, , 1], 2, mean)
+  manual <- apply(manual[, , 1], 2, mean) # nolint
   expect_equal(pred1$Predicted[1:32], manual, ignore_attr = TRUE)
 })
 
@@ -296,14 +303,14 @@ test_that("find_random", {
 
 test_that("get_random", {
   zinb <- get_data(m4)
-  expect_equal(get_random(m4), zinb[, "persons", drop = FALSE])
+  expect_identical(get_random(m4), zinb[, "persons", drop = FALSE])
 })
 
 
 test_that("get_data", {
   d <- get_data(m6)
-  expect_equal(nrow(d), 200)
-  expect_equal(ncol(d), 3)
+  expect_identical(nrow(d), 200L)
+  expect_identical(ncol(d), 3L)
 })
 
 
@@ -377,7 +384,10 @@ test_that("find_paramaters", {
           ),
           random = c(sprintf("r_persons__count2[%i,Intercept]", 1:4), "sd_persons__count2_Intercept"),
           zero_inflated = c("b_zi_count2_Intercept", "b_zi_count2_child"),
-          zero_inflated_random = c(sprintf("r_persons__zi_count2[%i,Intercept]", 1:4), "sd_persons__zi_count2_Intercept")
+          zero_inflated_random = c(
+            sprintf("r_persons__zi_count2[%i,Intercept]", 1:4),
+            "sd_persons__zi_count2_Intercept"
+          )
         )
       ),
       "is_mv" = "1"
@@ -497,7 +507,8 @@ test_that("find_algorithm", {
       chains = 1,
       iterations = 500,
       warmup = 250
-    )
+    ),
+    ignore_attr = TRUE
   )
 })
 
@@ -542,7 +553,7 @@ test_that("Issue #645", {
   # sink() writing permission fail on some Windows CI machines
   skip_on_os("windows")
 
-  void <- suppressMessages(suppressWarnings(capture.output(
+  void <- suppressMessages(suppressWarnings(capture.output({
     mod <- brms::brm(
       silent = 2,
       data = mtcars,
@@ -553,7 +564,7 @@ test_that("Issue #645", {
         nl = TRUE
       )
     )
-  )))
+  })))
 
   p <- find_predictors(mod, flatten = TRUE)
   d <- get_data(mod)
