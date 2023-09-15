@@ -50,7 +50,12 @@ check_if_installed <- function(package,
   what_is_wrong <- what_you_can_do <- NULL
 
   if (is.null(minimum_version)) {
-    minimum_version <- .get_dep_version(dep = package)
+    minimum_version <- .safe(.get_dep_version(dep = package))
+  }
+
+  # sanity check for equal length of package and minimum_version
+  if (!is.null(minimum_version) && length(package) != length(minimum_version)) {
+    minimum_version <- NULL
   }
 
   ## Test
@@ -68,24 +73,21 @@ check_if_installed <- function(package,
     what_you_can_do <- sprintf(
       "Please install %s by running `install.packages(%s)`.",
       if (length(package) > 1L) "them" else "it",
-      toString(sprintf("`%s`", package))
+      toString(sprintf("\"%s\"", package))
     )
   } else if (!is.null(minimum_version)) {
-    current_versions <- unlist(lapply(package, function(x) {
-      as.character(utils::packageVersion(x))
-    }))
-
-    desired_versions <- unlist(lapply(minimum_version, function(x) {
-      if (is.na(x)) {
-        0
+    needs_update <- unlist(Map(function(p, m) {
+      if (is.na(m)) {
+        FALSE
       } else {
-        as.character(package_version(x))
+        utils::packageVersion(p) < package_version(m)
       }
-    }))
-
-    needs_update <- current_versions < desired_versions
+    }, package, minimum_version))
 
     if (any(needs_update)) {
+      # set is_installed to FALSE for packages that fail minimum version check
+      is_installed[needs_update] <- FALSE
+
       # only keep not-up-to-date packages
       package <- package[needs_update]
       minimum_version <- minimum_version[needs_update]
@@ -103,7 +105,7 @@ check_if_installed <- function(package,
       what_you_can_do <- sprintf(
         "Please update %s by running `install.packages(%s)`.",
         if (length(package) > 1L) "them" else "it",
-        toString(sprintf("`%s`", package))
+        toString(sprintf("\"%s\"", package))
       )
     }
   }
@@ -163,8 +165,9 @@ print.check_if_installed <- function(x, ...) {
     dep_string <- unlist(strsplit(dep_string, ">", fixed = TRUE))
     gsub("[^0-9.]+", "", dep_string[2])
   })
-  if (all(is.na(out))) {
+  out <- unlist(compact_list(out))
+  if (all(is.na(out)) || !length(out)) {
     out <- NULL
   }
-  unlist(out)
+  out
 }
