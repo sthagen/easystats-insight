@@ -108,7 +108,7 @@ m12 <- suppressWarnings(
 test_that("stan_jm", {
   skip_on_os("windows")
   skip_on_os(c("mac", "linux", "solaris"), arch = "i386")
-  void <- capture.output(
+  void <- capture.output({
     m13 <- suppressMessages(
       suppressWarnings(
         stan_jm(
@@ -122,7 +122,7 @@ test_that("stan_jm", {
         )
       )
     )
-  )
+  })
   # expect_snapshot(model_info(m13))
 })
 
@@ -141,7 +141,7 @@ Orange$age <- Orange$age / 100
 #   iter = 1000
 # )
 
-invisible(capture.output(
+invisible(capture.output({
   m15 <- suppressWarnings(
     stan_mvmer(
       formula = list(
@@ -153,7 +153,7 @@ invisible(capture.output(
       chains = 1, cores = 1, seed = 12345, iter = 1000, refresh = 0
     )
   )
-))
+}))
 
 test_that("model_info-stanreg-glm", {
   expect_equal(
@@ -161,7 +161,7 @@ test_that("model_info-stanreg-glm", {
     list(
       is_binomial = TRUE, is_bernoulli = FALSE, is_count = FALSE,
       is_poisson = FALSE, is_negbin = FALSE, is_beta = FALSE, is_betabinomial = FALSE,
-      is_dirichlet = FALSE, is_exponential = FALSE, is_logit = TRUE,
+      is_orderedbeta = FALSE, is_dirichlet = FALSE, is_exponential = FALSE, is_logit = TRUE,
       is_probit = FALSE, is_censored = FALSE, is_truncated = FALSE,
       is_survival = FALSE, is_linear = FALSE, is_tweedie = FALSE,
       is_zeroinf = FALSE, is_zero_inflated = FALSE, is_dispersion = FALSE,
@@ -175,7 +175,8 @@ test_that("model_info-stanreg-glm", {
       is_binomtest = FALSE, is_ftest = FALSE, is_meta = FALSE,
       link_function = "logit", family = "binomial", n_obs = 56L,
       n_grouplevels = c(herd = 15L)
-    )
+    ),
+    ignore_attr = TRUE
   )
 
   expect_equal(
@@ -183,7 +184,7 @@ test_that("model_info-stanreg-glm", {
     list(
       is_binomial = FALSE, is_bernoulli = FALSE, is_count = FALSE,
       is_poisson = FALSE, is_negbin = FALSE, is_beta = FALSE, is_betabinomial = FALSE,
-      is_dirichlet = FALSE, is_exponential = FALSE, is_logit = FALSE,
+      is_orderedbeta = FALSE, is_dirichlet = FALSE, is_exponential = FALSE, is_logit = FALSE,
       is_probit = FALSE, is_censored = FALSE, is_truncated = FALSE,
       is_survival = FALSE, is_linear = TRUE, is_tweedie = FALSE,
       is_zeroinf = FALSE, is_zero_inflated = FALSE, is_dispersion = FALSE,
@@ -197,7 +198,8 @@ test_that("model_info-stanreg-glm", {
       is_binomtest = FALSE, is_ftest = FALSE, is_meta = FALSE,
       link_function = "identity", family = "gaussian", n_obs = 150L,
       n_grouplevels = NULL
-    )
+    ),
+    ignore_attr = TRUE
   )
 
   expect_equal(
@@ -205,7 +207,7 @@ test_that("model_info-stanreg-glm", {
     list(
       is_binomial = TRUE, is_bernoulli = TRUE, is_count = FALSE,
       is_poisson = FALSE, is_negbin = FALSE, is_beta = FALSE, is_betabinomial = FALSE,
-      is_dirichlet = FALSE, is_exponential = FALSE, is_logit = TRUE,
+      is_orderedbeta = FALSE, is_dirichlet = FALSE, is_exponential = FALSE, is_logit = TRUE,
       is_probit = FALSE, is_censored = FALSE, is_truncated = FALSE,
       is_survival = FALSE, is_linear = FALSE, is_tweedie = FALSE,
       is_zeroinf = FALSE, is_zero_inflated = FALSE, is_dispersion = FALSE,
@@ -219,24 +221,25 @@ test_that("model_info-stanreg-glm", {
       is_binomtest = FALSE, is_ftest = FALSE, is_meta = FALSE,
       link_function = "logit", family = "binomial", n_obs = 32L,
       n_grouplevels = NULL
-    )
+    ),
+    ignore_attr = TRUE
   )
 
   ## TODO add model m4 to m15
 })
 
 test_that("n_parameters", {
-  expect_equal(n_parameters(m1), 21)
-  expect_equal(n_parameters(m1, effects = "fixed"), 5)
+  expect_identical(n_parameters(m1), 21L)
+  expect_identical(n_parameters(m1, effects = "fixed"), 5L)
 })
 
 test_that("get_priors", {
-  expect_equal(
-    colnames(get_priors(m1)),
+  expect_named(
+    get_priors(m1),
     c("Parameter", "Distribution", "Location", "Scale")
   )
-  expect_equal(
-    colnames(get_priors(m2)),
+  expect_named(
+    get_priors(m2),
     c(
       "Parameter",
       "Distribution",
@@ -296,27 +299,27 @@ test_that("find_predictors", {
 })
 
 test_that("find_response", {
-  expect_equal(
+  expect_identical(
     find_response(m1, combine = TRUE),
     "cbind(incidence, size - incidence)"
   )
-  expect_equal(
+  expect_identical(
     find_response(m1, combine = FALSE),
     c("incidence", "size")
   )
 })
 
 test_that("get_response", {
-  expect_equal(nrow(get_response(m1)), 56)
-  expect_equal(colnames(get_response(m1)), c("incidence", "size"))
+  expect_identical(nrow(get_response(m1)), 56L)
+  expect_named(get_response(m1), c("incidence", "size"))
 })
 
 test_that("find_random", {
-  expect_equal(find_random(m1), list(random = "herd"))
+  expect_identical(find_random(m1), list(random = "herd"))
 })
 
 test_that("get_random", {
-  expect_equal(get_random(m1), lme4::cbpp[, "herd", drop = FALSE])
+  expect_identical(get_random(m1), lme4::cbpp[, "herd", drop = FALSE])
 })
 
 test_that("find_terms", {
@@ -350,19 +353,19 @@ test_that("find_variables", {
 })
 
 test_that("n_obs", {
-  expect_equal(n_obs(m1), 56)
-  expect_equal(n_obs(m1, disaggregate = TRUE), 842)
+  expect_identical(n_obs(m1), 56L)
+  expect_identical(n_obs(m1, disaggregate = TRUE), 842L)
 })
 
 test_that("find_paramaters", {
-  expect_equal(
+  expect_identical(
     find_parameters(m1),
     list(
       conditional = c("(Intercept)", "size", "period2", "period3", "period4"),
       random = c(sprintf("b[(Intercept) herd:%i]", 1:15), "Sigma[herd:(Intercept),(Intercept)]")
     )
   )
-  expect_equal(
+  expect_identical(
     find_parameters(m1, flatten = TRUE),
     c(
       "(Intercept)",
@@ -377,12 +380,12 @@ test_that("find_paramaters", {
 })
 
 test_that("find_paramaters", {
-  expect_equal(
-    colnames(get_parameters(m1)),
+  expect_named(
+    get_parameters(m1),
     c("(Intercept)", "size", "period2", "period3", "period4")
   )
-  expect_equal(
-    colnames(get_parameters(m1, effects = "all")),
+  expect_named(
+    get_parameters(m1, effects = "all"),
     c(
       "(Intercept)",
       "size",
@@ -404,9 +407,9 @@ test_that("link_inverse", {
 })
 
 test_that("get_data", {
-  expect_equal(nrow(get_data(m1)), 56)
-  expect_equal(
-    colnames(get_data(m1)),
+  expect_identical(nrow(get_data(m1)), 56L)
+  expect_named(
+    get_data(m1),
     c("incidence", "size", "period", "herd")
   )
 })
@@ -460,7 +463,7 @@ test_that("get_variance", {
 })
 
 test_that("find_algorithm", {
-  expect_equal(
+  expect_identical(
     find_algorithm(m1),
     list(
       algorithm = "sampling",
@@ -534,7 +537,7 @@ model <- stan_glm(
 
 test_that("flat_priors", {
   p <- get_priors(model)
-  expect_equal(p$Distribution, c("uniform", "normal"))
+  expect_identical(p$Distribution, c("uniform", "normal"))
   expect_equal(p$Location, c(NA, 0), tolerance = 1e-3)
 })
 
