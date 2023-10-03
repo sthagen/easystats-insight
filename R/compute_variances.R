@@ -628,7 +628,19 @@
       )
     }
     return(0)
-  } else if (mu < 6 && verbose) {
+  } else if (is.null(faminfo$family)) {
+    mu <- exp(mu)
+  } else {
+    # transform mu
+    mu <- switch(faminfo$family,
+      beta = mu,
+      ordbeta = stats::qlogis(mu),
+      exp(mu)
+    )
+  }
+
+  # check if mu is too close to zero, but not for beta-distribution
+  if (mu < 6 && verbose && isFALSE(faminfo$family %in% c("beta", "ordbeta"))) {
     format_warning(
       sprintf("mu of %0.1f is too close to zero, estimate of %s may be unreliable.", mu, name)
     )
@@ -641,7 +653,7 @@
         # (zero-inflated) poisson ----
         # ----------------------------
         `zero-inflated poisson` = ,
-        poisson = .variance_family_poisson(x, exp(mu), faminfo),
+        poisson = .variance_family_poisson(x, mu, faminfo),
 
         # hurdle-poisson ----
         # -------------------
@@ -658,20 +670,20 @@
         `negative binomial` = ,
         genpois = ,
         nbinom1 = ,
-        nbinom2 = .variance_family_nbinom(x, exp(mu), sig, faminfo),
-        truncated_nbinom2 = stats::family(x)$variance(exp(mu), sig),
+        nbinom2 = .variance_family_nbinom(x, mu, sig, faminfo),
+        truncated_nbinom2 = stats::family(x)$variance(mu, sig),
 
         # other distributions ----
         # ------------------------
-        tweedie = .variance_family_tweedie(x, exp(mu), sig),
+        tweedie = .variance_family_tweedie(x, mu, sig),
         beta = .variance_family_beta(x, mu, sig),
-        ordbeta =  .variance_family_orderedbeta(x, stats::plogis(mu)),
+        ordbeta = .variance_family_orderedbeta(x, mu),
         # betabinomial = stats::family(x)$variance(mu, sig),
         # betabinomial = .variance_family_betabinom(x, mu, sig),
 
         # default variance for non-captured distributions ----
         # ----------------------------------------------------
-        .variance_family_default(x, exp(mu), verbose)
+        .variance_family_default(x, mu, verbose)
       )
 
       if (vv < 0 && isTRUE(verbose)) {
