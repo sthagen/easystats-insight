@@ -3,18 +3,27 @@
 \name{find_formula}
 \alias{find_formula}
 \alias{formula_ok}
+\alias{find_formula.default}
+\alias{find_formula.nestedLogit}
 \title{Find model formula}
 \usage{
-find_formula(x, verbose = TRUE, ...)
+find_formula(x, ...)
 
 formula_ok(x, verbose = TRUE, ...)
+
+\method{find_formula}{default}(x, verbose = TRUE, ...)
+
+\method{find_formula}{nestedLogit}(x, dichotomies = FALSE, verbose = TRUE, ...)
 }
 \arguments{
 \item{x}{A fitted model.}
 
+\item{...}{Currently not used.}
+
 \item{verbose}{Toggle warnings.}
 
-\item{...}{Currently not used.}
+\item{dichotomies}{Logical, if model is a \code{nestedLogit} objects, returns
+the formulas for the dichotomies.}
 }
 \value{
 A list of formulas that describe the model. For simple models,

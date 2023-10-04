@@ -9,6 +9,8 @@
 #'  `variable`).
 #'
 #' @param verbose Toggle warnings.
+#' @param dichotomies Logical, if model is a `nestedLogit` objects, returns
+#' the formulas for the dichotomies.
 #' @param ... Currently not used.
 #' @inheritParams find_predictors
 #'
@@ -64,7 +66,7 @@
 #' f
 #' format(f)
 #' @export
-find_formula <- function(x, verbose = TRUE, ...) {
+find_formula <- function(x, ...) {
   UseMethod("find_formula")
 }
 
@@ -90,6 +92,7 @@ formula_ok <- function(x, verbose = TRUE, ...) {
 
 # Default method -----------------------------------
 
+#' @rdname find_formula
 #' @export
 find_formula.default <- function(x, verbose = TRUE, ...) {
   f <- .safe(list(conditional = stats::formula(x)))
@@ -116,7 +119,6 @@ find_formula.list <- function(x, verbose = TRUE, ...) {
   }
   .find_formula_return(f, verbose = verbose)
 }
-
 
 
 #' @export
@@ -176,7 +178,6 @@ find_formula.gam <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.gamlss <- function(x, verbose = TRUE, ...) {
   f <- tryCatch(
@@ -212,7 +213,6 @@ find_formula.gamlss <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.bamlss <- function(x, verbose = TRUE, ...) {
   f <- stats::formula(x)
@@ -235,7 +235,6 @@ find_formula.bamlss <- function(x, verbose = TRUE, ...) {
   ))
   .find_formula_return(f, verbose = verbose)
 }
-
 
 
 #' @export
@@ -316,6 +315,23 @@ find_formula.maxLik <- find_formula.default
 
 #' @export
 find_formula.maxim <- find_formula.default
+
+
+#' @rdname find_formula
+#' @export
+find_formula.nestedLogit <- function(x, dichotomies = FALSE, verbose = TRUE, ...) {
+  if (isTRUE(dichotomies)) {
+    stats::setNames(
+      lapply(x$models, function(m) {
+        f <- list(conditional = get_call(m)$formula)
+        .find_formula_return(f, verbose = verbose)
+      }),
+      names(x$models)
+    )
+  } else {
+    find_formula.default(x, verbose = verbose, ...)
+  }
+}
 
 
 #' @export
@@ -545,7 +561,6 @@ find_formula.gee <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.MANOVA <- function(x, verbose = TRUE, ...) {
   f <- compact_list(list(
@@ -557,7 +572,6 @@ find_formula.MANOVA <- function(x, verbose = TRUE, ...) {
 
 #' @export
 find_formula.RM <- find_formula.MANOVA
-
 
 
 #' @export
@@ -595,7 +609,6 @@ find_formula.gls <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.LORgee <- function(x, verbose = TRUE, ...) {
   f <- tryCatch(
@@ -617,7 +630,6 @@ find_formula.LORgee <- function(x, verbose = TRUE, ...) {
   )
   .find_formula_return(f, verbose = verbose)
 }
-
 
 
 #' @export
@@ -645,7 +657,6 @@ find_formula.cglm <- function(x, verbose = TRUE, ...) {
 
 
 # mfx models ---------------------------------------
-
 
 #' @export
 find_formula.betamfx <- find_formula.betareg
@@ -680,7 +691,6 @@ find_formula.probitmfx <- find_formula.logitmfx
 
 # Panel data models ---------------------------------------
 
-
 #' @export
 find_formula.ivreg <- function(x, verbose = TRUE, ...) {
   f <- tryCatch(
@@ -701,10 +711,8 @@ find_formula.ivreg <- function(x, verbose = TRUE, ...) {
   .find_formula_return(f, verbose = verbose)
 }
 
-
 #' @export
 find_formula.iv_robust <- find_formula.ivreg
-
 
 #' @export
 find_formula.ivFixed <- find_formula.ivreg
@@ -743,7 +751,6 @@ find_formula.plm <- function(x, verbose = TRUE, ...) {
   )
   .find_formula_return(f, verbose = verbose)
 }
-
 
 #' @export
 find_formula.pgmm <- find_formula.plm
@@ -784,7 +791,6 @@ find_formula.felm <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.mhurdle <- function(x, verbose = TRUE, ...) {
   f <- safe_deparse(stats::formula(x)[[3]])
@@ -821,7 +827,6 @@ find_formula.mhurdle <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.feglm <- function(x, verbose = TRUE, ...) {
   f <- safe_deparse(stats::formula(x))
@@ -850,7 +855,6 @@ find_formula.feglm <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.fixest <- function(x, verbose = TRUE, ...) {
   f <- safe_deparse(stats::formula(x))
@@ -873,7 +877,6 @@ find_formula.fixest <- function(x, verbose = TRUE, ...) {
   ))
   .find_formula_return(f, verbose = verbose)
 }
-
 
 
 #' @export
@@ -903,7 +906,6 @@ find_formula.feis <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.bife <- function(x, verbose = TRUE, ...) {
   f <- safe_deparse(stats::formula(x))
@@ -925,12 +927,10 @@ find_formula.bife <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.ivprobit <- function(x, verbose = TRUE, ...) {
   NULL
 }
-
 
 
 #' @export
@@ -993,7 +993,6 @@ find_formula.glimML <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.tobit <- function(x, verbose = TRUE, ...) {
   f <- tryCatch(
@@ -1026,7 +1025,6 @@ find_formula.zcpglm <- function(x, verbose = TRUE, ...) {
 
 
 # Ordinal models  --------------------------------------
-
 
 #' @export
 find_formula.clmm2 <- function(x, verbose = TRUE, ...) {
@@ -1147,7 +1145,6 @@ find_formula.glmmTMB <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.nlmerMod <- function(x, verbose = TRUE, ...) {
   f.random <- lapply(.findbars(stats::formula(x)), function(.x) {
@@ -1239,7 +1236,6 @@ find_formula.merModList <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.sem <- function(x, verbose = TRUE, ...) {
   if (!.is_semLme(x)) {
@@ -1305,7 +1301,6 @@ find_formula.lqmm <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.mixor <- function(x, verbose = TRUE, ...) {
   fm <- x$call$formula
@@ -1330,7 +1325,6 @@ find_formula.mixor <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.MixMod <- function(x, verbose = TRUE, ...) {
   f.cond <- stats::formula(x)
@@ -1348,7 +1342,6 @@ find_formula.MixMod <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 #' @export
 find_formula.BBmm <- function(x, verbose = TRUE, ...) {
   f.cond <- parse(text = safe_deparse(x$call))[[1]]$fixed.formula
@@ -1360,7 +1353,6 @@ find_formula.BBmm <- function(x, verbose = TRUE, ...) {
   ))
   .find_formula_return(f, verbose = verbose)
 }
-
 
 
 #' @export
