@@ -1,7 +1,7 @@
 Type: Package
 Package: insight
 Title: Easy Access to Model Information for Various Model Objects
-Version: 0.19.7.7
+Version: 0.19.7.9
 Authors@R: 
     c(person(given = "Daniel",
              family = "Lüdecke",
@@ -192,6 +192,7 @@ Suggests:
     survey,
     survival,
     testthat,
+    tinytable,
     truncreg,
     tweedie,
     TMB,
@@ -201,7 +202,7 @@ VignetteBuilder:
     knitr
 Encoding: UTF-8
 Language: en-US
-RoxygenNote: 7.2.3.9000
+RoxygenNote: 7.3.1
 Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3
 Config/testthat/parallel: true
