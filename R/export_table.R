@@ -31,9 +31,9 @@
 #'   the second and third, right-align column four and left-align the fifth
 #'   column. For HTML-tables, may be one of `"center"`, `"left"` or
 #'   `"right"`.
-#' @param group_by Name of column in `x` that indicates grouping for tables.
-#'   Only applies when `format = "html"`. `group_by` is passed down
-#'   to `gt::gt(groupname_col = group_by)`.
+#' @param by Name of column in `x` that indicates grouping for tables.
+#'   Only applies when `format = "html"`. `by` is passed down to
+#'   `gt::gt(groupname_col = by)`.
 #' @param width Refers to the width of columns (with numeric values). Can be
 #'   either `NULL`, a number or a named numeric vector. If `NULL`, the width for
 #'   each column is adjusted to the minimum required width. If a number, columns
@@ -48,6 +48,7 @@
 #'   if `table_width` is numeric and table rows are larger than `table_width`,
 #'   the table is split into two parts.
 #' @param ... Currently not used.
+#' @param group_by Deprecated, please use `by` instead.
 #' @inheritParams format_value
 #' @inheritParams get_data
 #'
@@ -116,6 +117,7 @@ export_table <- function(x,
                          subtitle = NULL,
                          footer = NULL,
                          align = NULL,
+                         by = NULL,
                          group_by = NULL,
                          zap_small = FALSE,
                          table_width = NULL,
@@ -129,6 +131,12 @@ export_table <- function(x,
   # handle alias
   if (format == "md") {
     format <- "markdown"
+  }
+
+  ## TODO: deprecate later
+  if (!is.null(group_by)) {
+    format_warning("Argument `group_by` is deprecated and will be removed in a future release. Please use `by` instead.") # nolint
+    by <- group_by
   }
 
   # validation check
@@ -191,7 +199,7 @@ export_table <- function(x,
       subtitle = subtitle,
       footer = footer,
       align = align,
-      group_by = group_by,
+      group_by = by,
       zap_small = zap_small,
       empty_line = empty_line,
       indent_groups = indent_groups,
@@ -263,7 +271,7 @@ export_table <- function(x,
         subtitle = attributes(i)$table_subtitle,
         footer = t_footer,
         align = align,
-        group_by = group_by,
+        group_by = by,
         zap_small = zap_small,
         empty_line = empty_line,
         indent_groups = indent_groups,
