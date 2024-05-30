@@ -45,10 +45,10 @@ test_that("get_modelmatrix - iv_robust", {
   out2 <- model.matrix(terms(x), data = Kmenta)
   expect_equal(out1, out2, tolerance = 1e-3, ignore_attr = TRUE)
 
-  out1 <- get_modelmatrix(x, data = get_datagrid(x, at = "P"))
-  out2 <- model.matrix(terms(x), data = get_datagrid(x, at = "P", include_response = TRUE))
+  out1 <- get_modelmatrix(x, data = get_datagrid(x, by = "P"))
+  out2 <- model.matrix(terms(x), data = get_datagrid(x, by = "P", include_response = TRUE))
   expect_equal(out1, out2, tolerance = 1e-3, ignore_attr = TRUE)
-  expect_identical(nrow(get_datagrid(x, at = "P")), nrow(out2))
+  expect_identical(nrow(get_datagrid(x, by = "P")), nrow(out2))
 })
 
 
@@ -69,10 +69,10 @@ test_that("get_modelmatrix - ivreg", {
   out2 <- model.matrix(x, data = d_kmenta)
   expect_equal(out1, out2, tolerance = 1e-3, ignore_attr = TRUE)
 
-  out1 <- get_modelmatrix(x, data = get_datagrid(x, at = "P"))
-  out2 <- model.matrix(terms(x), data = get_datagrid(x, at = "P", include_response = TRUE))
+  out1 <- get_modelmatrix(x, data = get_datagrid(x, by = "P"))
+  out2 <- model.matrix(terms(x), data = get_datagrid(x, by = "P", include_response = TRUE))
   expect_equal(out1, out2, tolerance = 1e-3, ignore_attr = TRUE)
-  expect_identical(nrow(get_datagrid(x, at = "P")), nrow(out2))
+  expect_identical(nrow(get_datagrid(x, by = "P")), nrow(out2))
 })
 
 
@@ -98,10 +98,10 @@ test_that("get_modelmatrix - lm_robust", {
   out2 <- model.matrix(x, data = dat)
   expect_equal(out1, out2, tolerance = 1e-3, ignore_attr = TRUE)
 
-  out1 <- get_modelmatrix(x, data = get_datagrid(x, at = "x"))
-  out2 <- model.matrix(x, data = get_datagrid(x, at = "x", include_response = TRUE))
+  out1 <- get_modelmatrix(x, data = get_datagrid(x, by = "x"))
+  out2 <- model.matrix(x, data = get_datagrid(x, by = "x", include_response = TRUE))
   expect_equal(out1, out2, tolerance = 1e-3, ignore_attr = TRUE)
-  expect_identical(nrow(get_datagrid(x, at = "x")), nrow(out2))
+  expect_identical(nrow(get_datagrid(x, by = "x")), nrow(out2))
 })
 
 
@@ -109,8 +109,8 @@ test_that("get_modelmatrix - lm_robust", {
 test_that("Issue #693", {
   set.seed(12345)
   n <- 500
-  x <- sample(1:3, n, replace = TRUE)
-  w <- sample(1:4, n, replace = TRUE)
+  x <- sample.int(3, n, replace = TRUE)
+  w <- sample.int(4, n, replace = TRUE)
   y <- rnorm(n)
   z <- as.numeric(x + y + rlogis(n) > 1.5)
   dat <<- data.frame(x = factor(x), w = factor(w), y = y, z = z)
