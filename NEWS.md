@@ -29,6 +29,12 @@
 * `format_alert()` and `format_warning()` get an `immediate` argument, to
   output warnings immediately.
 
+* `find_terms()` and `find_transformation()` now better cope with inverse
+  transformations of the response value, such as `1/y`.
+
+* `get_transformation()` now returns more transformations for power-transformed
+  response variables.
+
 ## Bug fixes
 
 * `null_model()` now correctly handles zero-inflated models from package
