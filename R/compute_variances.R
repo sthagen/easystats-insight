@@ -921,7 +921,7 @@
           # beta-alike ----
           # ---------------
           beta = .variance_family_beta(model, mu, sig),
-          ordbeta = .variance_family_orderedbeta(model, mu),
+          ordbeta = .variance_family_orderedbeta(model, mu, sig),
           betabinomial = .variance_family_betabinom(model, mu, sig),
 
           ## TODO: check alternatives, but probably less accurate
@@ -1015,26 +1015,22 @@
 # Get distributional variance for beta-family
 # ----------------------------------------------
 .variance_family_beta <- function(model, mu, phi) {
-  stats::family(model)$variance(mu)
-  # if (inherits(model, "MixMod")) {
-  #   stats::family(model)$variance(mu)
-  # } else {
-  #   # was:
-  #   # mu * (1 - mu) / (1 + phi)
-  #   # but that code is not what "glmmTMB" uses for the beta family
-  #   mu * (1 - mu)
-  # }
+  mu * (1 - mu) / (1 + phi)
+  # was:
+  # stats::family(model)$variance(mu)
+  # But the conditional variance should definitely be divided by (1+phi)
+  # see also https://github.com/easystats/performance/issues/742
 }
 
 
 
 # Get distributional variance for ordered beta-family
 # ----------------------------------------------
-.variance_family_orderedbeta <- function(model, mu) {
+.variance_family_orderedbeta <- function(model, mu, phi) {
   if (inherits(model, "MixMod")) {
     stats::family(model)$variance(mu)
   } else {
-    mu * (1 - mu)
+    mu * (1 - mu) / (1 + phi)
   }
 }
 
