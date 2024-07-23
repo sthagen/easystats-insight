@@ -14,8 +14,8 @@ get_df(x, ...)
 
 \item{...}{Currently not used.}
 
-\item{type}{Can be \code{"residual"}, \code{"wald"}, \code{"normal"}, or
-\code{"model"}. \code{"analytical"} is an alias for \code{"residual"}.
+\item{type}{Type of approximation for the degrees of freedom. Can be one of
+the following:
 \itemize{
 \item \code{"residual"} (aka \code{"analytical"}) returns the residual degrees of
 freedom, which usually is what \code{\link[stats:df.residual]{stats::df.residual()}} returns. If a
@@ -30,10 +30,11 @@ be extracted.
 \item \code{"normal"} always returns \code{Inf}.
 \item \code{"model"} returns model-based degrees of freedom, i.e. the number of
 (estimated) parameters.
-\item For mixed models, can also be \code{"ml1"} (approximation of degrees of freedom
-based on a "m-l-1" heuristic as suggested by \emph{Elff et al. 2019}) or
-\code{"betwithin"}, and for models of class \code{merMod}, \code{type} can also be
-\code{"satterthwaite"} or \code{"kenward-roger"}. See 'Details'.
+\item For mixed models, can also be \code{"ml1"} (or \code{"m-l-1"}, approximation of
+degrees of freedom based on a "m-l-1" heuristic as suggested by \emph{Elff et
+al. 2019}) or \code{"between-within"} (or \code{"betwithin"}).
+\item For mixed models of class \code{merMod}, \code{type} can also be \code{"satterthwaite"}
+or \code{"kenward-roger"} (or \code{"kenward"}). See 'Details'.
 }
 
 Usually, when degrees of freedom are required to calculate p-values or

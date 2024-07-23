@@ -8,7 +8,7 @@
 
 #' @keywords internal
 .degrees_of_freedom_residual.default <- function(x, verbose = TRUE, ...) {
-  if (.is_bayesian_model(x) && !inherits(x, c("bayesx", "blmerMod", "bglmerMod"))) {
+  if (.is_bayesian_model(x, exclude = c("bmerMod", "bayesx", "blmerMod", "bglmerMod"))) {
     if (check_if_installed("bayestestR", quietly = TRUE)) {
       x <- .safe(bayestestR::bayesian_as_frequentist(x))
       if (is.null(x)) {
@@ -51,17 +51,48 @@
   dof
 }
 
+
+# residual DF based on n-k -----------
+# ------------------------------------
+
 #' @keywords internal
 .degrees_of_freedom_residual.gls <- function(x, verbose = TRUE, ...) {
-  nparam <- n_parameters(x)
-  n <- n_obs(x)
-
-  if (is.null(n) || is.null(nparam)) {
-    return(Inf)
-  }
-
-  return(n - nparam)
+  # we don't call ".degrees_of_freedom_analytical()" here, because that
+  # function relies on `.model_df()` to estimate the number of parameters,
+  # which returns results that are not in line with the "summary()" for gls
+  .degrees_of_freedom_analytical(x, kenward = FALSE, model_n_params = FALSE)
 }
+
+#' @keywords internal
+.degrees_of_freedom_residual.rlm <- .degrees_of_freedom_residual.gls
+
+#' @keywords internal
+.degrees_of_freedom_residual.mhurdle <- .degrees_of_freedom_residual.gls
+
+#' @keywords internal
+.degrees_of_freedom_residual.truncreg <- .degrees_of_freedom_residual.gls
+
+#' @keywords internal
+.degrees_of_freedom_residual.garch <- .degrees_of_freedom_residual.gls
+
+#' @keywords internal
+.degrees_of_freedom_residual.complmrob <- .degrees_of_freedom_residual.gls
+
+#' @keywords internal
+.degrees_of_freedom_residual.biglm <- function(x, verbose = TRUE, ...) {
+  if (!is.null(x$df.resid)) {
+    x$df.resid
+  } else {
+    .degrees_of_freedom_analytical(x, kenward = FALSE, model_n_params = FALSE)
+  }
+}
+
+#' @keywords internal
+.degrees_of_freedom_residual.bigglm <- .degrees_of_freedom_residual.biglm
+
+
+# residual DF taken from model objects -----------
+# ------------------------------------------------
 
 #' @keywords internal
 .degrees_of_freedom_residual.glimML <- function(x, verbose = TRUE, ...) {
@@ -84,6 +115,9 @@
 
 #' @keywords internal
 .degrees_of_freedom_residual.nnet <- .degrees_of_freedom_residual.multinom
+
+#' @keywords internal
+.degrees_of_freedom_residual.rqss <- .degrees_of_freedom_residual.multinom
 
 #' @keywords internal
 .degrees_of_freedom_residual.fixest <- function(x, verbose = TRUE, ...) {
@@ -127,8 +161,18 @@
 }
 
 #' @keywords internal
+.degrees_of_freedom_residual.mipo <- function(x, verbose = TRUE, ...) {
+  as.vector(summary(x)$df)
+}
+
+#' @keywords internal
 .degrees_of_freedom_residual.hglm <- function(x, verbose = TRUE, ...) {
   x$dfReFe
+}
+
+#' @keywords internal
+.degrees_of_freedom_residual.serp <- function(x, verbose = TRUE, ...) {
+  x$rdf
 }
 
 #' @keywords internal
@@ -137,14 +181,9 @@
 }
 
 #' @keywords internal
-.degrees_of_freedom_residual.serp <- function(x, verbose = TRUE, ...) {
-  x$rdf
-}
-
-#' @export
 .degrees_of_freedom_residual.BBmm <- .degrees_of_freedom_residual.glht
 
-#' @export
+#' @keywords internal
 .degrees_of_freedom_residual.BBreg <- .degrees_of_freedom_residual.glht
 
 #' @keywords internal
@@ -162,23 +201,7 @@
 }
 
 #' @keywords internal
-.degrees_of_freedom_residual.rqs <- function(x, verbose = TRUE, ...) {
-  tryCatch(
-    {
-      s <- suppressWarnings(summary(x, covariance = TRUE))
-      cs <- lapply(s, function(i) i$rdf)
-      unique(unlist(cs, use.names = FALSE))
-    },
-    error = function(e) {
-      NULL
-    }
-  )
-}
-
-#' @keywords internal
-.degrees_of_freedom_residual.rqss <- function(x, verbose = TRUE, ...) {
-  n_obs(x) - x$edf
-}
+.degrees_of_freedom_residual.rqs <- .degrees_of_freedom_residual.rq
 
 #' @keywords internal
 .degrees_of_freedom_residual.bfsl <- function(x, verbose = TRUE, ...) {
@@ -188,12 +211,6 @@
 #' @keywords internal
 .degrees_of_freedom_residual.plm <- function(x, verbose = TRUE, ...) {
   x$df.residual
-}
-
-#' @keywords internal
-.degrees_of_freedom_residual.selection <- function(x, verbose = TRUE, ...) {
-  s <- summary(x)
-  s$param$df
 }
 
 #' @keywords internal
@@ -224,5 +241,20 @@
     dof <- c(dof, stats::setNames(dfs, df_names))
   }
 
+  dof
+}
+
+
+# helper ----------------------
+
+.dof_fit_gam <- function(model, dof) {
+  params <- find_parameters(model)
+  if (!is.null(params$conditional)) {
+    dof <- rep(dof, length(params$conditional))
+  }
+  if (!is.null(params$smooth_terms)) {
+    s <- summary(model)
+    dof <- c(dof, s$s.table[, "Ref.df"])
+  }
   dof
 }
