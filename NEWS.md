@@ -4,6 +4,8 @@
 
 * `get_df()` now supports more model classes.
 
+* `get_variance()` gives an informative error if no mixed model is provided.
+
 ## Bug fixes
 
 * Fixed issues in `find_response()` for *brms* models with `mi()` function in
@@ -12,12 +14,14 @@
 * Fixed issue in `get_variance()` that could lead to recursive calls for
   *brms* models, resulting in "infinite" resampling of the model.
 
-* Fixed issue in `check_if_installed()` that errorneously tried to guess the
+* Fixed issue in `check_if_installed()` that erroneously tried to guess the
   minimum required package version based on the SUGGEST field of the _insight_
   package, instead of the package that was calling the function.
 
 * Fixed issue in `get_modelmatrix()` for models from package *brms* with
   special functions in the formula (like `mo()`).
+
+* Fixed issue in `ellipses_info()` when this function was called from `do.call()`.
 
 # insight 0.20.2
 
