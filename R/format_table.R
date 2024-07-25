@@ -53,7 +53,7 @@
 #' [Formatting, printing and exporting tables](https://easystats.github.io/insight/articles/display.html)
 #' and [Formatting model parameters](https://easystats.github.io/parameters/articles/model_parameters_formatting.html).
 #'
-#' @note `options(insight_use_symbols = TRUE)` override the `use_symbols` argument
+#' @note `options(insight_use_symbols = TRUE)` overrides the `use_symbols` argument
 #'   and always displays symbols, if possible.
 #' @examplesIf require("rstanarm", warn.conflicts = FALSE) && require("parameters", , warn.conflicts = FALSE)
 #' format_table(head(iris), digits = 1)
@@ -800,9 +800,11 @@ format_table <- function(x,
   if (isTRUE(use_symbols) && .unicode_symbols()) {
     colnames(x) <- gsub("Delta", "\u0394", colnames(x), ignore.case = TRUE)
     colnames(x) <- gsub("Phi", "\u03D5", colnames(x), ignore.case = TRUE)
+    colnames(x) <- gsub("Eta2", "\u03B7\u00b2", colnames(x), ignore.case = TRUE)
     colnames(x) <- gsub("Eta", "\u03B7", colnames(x), ignore.case = TRUE)
     colnames(x) <- gsub("Epsilon", "\u03b5", colnames(x), ignore.case = TRUE)
-    colnames(x) <- gsub("Omega", "\u03b5", colnames(x), ignore.case = TRUE)
+    colnames(x) <- gsub("Omega2", "\u03C9\u00b2", colnames(x), ignore.case = TRUE)
+    colnames(x) <- gsub("Omega", "\u03C9", colnames(x), ignore.case = TRUE)
     colnames(x) <- gsub("R2", "R\u00b2", colnames(x), ignore.case = TRUE)
     colnames(x) <- gsub("Chi2", "\u03C7\u00b2", colnames(x), ignore.case = TRUE)
     colnames(x) <- gsub("Chi", "\u03C7", colnames(x), ignore.case = TRUE)
