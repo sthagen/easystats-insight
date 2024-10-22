@@ -44,8 +44,22 @@ test_that("find_transformation - power-1", {
 })
 
 test_that("find_transformation - power-2", {
-  model <- lm(I(Sepal.Length^2) ~ Species, data = iris)
+  model <- lm(I(Sepal.Length^2.5) ~ Species, data = iris)
   expect_identical(find_transformation(model), "power")
+})
+
+test_that("find_transformation - scale", {
+  model <- lm(mpg / 0.7 ~ hp, data = mtcars)
+  expect_identical(find_transformation(model), "scale")
+  model <- lm(I(mpg / 0.7) ~ hp, data = mtcars)
+  expect_identical(find_transformation(model), "scale")
+})
+
+test_that("find_transformation - box-cox", {
+  m <- lm((mpg^0.7 - 1) / 0.7 ~ hp, data = mtcars)
+  expect_identical(find_transformation(m), "box-cox")
+  m <- lm(I((mpg^0.7 - 1) / 0.7) ~ hp, data = mtcars)
+  expect_identical(find_transformation(m), "box-cox")
 })
 
 test_that("find_transformation - unknown", {

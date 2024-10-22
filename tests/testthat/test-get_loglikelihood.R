@@ -26,6 +26,11 @@ test_that("get_loglikelihood - lm", {
   x <- lm(log(mpg) ~ wt, data = mtcars)
   expect_equal(as.numeric(get_loglikelihood(x)), 19.42433, tolerance = 1e-3)
   expect_equal(as.numeric(get_loglikelihood(x, check_response = TRUE)), -75.21614, tolerance = 1e-3)
+  expect_equal(
+    as.numeric(get_loglikelihood(x, check_response = TRUE)),
+    as.numeric(get_loglikelihood(x)) + as.numeric(get_loglikelihood_adjustment(x)),
+    tolerance = 1e-3
+  )
 
   set.seed(123)
   mtcars$wg <- abs(rnorm(nrow(mtcars), mean = 1))
@@ -36,11 +41,29 @@ test_that("get_loglikelihood - lm", {
   expect_equal(as.numeric(get_loglikelihood(x)), 18.4205, tolerance = 1e-3)
   expect_equal(as.numeric(get_loglikelihood(x, check_response = TRUE)), -75.58669, tolerance = 1e-3)
 
-
   # sqrt-response
   x <- lm(sqrt(mpg) ~ wt, data = mtcars)
   expect_equal(as.numeric(get_loglikelihood(x)), -7.395031, tolerance = 1e-3)
   expect_equal(as.numeric(get_loglikelihood(x, check_response = TRUE)), -76.89597, tolerance = 1e-3)
+
+  # power to x
+  x <- lm(mpg^3.5 ~ wt, weights = wg, data = mtcars)
+  expect_equal(as.numeric(get_loglikelihood(x)), -385.6256, tolerance = 1e-3)
+  expect_equal(as.numeric(get_loglikelihood(x, check_response = TRUE)), -110.5192, tolerance = 1e-3)
+
+  # scale
+  x <- lm(mpg / 3.5 ~ wt, weights = wg, data = mtcars)
+  expect_equal(as.numeric(get_loglikelihood(x)), -41.94534, tolerance = 1e-3)
+  expect_equal(as.numeric(get_loglikelihood(x, check_response = TRUE)), -82.03376, tolerance = 1e-3)
+})
+
+test_that("get_loglikelihood - not supported", {
+  # Box-Cox
+  m <- lm((mpg^0.7 - 1) / 0.7 ~ hp, data = mtcars)
+  expect_warning(get_loglikelihood(m, check_response = TRUE), regex = "Could not compute")
+  # Inverse
+  m <- lm(1 / mpg ~ hp, data = mtcars)
+  expect_warning(get_loglikelihood(m, check_response = TRUE), regex = "Could not compute")
 })
 
 test_that("get_loglikelihood - glm", {

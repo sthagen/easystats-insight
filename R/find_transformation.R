@@ -5,14 +5,16 @@
 #'   or exp-transforming, was applied to the response variable (dependent
 #'   variable) in a regression formula. Currently, following patterns are
 #'   detected: `log`, `log1p`, `log2`, `log10`, `exp`, `expm1`, `sqrt`,
-#'   `log(x+<number>)`, `log-log`, `power` (to 2nd power, like `I(x^2)`), and
-#'   `inverse` (like `1/y`).
+#'   `log(y+<number>)`, `log-log`, `power` (e.g. to 2nd power, like `I(y^2)`),
+#'   `inverse` (like `1/y`), `scale` (e.g., `y/3`), and `box-cox` (e-g-,
+#'   `(y^lambda - 1) / lambda`).
 #'
-#' @param x A regression model or a character string of the response value.
+#' @param x A regression model or a character string of the formulation of the
+#' response variable.
 #' @param ... Currently not used.
 #'
 #' @return A string, with the name of the function of the applied transformation.
-#'   Returns `"identity"` for no transformation, and e.g. `"log(x+3)"` when
+#'   Returns `"identity"` for no transformation, and e.g. `"log(y+3)"` when
 #'   a specific values was added to the response variables before
 #'   log-transforming. For unknown transformations, returns `NULL`.
 #'
@@ -51,7 +53,22 @@ find_transformation.default <- function(x, ...) {
     })
     unlist(result)
   } else {
+    # "raw" response
     rv <- find_terms(x)[["response"]]
+    # for divisions, like x/3, `find_response()` returns a character vector
+    # of length 2, one with the nominator and the denominator. In this case,
+    # check against original response
+    original_response <- safe_deparse(find_formula(x)$conditional[[2]])
+    # check if we have the pattern (x/<number)
+    if (.is_division(original_response)) {
+      # if so, check if the pattern really match
+      nominator <- gsub("/.*", "\\1", original_response)
+      denominator <- gsub(".*\\/(.*)", "\\1", original_response)
+      # and if so again, then reconstruct division string
+      if (all(rv == c(nominator, denominator))) {
+        rv <- paste(nominator, denominator, sep = "/") # nolint
+      }
+    }
     find_transformation(rv)
   }
 }
@@ -111,6 +128,13 @@ find_transformation.character <- function(x, ...) {
   } else if (any(startsWith(x, "1/"))) {
     # inverse-transformation
     transform_fun <- "inverse"
+  } else if (.is_division(x)) {
+    # scale or Box-Cox transformation
+    if (.is_box_cox(x)) {
+      transform_fun <- "box-cox"
+    } else {
+      transform_fun <- "scale"
+    }
   } else if (any(grepl("(.*)(\\^|\\*\\*)\\s?-?(\\d+|[()])", x))) {
     # power-transformation
     transform_fun <- "power"
@@ -120,4 +144,15 @@ find_transformation.character <- function(x, ...) {
   }
 
   transform_fun
+}
+
+
+# helper -----------------------------
+
+.is_division <- function(x) {
+  any(grepl("(.*)/([0-9\\.]+)(\\)*)$", x)) && !any(grepl("(.*)(\\^|\\*\\*)\\((.*)/(.*)\\)", x))
+}
+
+.is_box_cox <- function(x) {
+  any(grepl("\\((.*)\\^[0-9\\.]+-1\\)", x))
 }
