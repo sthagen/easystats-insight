@@ -127,3 +127,74 @@ test_that("export_table, table_width", {
   tab <- parameters::compare_parameters(lm1, lm2, lm3, lm4, lm5, lm6)
   expect_snapshot(print(tab, table_width = 80), variant = "windows")
 })
+
+
+test_that("export_table, table_width, no split", {
+  skip_on_cran()
+  skip_if_not_installed("lavaan")
+  skip_if_not_installed("performance")
+  skip_if_not_installed("parameters")
+
+  data(HolzingerSwineford1939, package = "lavaan")
+  structure <- " visual  =~ x1 + x2 + x3
+                 textual =~ x4 + x5 + x6
+                 speed   =~ x7 + x8 + x9 "
+  model1 <- lavaan::cfa(structure, data = HolzingerSwineford1939)
+  model2 <- lavaan::cfa(structure, data = HolzingerSwineford1939)
+
+  out <- performance::compare_performance(model1, model2)
+  expect_snapshot(print(out, table_width = Inf), variant = "windows")
+
+  data(iris)
+  lm1 <- lm(Sepal.Length ~ Species, data = iris)
+  lm2 <- lm(Sepal.Length ~ Species + Petal.Length, data = iris)
+  lm3 <- lm(Sepal.Length ~ Species * Petal.Length, data = iris)
+  lm6 <- lm5 <- lm4 <- lm(Sepal.Length ~ Species * Petal.Length + Petal.Width, data = iris)
+
+  tab <- parameters::compare_parameters(lm1, lm2, lm3, lm4, lm5, lm6)
+  expect_snapshot(print(tab, table_width = NULL), variant = "windows")
+})
+
+
+test_that("export_table, table_width, remove duplicated empty lines", {
+  skip_if_not_installed("datawizard")
+  data(efc, package = "datawizard")
+  out <- datawizard::data_codebook(efc)
+  out$.row_id <- NULL
+  expect_snapshot(print(export_table(out, table_width = 60, remove_duplicates = FALSE)))
+  expect_snapshot(print(export_table(out, table_width = 60, empty_line = "-", remove_duplicates = FALSE)))
+  expect_snapshot(print(export_table(out, table_width = 60, empty_line = "-", sep = " | ", remove_duplicates = FALSE)))
+  expect_snapshot(print(export_table(out, table_width = 60, empty_line = "-", cross = "+", remove_duplicates = FALSE)))
+  # don't remove duplicates
+  expect_snapshot(print(export_table(out, table_width = 60, remove_duplicates = TRUE)))
+  expect_snapshot(print(export_table(out, table_width = 60, empty_line = "-", remove_duplicates = TRUE)))
+  expect_snapshot(print(export_table(out, table_width = 60, empty_line = "-", sep = " | ", remove_duplicates = TRUE)))
+  expect_snapshot(print(export_table(out, table_width = 60, empty_line = "-", cross = "+", remove_duplicates = TRUE)))
+
+  skip_if_not_installed("ggeffects")
+  data(efc, package = "ggeffects")
+  out <- datawizard::data_codebook(efc[, 1:4])
+  out$.row_id <- NULL
+  expect_snapshot(print(export_table(out, table_width = 60, remove_duplicates = TRUE, empty_line = "-", cross = "+")))
+  expect_snapshot(print(export_table(out, table_width = 60, remove_duplicates = FALSE, empty_line = "-", cross = "+")))
+  out <- datawizard::data_codebook(efc[, 1:3])
+  out$.row_id <- NULL
+  expect_snapshot(print(export_table(out, table_width = 60, remove_duplicates = TRUE, empty_line = "-", cross = "+")))
+  expect_snapshot(print(export_table(out, table_width = 60, remove_duplicates = FALSE, empty_line = "-", cross = "+")))
+})
+
+
+test_that("export_table, overlengthy lines", {
+  data(iris)
+  d <- iris
+  colnames(d)[1] <- paste0(letters[1:26], "no1", collapse = "_")
+  colnames(d)[2] <- paste0(letters[1:26], "no2", collapse = "_")
+  expect_warning(export_table(d[1:10, ]), regex = "The table contains")
+  expect_snapshot(print(export_table(d[1:10, ], verbose = FALSE)))
+
+  d <- iris
+  colnames(d)[2] <- paste0(letters[1:26], "no1", collapse = "_")
+  colnames(d)[5] <- paste0(letters[1:26], "no2", collapse = "_")
+  expect_warning(export_table(d[1:10, ]), regex = "The table contains")
+  expect_snapshot(print(export_table(d[1:10, ], verbose = FALSE)))
+})
