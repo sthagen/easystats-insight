@@ -7,28 +7,31 @@
 \usage{
 \method{find_parameters}{gamlss}(x, flatten = FALSE, ...)
 
-\method{find_parameters}{gam}(
-  x,
-  component = c("all", "conditional", "smooth_terms", "location"),
-  flatten = FALSE,
-  ...
-)
+\method{find_parameters}{gam}(x, component = "all", flatten = FALSE, ...)
 }
 \arguments{
 \item{x}{A fitted model.}
 
-\item{flatten}{Logical, if \code{TRUE}, the values are returned
-as character vector, not as list. Duplicated values are removed.}
+\item{flatten}{Logical, if \code{TRUE}, the values are returned as character
+vector, not as list. Duplicated values are removed.}
 
 \item{...}{Currently not used.}
 
-\item{component}{Should all predictor variables, predictor variables for the
+\item{component}{Which type of parameters to return, such as parameters for the
 conditional model, the zero-inflated part of the model, the dispersion
-term or the instrumental variables be returned? Applies to models
-with zero-inflated and/or dispersion formula, or to models with instrumental
-variable (so called fixed-effects regressions). May be abbreviated. Note that the
+term, the instrumental variables or marginal effects be returned? Applies
+to models with zero-inflated and/or dispersion formula, or to models with
+instrumental variables (so called fixed-effects regressions), or models
+with marginal effects from \strong{mfx}. May be abbreviated. Note that the
 \emph{conditional} component is also called \emph{count} or \emph{mean}
-component, depending on the model.}
+component, depending on the model. There are three convenient shortcuts:
+\code{component = "all"} returns all possible parameters.
+If \code{component = "location"}, location parameters such as \code{conditional},
+\code{zero_inflated}, \code{smooth_terms}, or \code{instruments} are returned
+(everything that are fixed or random effects - depending on the \code{effects}
+argument - but no auxiliary parameters). For \code{component = "distributional"}
+(or \code{"auxiliary"}), components like \code{sigma}, \code{dispersion},
+\code{beta} or \code{precision} (and other auxiliary parameters) are returned.}
 }
 \value{
 A list of parameter names. The returned list may have following
@@ -43,7 +46,9 @@ Returns the names of model parameters, like they typically
 appear in the \code{summary()} output.
 }
 \examples{
+\dontshow{if (requireNamespace("mgcv", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 data(mtcars)
-m <- lm(mpg ~ wt + cyl + vs, data = mtcars)
+m <- mgcv::gam(mpg ~ s(hp) + gear, data = mtcars)
 find_parameters(m)
+\dontshow{\}) # examplesIf}
 }

@@ -2,40 +2,10 @@
 % Please edit documentation in R/find_parameters_bayesian.R
 \name{find_parameters.BGGM}
 \alias{find_parameters.BGGM}
-\alias{find_parameters.BFBayesFactor}
-\alias{find_parameters.MCMCglmm}
-\alias{find_parameters.bamlss}
 \alias{find_parameters.brmsfit}
-\alias{find_parameters.bayesx}
-\alias{find_parameters.stanreg}
-\alias{find_parameters.stanmvreg}
-\alias{find_parameters.sim.merMod}
 \title{Find names of model parameters from Bayesian models}
 \usage{
-\method{find_parameters}{BGGM}(
-  x,
-  component = c("correlation", "conditional", "intercept", "all"),
-  flatten = FALSE,
-  ...
-)
-
-\method{find_parameters}{BFBayesFactor}(
-  x,
-  effects = c("all", "fixed", "random"),
-  component = c("all", "extra"),
-  flatten = FALSE,
-  ...
-)
-
-\method{find_parameters}{MCMCglmm}(x, effects = c("all", "fixed", "random"), flatten = FALSE, ...)
-
-\method{find_parameters}{bamlss}(
-  x,
-  flatten = FALSE,
-  component = c("all", "conditional", "location", "distributional", "auxiliary"),
-  parameters = NULL,
-  ...
-)
+\method{find_parameters}{BGGM}(x, component = "correlation", flatten = FALSE, ...)
 
 \method{find_parameters}{brmsfit}(
   x,
@@ -45,56 +15,28 @@
   parameters = NULL,
   ...
 )
-
-\method{find_parameters}{bayesx}(
-  x,
-  component = c("all", "conditional", "smooth_terms"),
-  flatten = FALSE,
-  parameters = NULL,
-  ...
-)
-
-\method{find_parameters}{stanreg}(
-  x,
-  effects = c("all", "fixed", "random"),
-  component = c("location", "all", "conditional", "smooth_terms", "sigma",
-    "distributional", "auxiliary"),
-  flatten = FALSE,
-  parameters = NULL,
-  ...
-)
-
-\method{find_parameters}{stanmvreg}(
-  x,
-  effects = c("all", "fixed", "random"),
-  component = c("location", "all", "conditional", "smooth_terms", "sigma",
-    "distributional", "auxiliary"),
-  flatten = FALSE,
-  parameters = NULL,
-  ...
-)
-
-\method{find_parameters}{sim.merMod}(
-  x,
-  effects = c("all", "fixed", "random"),
-  flatten = FALSE,
-  parameters = NULL,
-  ...
-)
 }
 \arguments{
 \item{x}{A fitted model.}
 
-\item{component}{Should all predictor variables, predictor variables for the
+\item{component}{Which type of parameters to return, such as parameters for the
 conditional model, the zero-inflated part of the model, the dispersion
-term or the instrumental variables be returned? Applies to models
-with zero-inflated and/or dispersion formula, or to models with instrumental
-variable (so called fixed-effects regressions). May be abbreviated. Note that the
+term, the instrumental variables or marginal effects be returned? Applies
+to models with zero-inflated and/or dispersion formula, or to models with
+instrumental variables (so called fixed-effects regressions), or models
+with marginal effects from \strong{mfx}. May be abbreviated. Note that the
 \emph{conditional} component is also called \emph{count} or \emph{mean}
-component, depending on the model.}
+component, depending on the model. There are three convenient shortcuts:
+\code{component = "all"} returns all possible parameters.
+If \code{component = "location"}, location parameters such as \code{conditional},
+\code{zero_inflated}, \code{smooth_terms}, or \code{instruments} are returned
+(everything that are fixed or random effects - depending on the \code{effects}
+argument - but no auxiliary parameters). For \code{component = "distributional"}
+(or \code{"auxiliary"}), components like \code{sigma}, \code{dispersion},
+\code{beta} or \code{precision} (and other auxiliary parameters) are returned.}
 
-\item{flatten}{Logical, if \code{TRUE}, the values are returned
-as character vector, not as list. Duplicated values are removed.}
+\item{flatten}{Logical, if \code{TRUE}, the values are returned as character
+vector, not as list. Duplicated values are removed.}
 
 \item{...}{Currently not used.}
 
@@ -128,6 +70,12 @@ parameters. These may be one of the following:
 \item \code{mix}, mixture parameters (\strong{brms} only)
 \item \code{shiftprop}, shifted proportion parameters (\strong{brms} only)
 }
+
+Models of class \strong{BGGM} additionally can return the elements \code{correlation}
+and \code{intercept}.
+
+Models of class \strong{BFBayesFactor} additionally can return the element
+\code{extra}.
 }
 \description{
 Returns the names of model parameters, like they typically
