@@ -9,7 +9,14 @@
 \usage{
 find_formula(x, ...)
 
-formula_ok(x, verbose = TRUE, ...)
+formula_ok(
+  x,
+  checks = "all",
+  action = "warning",
+  prefix_msg = NULL,
+  verbose = TRUE,
+  ...
+)
 
 \method{find_formula}{default}(x, verbose = TRUE, ...)
 
@@ -19,6 +26,29 @@ formula_ok(x, verbose = TRUE, ...)
 \item{x}{A fitted model.}
 
 \item{...}{Currently not used.}
+
+\item{checks}{Indicates what kind of checks are conducted when checking
+the formula notation. Currently, four different formula specification that
+can result in unexpected behaviour of downstream-functions are checked.
+\code{checks} can be one or more of:
+\itemize{
+\item \code{"dollar"}: Check if formula contains data name with "$", e.g. \code{mtcars$am}.
+\item \code{"T"}: Check if formula contains poly-term with "raw=T", e.g.
+\code{poly(x, 2, raw=T)}. In this case, \code{all.vars()} returns \code{T} as variable,
+which is not intended.
+\item \code{"index"}: Check if formula contains indexed data frames as response
+variable (e.g., \code{df[, 5] ~ x}).
+\item \code{"name"}: Check if syntactically invalid variable names were used and
+quoted in backticks.
+\item \code{"all"}: Checks all of the above mentioned options.
+}}
+
+\item{action}{Should a message, warning or error be given for an invalid
+formula? Must be one of \code{"message"}, \code{"warning"} (default) or \code{"error"}.}
+
+\item{prefix_msg}{Optional string that will be added to the warning/error
+message. This can be used to add additional information, e.g. about the
+specific function that was calling \code{formula_ok()} and failed.}
 
 \item{verbose}{Toggle warnings.}
 
