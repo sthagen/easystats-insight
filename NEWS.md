@@ -1,3 +1,10 @@
+# insight (devel)
+
+## Bug fixes
+
+* Fixed typo in `get_parameters.glmmadmb()`, which was erroneously renamed into
+  `get_parameters.glmmTMBadmb()`.
+
 # insight 1.0.0
 
 ## Breaking changes
@@ -42,7 +49,7 @@
 * `format_value()` gains a `decimal_point` argument, to change the decimal point
   in output conversion.
 
-* `format_bf()` with `stars = TRUE` used the `°` symbol for inferiority
+* `format_bf()` with `stars = TRUE` uses the `°` symbol for inferiority
   (evidence *against* the comparison).
 
 * Added support for `coxph.panel` models.
@@ -68,6 +75,8 @@
 
 * Fixed edge case in `find_transformation()` for simple log-transformation of
   the response variable.
+
+* Fixed issue for `model_info.averaging()`.
 
 # insight 0.20.5
 
