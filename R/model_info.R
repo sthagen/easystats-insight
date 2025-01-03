@@ -365,7 +365,6 @@ model_info.mlogit <- model_info.logistf
 model_info.gmnl <- model_info.logistf
 
 
-
 # Phylo logit and poisson family ------------------------------------
 
 #' @export
@@ -390,7 +389,6 @@ model_info.phyloglm <- function(x, verbose = TRUE, ...) {
     ...
   )
 }
-
 
 
 # Models with ordinal family ------------------------------------
@@ -526,7 +524,6 @@ model_info.crch <- model_info.tobit
 model_info.survreg <- model_info.tobit
 
 
-
 # Models with family in object ----------------------------------
 
 
@@ -642,7 +639,6 @@ model_info.riskRegression <- model_info.coxph
 
 #' @export
 model_info.comprisk <- model_info.coxph
-
 
 
 # Zero-Inflated Models ------------------------------
@@ -768,6 +764,35 @@ model_info.stanmvreg <- function(x, ...) {
       ...
     )
   })
+}
+
+
+#' @export
+model_info.oohbchoice <- function(x, ...) {
+  link <- switch(x$distribution,
+    normal = ,
+    "log-normal" = stats::gaussian()$link,
+    logistic = ,
+    "log-logistic" = stats::binomial()$link,
+    "log"
+  )
+
+  fam <- switch(x$distribution,
+    normal = ,
+    "log-normal" = "gaussian",
+    logistic = ,
+    "log-logistic" = "binomial",
+    "weibull"
+  )
+
+  .make_family(
+    x = x,
+    fitfam = fam,
+    zero.inf = FALSE,
+    logit.link = link == "logit",
+    link.fun = link,
+    ...
+  )
 }
 
 
@@ -949,7 +974,6 @@ model_info.gamm <- function(x, ...) {
   class(x) <- c(class(x), c("glm", "lm"))
   NextMethod()
 }
-
 
 
 #' @export
@@ -1403,8 +1427,6 @@ model_info.bfsl <- function(x, verbose = TRUE, ...) {
 model_info.marginaleffects <- function(x, ...) {
   model_info(attributes(x)$model)
 }
-
-
 
 
 # not yet supported -------------------------------

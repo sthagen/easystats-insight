@@ -39,8 +39,6 @@ supported_models <- function() {
 }
 
 
-
-
 .supported_models_list <- function() {
   c(
     # a ----------------------------
@@ -98,7 +96,7 @@ supported_models <- function() {
     "negbinmfx", "negbinirr", "nestedLogit",
 
     # o ----------------------------
-    "ols", "onesampb", "orm", "ordinal_weightit",
+    "ols", "onesampb", "orm", "ordinal_weightit", "oohbchoice",
 
     # p ----------------------------
     "PMCMR", "poissonmfx", "poissonirr", "pgmm", "plm", "polr", "psm",

@@ -1,5 +1,9 @@
 # insight (devel)
 
+## General
+
+* Support for models of class `oohbchoice` (package *DCchoice*).
+
 ## Bug fixes
 
 * Fixed issued due to latest *mice* updates.
@@ -9,6 +13,14 @@
 
 * Fixed issues in `find_predictors()` and `has_intercept()` for *brms* models
   with `0 + Intercept` formula notation.
+
+* Fixed issues in `get_statistic()` for models of class `fixest` from
+  negative-binomial families.
+
+* Fixed issue with `as.numeric()` method for `get_sigma()`.
+
+* `get_datagrid()` now only returns valid levels when `include_random = TRUE`
+  and group-level factor in random effects is numeric.
 
 # insight 1.0.0
 

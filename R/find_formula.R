@@ -75,6 +75,9 @@
 #'    **DirichletReg**, when parametrization (i.e. `model`) is
 #'    `"alternative"`.
 #'
+#'  - `bidrange`, for models of class `oohbchoice` (from package **DCchoice**),
+#'    which indicates the right-hand side of the bar (the bid-range).
+#'
 #' @note For models of class `lme` or `gls` the correlation-component
 #'   is only returned, when it is explicitly defined as named argument
 #'   (`form`), e.g. `corAR1(form = ~1 | Mare)`
@@ -92,7 +95,6 @@
 find_formula <- function(x, ...) {
   UseMethod("find_formula")
 }
-
 
 
 #' @rdname find_formula
@@ -156,7 +158,6 @@ formula_ok <- function(x,
 
   all(check_1 && check_2 && check_3 && check_4)
 }
-
 
 
 # Default method -----------------------------------
@@ -361,7 +362,6 @@ find_formula.gamm <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 # Meta-Analysis -----------------------
 
 #' @export
@@ -407,8 +407,6 @@ find_formula.meta_bma <- find_formula.meta_random
 
 #' @export
 find_formula.deltaMethod <- find_formula.meta_random
-
-
 
 
 # Other models ----------------------------------------------
@@ -764,7 +762,6 @@ find_formula.cglm <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 # mfx models ---------------------------------------
 
 #' @export
@@ -795,7 +792,6 @@ find_formula.poissonirr <- find_formula.logitmfx
 
 #' @export
 find_formula.probitmfx <- find_formula.logitmfx
-
 
 
 # Panel data models ---------------------------------------
@@ -989,6 +985,22 @@ find_formula.fixest <- function(x, verbose = TRUE, ...) {
 
 
 #' @export
+find_formula.oohbchoice <- function(x, verbose = TRUE, ...) {
+  f <- safe_deparse(stats::formula(x))
+  f_parts <- trim_ws(unlist(strsplit(f, "|", fixed = TRUE), use.names = FALSE))
+
+  f.cond <- f_parts[1]
+  f.bidrange <- f_parts[2]
+
+  f <- compact_list(list(
+    conditional = stats::as.formula(f.cond),
+    bidrange = stats::as.formula(paste("~", f.bidrange))
+  ))
+  .find_formula_return(f, verbose = verbose)
+}
+
+
+#' @export
 find_formula.feis <- function(x, verbose = TRUE, ...) {
   f <- safe_deparse(stats::formula(x))
   f_parts <- unlist(strsplit(f, "(?<!\\()\\|(?![\\w\\s\\+\\(~]*[\\)])", perl = TRUE), use.names = FALSE)
@@ -1132,7 +1144,6 @@ find_formula.zcpglm <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 # Ordinal models  --------------------------------------
 
 #' @export
@@ -1198,7 +1209,6 @@ find_formula.DirichletRegModel <- function(x, verbose = TRUE, ...) {
 
   .find_formula_return(out, verbose = verbose)
 }
-
 
 
 # Mixed models -----------------------
@@ -1647,7 +1657,6 @@ find_formula.BFBayesFactor <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 # tidymodels --------------------------------------------------------------
 
 #' @export
@@ -1815,7 +1824,6 @@ find_formula.model_fit <- function(x, verbose = TRUE, ...) {
 }
 
 
-
 # Find formula for zero-inflated regressions, where
 # zero-inflated part is separated by | from count part
 .zeroinf_formula <- function(x, separator = "\\|", verbose = TRUE) {
@@ -1858,7 +1866,6 @@ find_formula.model_fit <- function(x, verbose = TRUE, ...) {
   f <- compact_list(list(conditional = c.form, zero_inflated = zi.form))
   .find_formula_return(f, verbose = verbose)
 }
-
 
 
 # try to guess "full" formula for dot-abbreviation, e.g.
@@ -1912,7 +1919,6 @@ find_formula.model_fit <- function(x, verbose = TRUE, ...) {
   }
   f
 }
-
 
 
 # Helpers and Methods -----------------------------------------------------

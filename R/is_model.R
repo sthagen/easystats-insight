@@ -127,7 +127,7 @@ is_regression_model <- function(x) {
     "nparLD", "nestedLogit",
 
     # o --------------------
-    "objectiveML", "ols", "osrt", "orcutt", "ordinal_weightit",
+    "objectiveML", "ols", "osrt", "orcutt", "ordinal_weightit", "oohbchoice",
 
     # p --------------------
     "pairwise.htest", "pb1", "pb2", "pgmm", "plm", "plmm", "PMCMR",
@@ -174,9 +174,6 @@ is_regression_model <- function(x) {
 
   out
 }
-
-
-
 
 
 .get_gam_classes <- function() {
