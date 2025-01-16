@@ -1,10 +1,18 @@
 # insight 1.02
 
+## Changes
+
+* `get_datagrid()` gives a more informative error message when a variable
+  specified in `by` was not found in the data.
+
 ## Bug fixes
 
 * Option `"terciles"` and `"terciles2"` in `get_datagrid()` were swapped, i.e.
   `"terciles"` was doing what was documented for `"terciles2"` and vice versa.
   This has been fixed.
+
+* `include_random` in `get_datagrid()` now works for nested random effects, i.e.
+  for more than one group level factor in the random effects.
 
 # insight 1.01
 
