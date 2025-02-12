@@ -177,6 +177,12 @@ test_that("get_datagrid - data", {
     X = c("A", "A", "B"),
     Y = c(1, 5, 2),
     stringsAsFactors = FALSE
+  ), by = "Y", factors = "mode", length = 5)), 3L)
+
+  expect_identical(nrow(get_datagrid(data.frame(
+    X = c("A", "A", "B"),
+    Y = c(1.2, 5.5, 2),
+    stringsAsFactors = FALSE
   ), by = "Y", factors = "mode", length = 5)), 5L)
 
   expect_identical(nrow(get_datagrid(iris, by = c("Sepal.Length = 3", "Species"))), 3L)
@@ -403,10 +409,11 @@ test_that("get_datagrid - factor levels as reference / non-focal terms works", {
     by = "k618", range = "grid", preserve_range = FALSE,
     verbose = FALSE, include_response = TRUE
   )
+  expect_identical(dim(grid), c(4L, 5L))
   expect_identical(
     sapply(grid, class),
     c(
-      k618 = "numeric", lfp = "factor", wc = "factor", hc = "factor",
+      k618 = "integer", lfp = "factor", wc = "factor", hc = "factor",
       inc = "numeric"
     )
   )
@@ -504,4 +511,25 @@ test_that("get_datagrid - include weights", {
   m <- glmmTMB::glmmTMB(Reaction ~ Days + (1 | Subject), data = sleepstudy)
   d <- insight::get_datagrid(m, "Days")
   expect_named(d, c("Days", "Subject"))
+})
+
+
+test_that("get_datagrid - handle integers", {
+  d <- data.frame(
+    x = 1:8,
+    y = letters[1:8]
+  )
+  expect_identical(dim(get_datagrid(d)), c(64L, 2L)) # 8^2
+  expect_identical(dim(get_datagrid(d, range = "grid")), c(64L, 2L))
+  expect_identical(dim(get_datagrid(d, length = 5)), c(40L, 2L))
+
+  d <- data.frame(
+    x = 1:8,
+    y = 21:28,
+    z = letters[1:8]
+  )
+  expect_identical(dim(get_datagrid(d)), c(512L, 3L)) # 8^3
+  expect_identical(dim(get_datagrid(d, range = "grid")), c(192L, 3L)) # 8 * 3 * 8
+  expect_identical(dim(get_datagrid(d, length = 5)), c(200L, 3L))
+  expect_identical(dim(get_datagrid(d, length = 5, range = "grid")), c(120L, 3L))
 })
