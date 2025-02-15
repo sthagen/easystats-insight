@@ -19,10 +19,11 @@ get_datagrid(x, ...)
   reference = x,
   length = 10,
   range = "range",
+  digits = 3,
   ...
 )
 
-\method{get_datagrid}{numeric}(x, length = 10, range = "range", ...)
+\method{get_datagrid}{numeric}(x, length = 10, range = "range", digits = 3, ...)
 
 \method{get_datagrid}{factor}(x, ...)
 
@@ -37,6 +38,7 @@ get_datagrid(x, ...)
   include_random = FALSE,
   include_response = FALSE,
   data = NULL,
+  digits = 3,
   verbose = TRUE,
   ...
 )
@@ -156,6 +158,10 @@ first in \code{by}, mean and -1/+1 SD around the mean are returned. For factors,
 all levels are returned.
 }}
 
+\item{digits}{Number of digits used for rounding numeric values specified in
+\code{by}. E.g., \verb{x = [sd]} will round the mean and +-/1 SD in the data grid to
+\code{digits}.}
+
 \item{include_smooth}{If \code{x} is a model object, decide whether smooth terms
 should be included in the data grid or not.}
 
@@ -180,8 +186,8 @@ Reference grid data frame.
 }
 \description{
 Create a reference matrix, useful for visualisation, with evenly spread and
-combined values. Usually used to make generate predictions using
-\code{\link[=get_predicted]{get_predicted()}}. See this
+combined values. Usually used to generate predictions using \code{\link[=get_predicted]{get_predicted()}}.
+See this
 \href{https://easystats.github.io/modelbased/articles/visualisation_matrix.html}{vignette}
 for a tutorial on how to create a visualisation matrix using this function.
 
@@ -208,6 +214,7 @@ get_datagrid(iris[2:150, ],
 get_datagrid(iris, by = "Sepal.Length", range = "ci", ci = 0.90) # change min/max of target
 get_datagrid(iris, by = "Sepal.Length = [0, 1]") # Manually change min/max
 get_datagrid(iris, by = "Sepal.Length = [sd]") # -1 SD, mean and +1 SD
+get_datagrid(iris, by = "Sepal.Length = [sd]", digits = 1) # rounded to 1 digit
 # identical to previous line: -1 SD, mean and +1 SD
 get_datagrid(iris, by = "Sepal.Length", range = "sd", length = 3)
 get_datagrid(iris, by = "Sepal.Length = [quartiles]") # quartiles
