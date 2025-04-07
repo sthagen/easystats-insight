@@ -29,6 +29,9 @@
 * `get_datagrid()` gets a `protect_integer` argument, to allow a spread of
   values from minimum to maximum of length `length`, also for integer values.
 
+* `export_table()` gets an argument `column_names`, to change the column names
+  of the exported table.
+
 * Creating a range of values in a `get_datagrid()` using `by` was now simplified
   and works like regular R syntax, e.g. `by = "mpg = 20:50"`.
 
@@ -47,6 +50,8 @@
 * `null_model()` now correctly calculates the null-model based on the data that
   was used to fit the model (model frame), which can lead to different results
   when the original data contained missing values.
+
+* Fixed issue for `get_predicted()` with multivariate response models.
 
 # insight 1.1.0
 
