@@ -77,6 +77,17 @@ get_predicted.stanreg <- function(x,
   dots[["newdata"]] <- NULL
   fun_args <- c(fun_args, dots)
 
+  model_family <- get_family(x)
+  # exceptions
+  is_wiener <- inherits(model_family, "brmsfamily") && model_family$family == "wiener"
+  is_rtchoice <- model_family$family == "custom" && model_family$name == "lnr"
+
+  # Special case for rwiener (get choice 1 as negative values)
+  # Note that for mv models, x$family returns a list of families
+  if (is_wiener) {
+    fun_args$negative_rt <- TRUE
+  }
+
   # Get draws
   if (my_args$predict == "link") {
     draws <- do.call(rstantools::posterior_linpred, fun_args)
@@ -86,11 +97,36 @@ get_predicted.stanreg <- function(x,
     draws <- do.call(rstantools::posterior_predict, fun_args)
   }
 
+  # Handle special cases
+  if (!my_args$predict %in% c("expectation", "response", "link") && inherits(model_family, "brmsfamily")) {
+    if (is_wiener) {
+      # Separate RT from Choice and assemble into 3D matrix (as if it was a multivariate)
+      response <- as.numeric(draws >= 0)
+      draws <- abs(draws)
+      draws <- array(
+        c(draws, response),
+        dim = c(dim(draws), 2),
+        dimnames = list(NULL, NULL, c("rt", "response"))
+      )
+    } else if (is_rtchoice) {
+      # LogNormal Race models (cogmod package) return RT and Choice as odd and even columns
+      response <- as.matrix(draws[, seq(2, ncol(draws), 2)])
+      draws <- as.matrix(draws[, seq(1, ncol(draws), 2)])
+      draws <- array(
+        c(draws, response),
+        dim = c(dim(draws), 2),
+        dimnames = list(NULL, NULL, c("rt", "response"))
+      )
+    }
+  }
+
   # Get predictions (summarize)
   predictions <- .get_predicted_centrality_from_draws(
     x,
     iter = draws,
     datagrid = my_args$data,
+    is_wiener = is_wiener,
+    is_rtchoice = is_rtchoice,
     ...
   )
 
