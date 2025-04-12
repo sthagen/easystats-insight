@@ -42,6 +42,5 @@ find_auxiliary.brmsfit <- function(x, ...) {
   if (any(startsWith(fe, "sigma_") | grepl("sigma", fe, fixed = TRUE))) {
     out <- c(out, "sigma")
   }
-
   unique(out)
 }
