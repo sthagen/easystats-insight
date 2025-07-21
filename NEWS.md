@@ -7,12 +7,23 @@
 * `get_predicted()` now supports `chisq.test()`, and returns the expected
   frequencies.
 
+* `export_table()` gains better support for the _tinytable_ package. Use
+  `format = "tt"` to export tables into the tinytable-format. This can also
+  be used with grouped tables, i.e. `by = "group"`.
+
+* `export_table()` gains arguments `row_groups` and `column_groups`, to
+  group rows and columns in the exported table. Column groups currently only
+  work for `format = "tt"`.
+
 ## Bug fixes
 
 * Fixed issue with models of class `selection` with multiple response
   variables.
 
 * Fixed issue in `get_datagrid()` for factors with `=` in their levels.
+
+* Fixed issue in `find_random()` for multivariate response models of class `brms`
+  with special response options.
 
 # insight 1.3.1
 
