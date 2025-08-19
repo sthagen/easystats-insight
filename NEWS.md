@@ -1,4 +1,4 @@
-# insight (devel)
+# insight 1.4.0
 
 ## Breaking changes
 
@@ -19,6 +19,10 @@
 * `export_table()` gains arguments `row_groups` and `column_groups`, to
   group rows and columns in the exported table. Column groups currently only
   work for `format = "tt"`.
+
+* If arguments `title`, `subtitle` and `footer` in `export_table()` are set to
+  an empty string `""`, no titles/subtitles/footers are printed, even if present
+  as attributes.
 
 * Added a `.lavaan` method for `is_converged()`.
 
