@@ -135,25 +135,27 @@ find_predictors <- function(x, ...) {
 
 #' @rdname find_predictors
 #' @export
-find_predictors.default <- function(x,
-                                    effects = "fixed",
-                                    component = "all",
-                                    flatten = FALSE,
-                                    verbose = TRUE,
-                                    ...) {
+find_predictors.default <- function(
+  x,
+  effects = "fixed",
+  component = "all",
+  flatten = FALSE,
+  verbose = TRUE,
+  ...
+) {
   effects <- validate_argument(effects, c("fixed", "random", "all"))
+  # fmt: skip
   component <- validate_argument(
     component,
     c(
       "all", "conditional", "zi", "zero_inflated", "dispersion", "instruments",
-      "correlation", "smooth_terms", "location"
+      "correlation", "smooth_terms", "location", "design"
     )
   )
 
   f <- find_formula(x, verbose = verbose)
   is_mv <- is_multivariate(f)
   elements <- .get_elements(effects, component, model = x)
-
 
   # filter formulas, depending on requested effects and components
   if (is_mv) {
@@ -173,7 +175,6 @@ find_predictors.default <- function(x,
     return(NULL)
   }
 
-
   # some models, like spatial models, have random slopes that are not defined
   # as fixed effect predictor. In such cases, we have to add the random slope term
   # manually, so other functions like "get_data()" work as expected...
@@ -184,7 +185,6 @@ find_predictors.default <- function(x,
     rs_not_in_pred <- unique(setdiff(random_slope, all_predictors))
     if (length(rs_not_in_pred)) l$random <- c(rs_not_in_pred, l$random)
   }
-
 
   if (flatten) {
     unique(unlist(l, use.names = FALSE))
@@ -202,6 +202,7 @@ find_predictors.lcmm <- function(
   verbose = TRUE,
   ...
 ) {
+  # fmt: skip
   component <- validate_argument(
     component,
     c(
@@ -233,6 +234,76 @@ find_predictors.externX <- find_predictors.lcmm
 
 #' @export
 find_predictors.externVar <- find_predictors.lcmm
+
+#' @export
+find_predictors.survey.design <- function(
+  x,
+  flatten = FALSE,
+  verbose = TRUE,
+  ...
+) {
+  vars <- .safe(compact_list(lapply(get_call(x), all.vars)))
+  if (!is.null(vars)) {
+    # remove NULL or unnamed entries
+    vars <- vars[!is.null(names(vars)) & names(vars) != ""]
+    # we don't want the name of the data or weights variable
+    vars[names(vars) %in% c("data", "weights")] <- NULL
+    vars <- unlist(vars, use.names = FALSE)
+    # make sure all variables actually appear in the data
+    vars <- list(design = intersect(colnames(stats::model.frame(x)), vars))
+  }
+  if (is_empty_object(vars)) {
+    return(NULL)
+  }
+
+  if (flatten) {
+    unique(unlist(vars, use.names = FALSE))
+  } else {
+    vars
+  }
+}
+
+#' @export
+find_predictors.survey.design2 <- find_predictors.survey.design
+
+#' @export
+find_predictors.svyglm <- function(
+  x,
+  component = "all",
+  flatten = FALSE,
+  verbose = TRUE,
+  ...
+) {
+  component <- validate_argument(component, c("all", "conditional", "design"))
+
+  f <- find_formula(x, verbose = verbose)
+  elements <- .get_elements(effects = "all", component, model = x)
+
+  # filter formulas, depending on requested effects and components
+  f <- .prepare_predictors(x, f, elements)
+
+  # random effects are returned as list, so we need to unlist here
+  l <- .return_vars(f, x)
+
+  # add design variables
+  if (component != "conditional") {
+    l$design <- find_predictors.survey.design(
+      x$survey.design,
+      flatten = TRUE,
+      verbose = FALSE
+    )
+  }
+
+  if (is_empty_object(l) || is_empty_object(compact_list(l))) {
+    return(NULL)
+  }
+
+  if (flatten) {
+    unique(unlist(l, use.names = FALSE))
+  } else {
+    compact_list(l)
+  }
+}
 
 
 #' @export
@@ -277,7 +348,10 @@ find_predictors.fixest <- function(x, flatten = FALSE, ...) {
   cluster <- x$fixef_vars
 
   if (!is.null(instruments)) {
-    instruments <- all.vars(stats::as.formula(paste0("~", paste(instruments, collapse = "+"))))
+    instruments <- all.vars(stats::as.formula(paste0(
+      "~",
+      paste(instruments, collapse = "+")
+    )))
   }
   if (!is.null(endo)) {
     endo <- all.vars(endo)
@@ -319,11 +393,13 @@ find_predictors.bfsl <- function(x, flatten = FALSE, verbose = TRUE, ...) {
 
 
 #' @export
-find_predictors.afex_aov <- function(x,
-                                     effects = "fixed",
-                                     flatten = FALSE,
-                                     verbose = TRUE,
-                                     ...) {
+find_predictors.afex_aov <- function(
+  x,
+  effects = "fixed",
+  flatten = FALSE,
+  verbose = TRUE,
+  ...
+) {
   effects <- validate_argument(effects, c("fixed", "random", "all"))
 
   if (effects == "all") {
@@ -344,13 +420,16 @@ find_predictors.afex_aov <- function(x,
 
 
 #' @export
-find_predictors.brmsfit <- function(x,
-                                    effects = "fixed",
-                                    component = "all",
-                                    flatten = FALSE,
-                                    verbose = TRUE,
-                                    ...) {
+find_predictors.brmsfit <- function(
+  x,
+  effects = "fixed",
+  component = "all",
+  flatten = FALSE,
+  verbose = TRUE,
+  ...
+) {
   effects <- validate_argument(effects, c("fixed", "random", "all"))
+  # fmt: skip
   component <- validate_argument(
     component,
     c(
@@ -398,7 +477,6 @@ find_predictors.brmsfit <- function(x,
     if (length(rs_not_in_pred)) l$random <- c(rs_not_in_pred, l$random)
   }
 
-
   if (flatten) {
     unique(unlist(l, use.names = FALSE))
   } else {
@@ -408,11 +486,13 @@ find_predictors.brmsfit <- function(x,
 
 
 #' @export
-find_predictors.sdmTMB <- function(x,
-                                   effects = "fixed",
-                                   flatten = FALSE,
-                                   verbose = TRUE,
-                                   ...) {
+find_predictors.sdmTMB <- function(
+  x,
+  effects = "fixed",
+  flatten = FALSE,
+  verbose = TRUE,
+  ...
+) {
   effects <- validate_argument(effects, c("fixed", "random", "all"))
   elements <- .get_elements(effects, component = "conditional", model = x)
 

@@ -31,7 +31,9 @@ find_weights.default <- function(x, ...) {
 
         # edge case, users use "eval(parse())" to parse weight variables
         if (grepl("eval(parse(", w, fixed = TRUE)) {
-          w <- eval(parse(text = trim_ws(gsub("eval\\(parse\\((.*)=(.*)\\)\\)", "\\2", w))))
+          w <- eval(parse(
+            text = trim_ws(gsub("eval\\(parse\\((.*)=(.*)\\)\\)", "\\2", w))
+          ))
         }
 
         if (is_empty_object(w) || w == "NULL") w <- NULL
@@ -52,7 +54,10 @@ find_weights.brmsfit <- function(x, ...) {
   f <- find_formula(x, verbose = FALSE)
 
   if (is_multivariate(f)) {
-    resp <- unlist(lapply(f, function(i) safe_deparse(i$conditional[[2L]])), use.names = FALSE)
+    resp <- unlist(
+      lapply(f, function(i) safe_deparse(i$conditional[[2L]])),
+      use.names = FALSE
+    )
   } else {
     resp <- safe_deparse(f$conditional[[2L]])
   }
@@ -66,7 +71,9 @@ find_weights.brmsfit <- function(x, ...) {
   })))
 
   w <- trim_ws(sub("(.*)\\|(\\s+)weights\\((.*)\\)", "\\3", resp))
-  if (is_empty_object(w)) w <- NULL
+  if (is_empty_object(w)) {
+    w <- NULL
+  }
   w
 }
 
@@ -74,6 +81,20 @@ find_weights.brmsfit <- function(x, ...) {
 #' @export
 find_weights.model_fit <- function(x, ...) {
   find_weights(x$fit, ...)
+}
+
+
+#' @export
+find_weights.survey.design <- function(x, ...) {
+  .safe(all.vars(get_call(x)$weights))
+}
+
+#' @export
+find_weights.survey.design2 <- find_weights.survey.design
+
+#' @export
+find_weights.svyglm <- function(x, ...) {
+  find_weights(x$survey.design, ...)
 }
 
 
@@ -88,7 +109,9 @@ find_weights.merMod <- function(x, ...) {
         w <- eval(parse(text = trim_ws(gsub("eval\\(parse\\((.*)=(.*)\\)\\)", "\\2", w))))
       }
 
-      if (is_empty_object(w) || w == "NULL") w <- NULL
+      if (is_empty_object(w) || w == "NULL") {
+        w <- NULL
+      }
       w
     },
     error = function(e) {
