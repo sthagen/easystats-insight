@@ -23,6 +23,12 @@
 #'   `source = "frame"` and data cannot be extracted from the model frame, data
 #'   will be recovered from the environment. Both ways only returns observations
 #'   that have no missing data in the variables used for model fitting.
+#'
+#'   For objects from package **survey**, `"mf"` extracts data from the model
+#'   frame of the survey design object, which is usually equivalent to the
+#'   original data. `source = "environment"` extracts data from the model-object
+#'   in the environment, which usually includes processed variables (like the
+#'   `"(weights)"` variable for weights).
 #' @param verbose Toggle messages and warnings.
 #'
 #' @inheritParams find_predictors
@@ -57,7 +63,8 @@ get_data <- function(x, ...) {
   source = "environment",
   additional_variables = NULL,
   verbose = FALSE,
-  data_name = NULL
+  data_name = NULL,
+  ...
 ) {
   # process arguments, check whether data should be recovered from
   # environment or model frame
@@ -283,7 +290,7 @@ get_data <- function(x, ...) {
     } else if (verbose) {
       format_warning(
         "Looks like the original data was subset, however `get_data()` could not retrieve the subset of the data. The full data set is returned."
-      ) # nolint
+      )
     }
   }
 
@@ -331,7 +338,7 @@ get_data.default <- function(x, source = "environment", verbose = TRUE, ...) {
         }
       )
     }
-    model_data <- .prepare_get_data(x, mf, verbose = verbose)
+    model_data <- .prepare_get_data(x, mf, verbose = verbose, ...)
   }
   model_data
 }
@@ -1964,14 +1971,19 @@ get_data.survey.design <- function(x, source = "mf", variables = NULL, ...) {
 get_data.survey.design2 <- get_data.survey.design
 
 #' @export
-get_data.svyglm <- function(x, source = "mf", ...) {
+get_data.svyglm <- function(x, source = "environment", verbose = TRUE, ...) {
+  source <- .check_data_source_arg(source)
+  # if we want to recover data from environment, use default extractor
+  if (source == "environment") {
+    return(get_data.default(x, source = source, verbose = FALSE, ...))
+  }
   # if we have no survey design, fall back to default extractor
   if (is.null(x$survey.design)) {
     get_data.default(x, ...)
   } else {
     # add variables from the model
-    vars <- unique(c(find_variables(x, flatten = TRUE), find_weights(x)))
-    get_data(x$survey.design, variables = vars, ...)
+    vars <- unique(c(find_variables(x, flatten = TRUE), find_weights(x, source = source)))
+    get_data(x$survey.design, variables = vars, verbose = verbose, ...)
   }
 }
 

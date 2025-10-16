@@ -399,14 +399,15 @@ get_df.serp <- function(x, type = "normal", ...) {
 # -----------------------------------------------
 
 #' @export
-get_df.lmerMod <- function(x, type = "residual", ...) {
+get_df.lmerMod <- function(x, type = "residual", verbose = TRUE, ...) {
   # fmt: skip
   type <- validate_argument(
     tolower(type),
+    # uniroot, profile and noot relevant for glmmTMB
     c(
       "residual", "model", "analytical", "satterthwaite", "kenward",
       "kenward-roger", "kr", "normal", "wald", "ml1", "m-l-1", "betwithin",
-      "between-within", "any"
+      "between-within", "any", "uniroot", "profile", "boot"
     )
   )
 
@@ -422,7 +423,7 @@ get_df.lmerMod <- function(x, type = "residual", ...) {
   } else if (type == "satterthwaite") {
     .degrees_of_freedom_satterthwaite(x)
   } else if (type %in% c("kr", "kenward", "kenward-roger")) {
-    .degrees_of_freedom_kr(x)
+    .degrees_of_freedom_kr(x, verbose = verbose)
   } else {
     get_df.default(x, type = type, ...)
   }
@@ -430,6 +431,9 @@ get_df.lmerMod <- function(x, type = "residual", ...) {
 
 #' @export
 get_df.lmerModTest <- get_df.lmerMod
+
+#' @export
+get_df.glmmTMB <- get_df.lmerMod
 
 #' @export
 get_df.lme <- get_df.lmerMod
