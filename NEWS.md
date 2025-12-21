@@ -1,3 +1,12 @@
+# insight 1.4.4
+
+## Bug fixes
+
+* Fixed issue with `is_converged()` due to changes in *lme4* package.
+
+* Fixed issue in `get_data(source = "mf")` for models from package *fixest*
+  when `lean` was set to `TRUE` in the model call.
+
 # insight 1.4.3
 
 ## Changes
