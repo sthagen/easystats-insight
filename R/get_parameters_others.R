@@ -595,7 +595,7 @@ get_parameters.ggcomparisons <- function(x, merge_parameters = FALSE, ...) {
 
 #' @export
 get_parameters.coxph <- function(x, verbose = TRUE, ...) {
-  cf <- stats::coef(summary(x))
+  junk <- utils::capture.output(cf <- stats::coef(summary(x)))
   params <- rownames(cf)
   if (is.null(params)) {
     params <- paste(seq_along(cf))

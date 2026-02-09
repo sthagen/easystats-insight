@@ -723,7 +723,7 @@ get_statistic.coxph <- function(x, ...) {
   # not sure t is possible, but it is cheap to include it in the regex
   # avoid calling default method which would be computationally wasteful, since
   # we need summary() here.
-  cs <- suppressWarnings(stats::coef(summary(x)))
+  junk <- utils::capture.output(cs <- suppressWarnings(stats::coef(summary(x))))
   column_index <- grep("^z$|^t$|Chisq", colnames(cs))
   out <- data.frame(
     Parameter = row.names(cs),

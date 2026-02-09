@@ -1,5 +1,8 @@
 skip_if_not_installed("lme4")
 
+## TODO: enable tests when issues in lme4 and r-devel are resolved
+skip_if(getRversion() >= "4.6.0")
+
 data(sleepstudy, package = "lme4")
 data(cbpp, package = "lme4")
 set.seed(123)
