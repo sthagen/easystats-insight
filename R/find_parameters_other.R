@@ -297,7 +297,7 @@ find_parameters.deltaMethod <- function(x, flatten = FALSE, ...) {
 
 #' @export
 find_parameters.coxph <- function(x, flatten = FALSE, ...) {
-  cf <- stats::coef(summary(x))
+  junk <- utils::capture.output(cf <- suppressWarnings(stats::coef(summary(x))))
   out <- list(conditional = rownames(cf))
 
   if (flatten) {
