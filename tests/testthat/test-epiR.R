@@ -1,6 +1,6 @@
 skip_on_os("mac")
 skip_if_not(packageVersion("base") >= "4.2.0")
-skip_if_not_installed("epiR")
+skip_if_not_installed("epiR", minimum_version = "2.0.92")
 
 
 dat <- matrix(c(13, 2163, 5, 3349), nrow = 2, byrow = TRUE)
@@ -21,12 +21,12 @@ params <- get_parameters(m)
 test_that("get_parameters", {
   expect_equal(
     params$Estimate,
-    c(4.00754, 4.02561, 0.44835, 0.75047, 0.17642, 0.54201),
+    c(4.00754, 4.02561, 0.44835, 0.75047, 0.17642, 0.54201, 7.479253),
     tolerance = 1e-3
   )
   expect_equal(
     params$Parameter,
-    c("RR", "OR", "ARisk", "AFRisk", "PARisk", "PAFRisk")
+    c("RR", "OR", "ARisk", "AFRisk", "PARisk", "PAFRisk", "E")
   )
 })
 
