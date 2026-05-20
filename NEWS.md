@@ -18,10 +18,19 @@
 
 * `get_data()` now supports objects of class `mira` from package *mice*.
 
+* `get_varcov()` now supports the option `"fpc"` to apply finite population
+  correction (Lai et al. 2018).
+
+* Added a new function, `vcovFPC()`, to calculate finite-population-adjusted
+  variance-covariance matrices.
+
 ## Bug fixes
 
 * `has_intercept()` now correctly detects whether models from packages *fixest*
   and *lfe* have intercepts or not.
+
+* The `vcov` argument in `get_varcov()` was ignored when `vcov` was of class
+  `"dpoMatrix"` and did not return `TRUE` to `is.matrix()`.
 
 # insight 1.5.0
 
