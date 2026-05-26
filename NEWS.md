@@ -2,6 +2,18 @@
 
 ## Changes
 
+* Major performance improvement for `compact_list` on very large, nested list
+  objects.
+
+## Bug fixes
+
+* `get_modelmatrix()` now correctly handles *brms* models fitted with
+  `0 + Intercept` formulas.
+
+# insight 1.5.1
+
+## Changes
+
 * New support for `CmdStanFit` models from the *cmdstanr* package -
   `find_algorithm()`, `find_parameters()`, and `get_parameters()` now work with
   these models.
