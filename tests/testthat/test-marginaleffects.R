@@ -54,3 +54,117 @@ test_that("marginaleffects", {
 
   expect_equal(n_obs(x), 150) # nrow(iris)
 })
+
+test_that("marginaleffects, find_response", {
+  data(mtcars)
+  tmp <- mtcars
+  tmp$am <- as.logical(tmp$am)
+  mod <- lm(mpg ~ am + factor(cyl), tmp)
+
+  mod_comp <- suppressWarnings(marginaleffects::avg_comparisons(
+    mod,
+    variables = list(cyl = "reference")
+  ))
+  expect_identical(find_response(mod_comp), "mpg")
+  mod_comp <- marginaleffects::avg_predictions(mod, variables = "cyl")
+  expect_identical(find_response(mod_comp), "mpg")
+  mod_comp <- marginaleffects::avg_slopes(mod, variables = "am")
+  expect_identical(find_response(mod_comp), "mpg")
+
+  skip_if_not_installed("lme4")
+  data("cbpp", package = "lme4")
+  m <- glm(cbind(incidence, size - incidence) ~ herd, data = cbpp, family = binomial)
+  mod_comp <- marginaleffects::avg_predictions(m, variables = "herd")
+  expect_identical(find_response(mod_comp, combine = FALSE), c("incidence", "size"))
+  expect_identical(
+    find_response(mod_comp, combine = TRUE),
+    "cbind(incidence, size - incidence)"
+  )
+})
+
+test_that("marginaleffects, find_predictors", {
+  data(mtcars)
+  tmp <- mtcars
+  tmp$am <- as.logical(tmp$am)
+  mod <- lm(mpg ~ am + factor(cyl), tmp)
+
+  mod_comp <- suppressWarnings(marginaleffects::avg_comparisons(
+    mod,
+    variables = list(cyl = "reference")
+  ))
+  expect_identical(find_predictors(mod_comp), c("am", "cyl"))
+  mod_comp <- marginaleffects::avg_predictions(mod, variables = "cyl")
+  expect_identical(find_predictors(mod_comp), c("am", "cyl"))
+  mod_comp <- marginaleffects::avg_slopes(mod, variables = "am")
+  expect_identical(find_predictors(mod_comp), c("am", "cyl"))
+})
+
+test_that("marginaleffects, get_data", {
+  data(mtcars)
+  tmp <- mtcars
+  tmp$cyl <- as.factor(tmp$cyl)
+  attr(tmp$mpg, "label") <- "Miles per gallon"
+  attr(tmp$cyl, "label") <- "Number of cylinders"
+  attr(tmp$disp, "label") <- "Displacement"
+
+  mod <- lm(mpg ~ cyl + disp, tmp)
+  mod_ame <- marginaleffects::avg_comparisons(mod, variables = list(cyl = "reference"))
+  out <- get_data(mod)
+  expect_named(out, c("mpg", "cyl", "disp"))
+  expect_identical(attributes(out$cyl)$label, "Number of cylinders")
+
+  mod <- marginaleffects::avg_predictions(mod, variables = "cyl")
+  out <- get_data(mod)
+  expect_named(out, c("mpg", "cyl", "disp"))
+  expect_identical(attributes(out$cyl)$label, "Number of cylinders")
+})
+
+test_that("marginaleffects, comparisons, find_parameters", {
+  data(mtcars)
+  tmp <- mtcars
+  tmp$cyl <- as.factor(tmp$cyl)
+  tmp$am <- as.logical(tmp$am)
+
+  attr(tmp$mpg, "label") <- "Miles per gallon"
+  attr(tmp$cyl, "label") <- "Number of cylinders"
+  attr(tmp$disp, "label") <- "Displacement"
+  attr(tmp$am, "label") <- "Transmission (manual)"
+
+  mod <- lm(mpg ~ cyl * am + disp, tmp)
+  mod_ame <- marginaleffects::avg_comparisons(mod, variables = c("cyl", "am"))
+  expect_identical(find_parameters(mod_ame), c("am", "cyl"))
+
+  mod_ame <- marginaleffects::avg_comparisons(mod, variables = "cyl", by = "am")
+  expect_identical(find_parameters(mod_ame), "cyl")
+
+  mod_ame <- marginaleffects::avg_comparisons(mod, variables = "am", by = "cyl")
+  expect_identical(find_parameters(mod_ame), "am")
+
+  mod_ame <- marginaleffects::avg_comparisons(mod, by = c("cyl", "am"))
+  expect_identical(find_parameters(mod_ame), c("am", "cyl", "disp"))
+})
+
+test_that("marginaleffects, predictions, find_parameters", {
+  data(mtcars)
+  tmp <- mtcars
+  tmp$cyl <- as.factor(tmp$cyl)
+  tmp$am <- as.logical(tmp$am)
+
+  attr(tmp$mpg, "label") <- "Miles per gallon"
+  attr(tmp$cyl, "label") <- "Number of cylinders"
+  attr(tmp$disp, "label") <- "Displacement"
+  attr(tmp$am, "label") <- "Transmission (manual)"
+
+  mod <- lm(mpg ~ cyl * am + disp, tmp)
+  mod_ame <- marginaleffects::avg_predictions(mod, variables = c("cyl", "am"))
+  expect_identical(find_parameters(mod_ame), c("am", "cyl"))
+
+  mod_ame <- marginaleffects::avg_predictions(mod, variables = "cyl", by = "am")
+  expect_identical(find_parameters(mod_ame), c("cyl", "am"))
+
+  mod_ame <- marginaleffects::avg_predictions(mod, variables = "am", by = "cyl")
+  expect_identical(find_parameters(mod_ame), c("am", "cyl"))
+
+  mod_ame <- marginaleffects::avg_predictions(mod, by = c("cyl", "am"))
+  expect_identical(find_parameters(mod_ame), c("cyl", "am"))
+})

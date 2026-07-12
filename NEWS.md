@@ -2,6 +2,21 @@
 
 ## Changes
 
+* `format_ci()` gains a `separator` argument, to customize the separator for
+  lower and upper CI values.
+
+* `find_response()`, `find_predictors()`, and `find_variables()` now also work
+  for objects from package *marginaleffects*.
+
+* Preliminary support in `find_parameters()` for objects from package
+  *marginaleffects*.
+
+* Added a documentation page for available `options`.
+
+# insight 1.5.2
+
+## Changes
+
 * Major performance improvement for `compact_list` on very large, nested list
   objects.
 
