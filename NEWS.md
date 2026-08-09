@@ -1,10 +1,17 @@
 # insight (devel)
 
+## Bug fixes
+
+* `null_model()` no longer fails for models whose offset is written inline in
+  the formula with a nested-parenthesis expression followed by further terms
+  (e.g. `y ~ x + offset(log(exposure)) + factor(year)`). The offset term is now
+  extracted from the formula's language tree instead of by a paren-blind regex.
+
 ## Changes
 
 * `get_datagrid()` gains a `weighted` argument, to create a smaller representation
   of large data grids, where multiple unique combinations of predictors are
-  included only once, and a new `weight` column indicates how often each
+  included only once, and a new `Weight` column indicates how often each
   combination appears in the original data.
 
 * `format_ci()` gains a `separator` argument, to customize the separator for

@@ -1,9 +1,12 @@
 skip_on_ci()
 
-d <- data.frame(a = c(1.3, 2, 543), b = c("ab", "cd", "abcde"), stringsAsFactors = FALSE)
-
-test_that("export_table", {
+test_that("export_table-1", {
   skip_on_cran()
+  d <- data.frame(
+    a = c(1.3, 2, 543),
+    b = c("ab", "cd", "abcde"),
+    stringsAsFactors = FALSE
+  )
   expect_equal(
     export_table(d),
     structure(
@@ -14,8 +17,13 @@ test_that("export_table", {
   )
 })
 
-test_that("export_table", {
+test_that("export_table-2", {
   skip_on_cran()
+  d <- data.frame(
+    a = c(1.3, 2, 543),
+    b = c("ab", "cd", "abcde"),
+    stringsAsFactors = FALSE
+  )
   expect_equal(
     export_table(d, sep = " ", header = "*", digits = 1),
     structure(
@@ -29,7 +37,12 @@ test_that("export_table", {
 
 # snapshots have a very messy output for format = "md"
 
-test_that("export_table", {
+test_that("export_table-3", {
+  d <- data.frame(
+    a = c(1.3, 2, 543),
+    b = c("ab", "cd", "abcde"),
+    stringsAsFactors = FALSE
+  )
   out <- export_table(d, format = "md")
   expect_equal(
     out,
@@ -48,34 +61,14 @@ test_that("export_table", {
   )
 })
 
-d <- data.frame(a = c(1.3, 2, 543), b = c("ab", "cd", "abcde"), stringsAsFactors = FALSE)
-attr(d, "table_caption") <- "Table Title"
 
-test_that("export_table", {
-  out <- export_table(d, format = "md")
-  expect_equal(
-    out,
-    structure(
-      c(
-        "Table: Table Title",
-        "",
-        "|      a|     b|",
-        "|------:|-----:|",
-        "|   1.30|    ab|",
-        "|   2.00|    cd|",
-        "| 543.00| abcde|"
-      ),
-      format = "pipe",
-      class = c("knitr_kable", "character")
-    ),
-    ignore_attr = TRUE
+test_that("export_table-4", {
+  d <- data.frame(
+    a = c(1.3, 2, 543),
+    b = c("ab", "cd", "abcde"),
+    stringsAsFactors = FALSE
   )
-})
-
-d <- data.frame(a = c(1.3, 2, 543), b = c("ab", "cd", "abcde"), stringsAsFactors = FALSE)
-attr(d, "table_title") <- "Table Title"
-
-test_that("export_table", {
+  attr(d, "table_caption") <- "Table Title"
   out <- export_table(d, format = "md")
   expect_equal(
     out,
@@ -96,9 +89,40 @@ test_that("export_table", {
   )
 })
 
-d <- data.frame(a = c(1.3, 2, 543), b = c("ab", "cd", "abcde"), stringsAsFactors = FALSE)
 
-test_that("export_table", {
+test_that("export_table-5", {
+  d <- data.frame(
+    a = c(1.3, 2, 543),
+    b = c("ab", "cd", "abcde"),
+    stringsAsFactors = FALSE
+  )
+  attr(d, "table_title") <- "Table Title"
+  out <- export_table(d, format = "md")
+  expect_equal(
+    out,
+    structure(
+      c(
+        "Table: Table Title",
+        "",
+        "|      a|     b|",
+        "|------:|-----:|",
+        "|   1.30|    ab|",
+        "|   2.00|    cd|",
+        "| 543.00| abcde|"
+      ),
+      format = "pipe",
+      class = c("knitr_kable", "character")
+    ),
+    ignore_attr = TRUE
+  )
+})
+
+test_that("export_table-6", {
+  d <- data.frame(
+    a = c(1.3, 2, 543),
+    b = c("ab", "cd", "abcde"),
+    stringsAsFactors = FALSE
+  )
   out <- export_table(d, format = "md", title = "Table Title")
   expect_equal(
     out,
@@ -119,11 +143,14 @@ test_that("export_table", {
   )
 })
 
-d <- data.frame(a = c(1.3, 2, 543), b = c("ab", "cd", "abcde"), stringsAsFactors = FALSE)
-attr(d, "table_caption") <- "Table Title"
-attr(d, "table_footer") <- list("first", "second", "third")
-
-test_that("export_table", {
+test_that("export_table-7", {
+  d <- data.frame(
+    a = c(1.3, 2, 543),
+    b = c("ab", "cd", "abcde"),
+    stringsAsFactors = FALSE
+  )
+  attr(d, "table_caption") <- "Table Title"
+  attr(d, "table_footer") <- list("first", "second", "third")
   out <- export_table(d, format = "md")
   expect_equal(
     out,
@@ -148,7 +175,7 @@ test_that("export_table", {
 })
 
 
-test_that("export_table, table_width", {
+test_that("export_table, table_width (lavaan)", {
   skip_on_cran()
   skip_if_not_installed("lavaan")
   skip_if_not_installed("performance")
@@ -174,8 +201,8 @@ test_that("export_table, table_width", {
       "",
       "Name   | Baseline(36) | p (Baseline) |   GFI",
       "--------------------------------------------",
-      "model1 |      918.852 |       < .001 | 0.943",
-      "model2 |      918.852 |       < .001 | 0.943",
+      "model1 |      918.852 |       < .001 | 0.959",
+      "model2 |      918.852 |       < .001 | 0.959",
       "",
       "Name   |  AGFI |   NFI |  NNFI |   CFI | RMSEA",
       "----------------------------------------------",
@@ -269,7 +296,7 @@ test_that("export_table, table_width", {
 })
 
 
-test_that("export_table, table_width, no split", {
+test_that("export_table, table_width (lavaan), no split", {
   skip_on_cran()
   skip_if_not_installed("lavaan")
   skip_if_not_installed("performance")
@@ -290,8 +317,8 @@ test_that("export_table, table_width, no split", {
       "",
       "Name   |  Model | Chi2(24) | p (Chi2) | Baseline(36) | p (Baseline) |   GFI |  AGFI |   NFI |  NNFI |   CFI | RMSEA |    RMSEA  CI | p (RMSEA) |   RMR |  SRMR |   RFI |  PNFI |   IFI |   RNI | Loglikelihood |  AIC (weights) |  BIC (weights) | BIC_adjusted",
       "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------",
-      "model1 | lavaan |   85.306 |   < .001 |      918.852 |       < .001 | 0.943 | 0.894 | 0.907 | 0.896 | 0.931 | 0.092 | [0.07, 0.11] |    < .001 | 0.082 | 0.065 | 0.861 | 0.605 | 0.931 | 0.931 |     -3737.745 | 7517.5 (0.500) | 7595.3 (0.500) |     7528.739",
-      "model2 | lavaan |   85.306 |   < .001 |      918.852 |       < .001 | 0.943 | 0.894 | 0.907 | 0.896 | 0.931 | 0.092 | [0.07, 0.11] |    < .001 | 0.082 | 0.065 | 0.861 | 0.605 | 0.931 | 0.931 |     -3737.745 | 7517.5 (0.500) | 7595.3 (0.500) |     7528.739"
+      "model1 | lavaan |   85.306 |   < .001 |      918.852 |       < .001 | 0.959 | 0.894 | 0.907 | 0.896 | 0.931 | 0.092 | [0.07, 0.11] |    < .001 | 0.082 | 0.065 | 0.861 | 0.605 | 0.931 | 0.931 |     -3737.745 | 7517.5 (0.500) | 7595.3 (0.500) |     7528.739",
+      "model2 | lavaan |   85.306 |   < .001 |      918.852 |       < .001 | 0.959 | 0.894 | 0.907 | 0.896 | 0.931 | 0.092 | [0.07, 0.11] |    < .001 | 0.082 | 0.065 | 0.861 | 0.605 | 0.931 | 0.931 |     -3737.745 | 7517.5 (0.500) | 7595.3 (0.500) |     7528.739"
     )
   )
 
