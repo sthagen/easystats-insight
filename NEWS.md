@@ -27,6 +27,9 @@
 * Preliminary support in `find_parameters()` for objects from package
   *marginaleffects*.
 
+* `get_variances()` now passes `...` down to `VarCorr()`, which might be useful
+  for Bayesian models (e.g. to return robust estimates using `robust = TRUE`).
+
 * Added a documentation page for available `options`.
 
 * Updated test-files for `htest` objects and fixed deprecated names.
