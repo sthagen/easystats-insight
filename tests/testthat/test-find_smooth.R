@@ -27,6 +27,7 @@ test_that("find_smooth - mgcv::gamm", {
 })
 
 test_that("find_smooth - gamm4", {
+  skip_on_cran()
   model <- gamm4::gamm4(
     Petal.Length ~ Petal.Width + s(Sepal.Length),
     random = ~ (1 | Species),

@@ -270,12 +270,19 @@ get_mixed_info.glmmadmb <- function(model, verbose = TRUE, ...) {
 
 #' @export
 get_mixed_info.brmsfit <- function(model, verbose = TRUE, ...) {
-  check_if_installed("brms")
+  check_if_installed(c("brms", "lme4"))
+
+  # evaluate dots, make sure "summary" is not passed. Else, we
+  # get incompatible posterior draws when calling VarCorr()
+  dots <- list(...)
+  dots$summary <- NULL
+
+  varcorr <- do.call(lme4::VarCorr, c(list(model), dots))
 
   comp_x <- get_modelmatrix(model)
   rownames(comp_x) <- seq_len(nrow(comp_x))
-  vc <- lapply(names(lme4::VarCorr(model)), function(i) {
-    element <- lme4::VarCorr(model)[[i]]
+  vc <- lapply(names(varcorr), function(i) {
+    element <- varcorr[[i]]
     if (i != "residual__") {
       if (is.null(element$cov)) {
         out <- as.matrix(drop(element$sd[, 1])^2)
@@ -301,8 +308,8 @@ get_mixed_info.brmsfit <- function(model, verbose = TRUE, ...) {
     out
   })
   vc <- compact_list(vc)
-  names(vc) <- setdiff(names(lme4::VarCorr(model)), "residual__")
-  attr(vc, "sc") <- lme4::VarCorr(model)$residual__$sd[1, 1]
+  names(vc) <- setdiff(names(varcorr), "residual__")
+  attr(vc, "sc") <- varcorr$residual__$sd[1, 1]
   fixef_params <- lme4::fixef(model)[, 1]
   # remove sigma parameters
   if (!is.null(names(fixef_params))) {

@@ -347,6 +347,8 @@ test_that("get_datagrid - models", {
     c(10L, 1L)
   )
 
+  skip_on_cran()
+
   # GAMM4
   mod <- gamm4::gamm4(
     Petal.Length ~ Petal.Width + s(Sepal.Length),

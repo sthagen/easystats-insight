@@ -228,12 +228,11 @@ get_variance.merMod <- function(
   .safe(.compute_variances(
     model = x,
     component = component,
-    name_fun = "get_variance",
-    name_full = "random effect variances",
     verbose = verbose,
     tolerance = tolerance,
     model_null = null_model,
-    approximation = approximation
+    approximation = approximation,
+    ...
   ))
 }
 
@@ -295,13 +294,12 @@ get_variance.glmmTMB <- function(
   .safe(.compute_variances(
     model = x,
     component = component,
-    name_fun = "get_variance",
-    name_full = "random effect variances",
     verbose = verbose,
     tolerance = tolerance,
     model_component = model_component,
     model_null = null_model,
-    approximation = approximation
+    approximation = approximation,
+    ...
   ))
 }
 
@@ -330,12 +328,11 @@ get_variance.mixed <- function(
   .safe(.compute_variances(
     model = x$full_model,
     component = component,
-    name_fun = "get_variance",
-    name_full = "random effect variances",
     verbose = verbose,
     tolerance = tolerance,
     model_null = null_model,
-    approximation = approximation
+    approximation = approximation,
+    ...
   ))
 }
 

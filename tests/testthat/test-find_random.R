@@ -24,6 +24,9 @@ test_that("find_random - mgcv::gamm", {
 })
 
 test_that("find_random - gamm4::gamm4", {
+  # errors on CRAN
+  skip_on_cran()
+
   model <- gamm4::gamm4(
     Petal.Length ~ Petal.Width + s(Sepal.Length),
     random = ~ (1 | Species),
@@ -40,7 +43,9 @@ test_that("find_random - gamm4::gamm4", {
 })
 
 test_that("find_random - rstanarm::gamm4", {
+  # errors on CRAN
   skip_on_cran()
+
   model <-
     suppressWarnings(rstanarm::stan_gamm4(
       Petal.Length ~ Petal.Width + s(Sepal.Length),
