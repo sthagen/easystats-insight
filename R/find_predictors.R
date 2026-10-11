@@ -255,7 +255,7 @@ find_predictors.workflow <- function(
   if (verbose) {
     format_warning(sprintf(
       "Unknown preprocessor type: %s",
-      paste(class(preprocessor), collapse = ", ")
+      toString(class(preprocessor))
     ))
   }
   NULL
@@ -524,8 +524,10 @@ find_predictors.brmsfit <- function(
   is_mv <- is_multivariate(f)
   elements <- .get_elements(effects, component, model = x)
 
-  # extract all components, including custom and auxiliary ones
-  dpars <- find_auxiliary(x)
+  # extract all components, including custom and auxiliary ones. For
+  # non-linear models, `find_formula()` returns the formulas of the non-linear
+  # parameters as separate elements, so we need these names, too
+  dpars <- c(find_auxiliary(x), .brms_nlpars(x))
 
   # elements to return
   elements <- .brms_elements(effects, component, dpars)
@@ -742,6 +744,39 @@ find_predictors.marginaleffects <- find_predictors.predictions
 }
 
 
+# removes the matrix argument `M` from the brms autocorrelation terms `sar()`,
+# `car()` and `fcor()`, recursively, so that `all.vars()` does not return it
+.remove_brms_autocor_matrix <- function(expr) {
+  if (!is.call(expr)) {
+    return(expr)
+  }
+  fun <- sub("^brms:::?", "", safe_deparse(expr[[1]]))
+  if (fun %in% c("sar", "car", "fcor") && length(expr) > 1) {
+    arg_names <- names(expr)
+    if (is.null(arg_names)) {
+      arg_names <- rep("", length(expr))
+    }
+    # `M` is either named or the first unnamed argument
+    m_pos <- which(arg_names == "M")
+    if (!length(m_pos)) {
+      m_pos <- which(!nzchar(arg_names[-1]))[1] + 1
+    }
+    if (!is.na(m_pos[1])) {
+      expr <- expr[-m_pos[1]]
+    }
+    return(expr)
+  }
+  for (i in seq_along(expr)[-1]) {
+    # only recurse into calls, missing arguments like in `x[, 1]` can't be
+    # passed to a function
+    if (is.call(expr[[i]])) {
+      expr[[i]] <- .remove_brms_autocor_matrix(expr[[i]])
+    }
+  }
+  expr
+}
+
+
 .prepare_predictors <- function(x, f, elements) {
   f <- f[names(f) %in% elements]
   # from conditional model, remove response
@@ -844,5 +879,12 @@ find_predictors.marginaleffects <- find_predictors.predictions
     }
   }
 
-  f
+  # the matrix in autocorrelation terms like `sar(W)` is an object in `data2`,
+  # not a variable in the data, so we remove it
+  rapply(
+    f,
+    .remove_brms_autocor_matrix,
+    classes = c("call", "formula"),
+    how = "replace"
+  )
 }
